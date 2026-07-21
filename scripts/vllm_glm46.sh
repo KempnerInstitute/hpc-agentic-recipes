@@ -5,7 +5,7 @@
 # PERF=1 retries the compile path (after a vLLM fix); NO_MTP=1 disables speculative decoding.
 set -euo pipefail
 source "$(dirname "$0")/lib_env.sh"
-MODEL="${MODEL:-/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/GLM-4.6-FP8}"
+MODEL="${MODEL:?set MODEL (launch via serve_glm46_ssh.sh or slurm_glm46.sbatch)}"
 EXTRA=()
 if [ -n "${PERF:-}" ]; then
   EXTRA+=(--compilation-config "{\"cudagraph_mode\": \"${CUDAGRAPH_MODE:-NONE}\"}")

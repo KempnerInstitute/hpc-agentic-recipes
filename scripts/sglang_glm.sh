@@ -6,7 +6,7 @@ set -euo pipefail
 source "$(dirname "$0")/lib_env_sglang.sh"
 NODE_RANK="${1:?node rank (0=head, 1=worker)}"
 DIST_HOST="${2:?dist-init host/ip}"
-MODEL="${MODEL:-/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/GLM-5.2-FP8}"
+MODEL="${MODEL:?set MODEL (launch via serve_sglang_glm_ssh.sh)}"
 SPEC=()
 if [ -z "${NO_MTP:-}" ]; then
   SPEC+=(--speculative-algorithm EAGLE

@@ -4,8 +4,9 @@
 # Sends the API key (VLLM_API_KEY env, else secrets/vllm_api_key) so it works against gated endpoints.
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"; REPO_DIR="$(dirname "$S")"
+source "$S/config.sh"
 PROMPT="${1:?usage: chat.sh <prompt> [host] [port] [model]}"
-HOST="${2:-holygpu8a10101}"
+HOST="${2:-$RTX_NODE}"
 PORT="${3:-8000}"
 MODEL="${4:-glm-5.2}"
 KEY="${VLLM_API_KEY:-}"

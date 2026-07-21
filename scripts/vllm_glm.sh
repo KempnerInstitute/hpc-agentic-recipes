@@ -8,7 +8,7 @@ source "$(dirname "$0")/lib_env.sh"
 HEAD_IP="${1:?head ip}"
 RAY_PORT="${2:-6379}"
 export RAY_ADDRESS="$HEAD_IP:$RAY_PORT"
-MODEL="${MODEL:-/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/GLM-5.2-FP8}"
+MODEL="${MODEL:?set MODEL (launch via serve_glm_ssh.sh or slurm_glm52_fp8.sbatch)}"
 EXTRA=()
 if [ -n "${PERF:-}" ]; then
   EXTRA+=(--compilation-config "{\"cudagraph_mode\": \"${CUDAGRAPH_MODE:-NONE}\"}")

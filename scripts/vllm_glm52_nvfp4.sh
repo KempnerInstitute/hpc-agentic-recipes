@@ -5,7 +5,7 @@
 # Native Anthropic API, so Claude Code connects directly. Set ATTN_BACKEND to override backend selection.
 set -euo pipefail
 source "$(dirname "$0")/lib_env_cu130.sh"
-MODEL="${MODEL:-/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/GLM-5.2-NVFP4}"
+MODEL="${MODEL:?set MODEL (launch via serve_glm52_nvfp4_ssh.sh or slurm_glm52_nvfp4.sbatch)}"
 [ -n "${ATTN_BACKEND:-}" ] && export VLLM_ATTENTION_BACKEND="$ATTN_BACKEND"
 EXTRA=()
 if [ -z "${NO_MTP:-}" ]; then
