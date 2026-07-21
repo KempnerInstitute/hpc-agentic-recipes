@@ -126,7 +126,7 @@ checkpoints are expected under `MODELS_DIR` (see Weights).
 
 ```
 bash scripts/setup_env.sh
-printf '%s' '<api-key>' > secrets/vllm_api_key && chmod 600 secrets/vllm_api_key
+mkdir -p secrets && printf '%s' '<api-key>' > secrets/vllm_api_key && chmod 600 secrets/vllm_api_key
 ```
 
 ### RTX 6000 environment (one-time)
