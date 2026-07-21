@@ -2,7 +2,8 @@
 .venv-cu130/
 .venv-sglang/
 cuda13/
-logs/
+logs/*
+!logs/.gitkeep
 models/
 *.log
 __pycache__/

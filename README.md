@@ -113,6 +113,9 @@ restart the servers.
 
 ## Setup
 
+Requires `uv` (Python environment manager) and a Kempner Slurm account or reservation. Model
+checkpoints are expected under `MODELS_DIR` (see Weights).
+
 > [!NOTE]
 > On Kempner, VAST scratch (`/n/netscratch`) outperforms Lustre for this workload, most noticeably
 > for the Python environments, which are large sets of small files. For best throughput, build the
