@@ -1,6 +1,6 @@
 # Local Agentic Coding
 
-Self-hosted open-weight LLMs for agentic coding on Kempner GPU nodes — served as OpenAI- and
+Self-hosted open-weight LLMs for agentic coding on Kempner GPU nodes, served as OpenAI- and
 Anthropic-compatible endpoints for tools like Claude Code, Cline, Aider, and OpenHands. Recipes run
 on either vLLM or SGLang, whichever serves a given model best, and every endpoint is API-key gated.
 
@@ -23,9 +23,9 @@ H200 nodes and supports up to 256K context (raise `MAX_MODEL_LEN`, subject to KV
 
 Recipes target one of two inference engines; pick whichever serves a given model best.
 
-- **vLLM** (default) — exposes both the OpenAI (`/v1`) and native Anthropic (`/v1/messages`) APIs, so
+- **vLLM** (default): exposes both the OpenAI (`/v1`) and native Anthropic (`/v1/messages`) APIs, so
   Claude Code connects directly. It backs every endpoint in the table above.
-- **SGLang** — OpenAI-compatible, used where it wins on a specific model. The included GLM-5.2 FP8
+- **SGLang**: OpenAI-compatible, used where it wins on a specific model. The included GLM-5.2 FP8
   two-node recipe (`serve_sglang_glm_ssh.sh`, served as `glm-5.2`) drives GLM-5.2's MTP/EAGLE
   speculative head, which vLLM cannot use when it spans two nodes with pipeline parallelism. It runs
   from a separate `.venv-sglang`.
