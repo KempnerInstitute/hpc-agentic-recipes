@@ -2,7 +2,8 @@
 # Web and literature search for local models, which cannot use Anthropic's hosted web search tool.
 # Usage: search.sh <web|arxiv|crossref|pubmed|openalex|wiki|fetch> "<query or url>" [count]
 # Web search needs the ddgs package; it is installed into .venv-tools on first use.
-# Override the interpreter with SEARCH_PYTHON, or the result count with the third argument.
+# Override the interpreter with SEARCH_PYTHON, the venv location with SEARCH_VENV, or the result
+# count with the third argument.
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(dirname "$S")"
@@ -11,16 +12,17 @@ ARG="${2:?usage: search.sh <mode> \"<query or url>\" [count]}"
 N="${3:-5}"
 
 if [ "$MODE" = web ]; then
+  VENV="${SEARCH_VENV:-$REPO_DIR/.venv-tools}"
   PY="${SEARCH_PYTHON:-}"
-  if [ -z "$PY" ] && [ -x "$REPO_DIR/.venv-tools/bin/python" ]; then PY="$REPO_DIR/.venv-tools/bin/python"; fi
+  if [ -z "$PY" ] && [ -x "$VENV/bin/python" ]; then PY="$VENV/bin/python"; fi
   if [ -z "$PY" ] && python3 -c 'import ddgs' 2>/dev/null; then PY="python3"; fi
   if [ -z "$PY" ]; then
     export PATH="$HOME/.local/bin:$PATH"
     command -v uv >/dev/null 2>&1 || { echo "search.sh: need uv, or install ddgs and set SEARCH_PYTHON" >&2; exit 1; }
-    echo "search.sh: creating $REPO_DIR/.venv-tools with ddgs (one time)" >&2
-    uv venv "$REPO_DIR/.venv-tools" --python 3.12 --quiet >&2
-    uv pip install --python "$REPO_DIR/.venv-tools/bin/python" --quiet ddgs >&2
-    PY="$REPO_DIR/.venv-tools/bin/python"
+    echo "search.sh: creating $VENV with ddgs (one time)" >&2
+    uv venv "$VENV" --python 3.12 --quiet >&2
+    uv pip install --python "$VENV/bin/python" --quiet ddgs >&2
+    PY="$VENV/bin/python"
   fi
   exec "$PY" - "$ARG" "$N" <<'PY'
 import sys
@@ -64,10 +66,16 @@ def show(i, title, url, extra=""):
 
 
 def arxiv(q):
-    url = ("https://export.arxiv.org/api/query?search_query=all:"
-           + urllib.parse.quote(f'"{q}"') + f"&start=0&max_results={n}")
     ns = {"a": "http://www.w3.org/2005/Atom"}
-    entries = ET.fromstring(get(url)).findall("a:entry", ns)
+
+    def query(expr):
+        url = "https://export.arxiv.org/api/query?" + urllib.parse.urlencode(
+            {"search_query": expr, "start": 0, "max_results": n})
+        return ET.fromstring(get(url)).findall("a:entry", ns)
+
+    entries = query(f'all:"{q}"')
+    if not entries and len(q.split()) > 1:
+        entries = query(" AND ".join(f"all:{t}" for t in q.split()))
     for i, e in enumerate(entries, 1):
         link = e.find("a:id", ns)
         summary = e.find("a:summary", ns)
