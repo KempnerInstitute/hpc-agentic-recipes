@@ -1,6 +1,7 @@
 .venv/
 .venv-cu130/
 .venv-sglang/
+.venv-tools/
 cuda13/
 logs/*
 !logs/.gitkeep

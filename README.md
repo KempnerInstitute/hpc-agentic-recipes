@@ -56,7 +56,9 @@ local-agentic-coding/
 │   ├── sglang_glm.sh             # GLM-5.2 SGLang serve command (MTP/EAGLE)
 │   ├── ray_head.sh, ray_worker.sh# Ray cluster for the 2-node models
 │   ├── chat.sh, bench.sh, smoke_test.sh  # query / throughput / health (all send the API key)
+│   ├── search.sh                 # web and literature search (no API key needed)
 │   └── stop_ssh.sh               # tear down
+├── .claude/skills/local-search/  # skill so Claude Code uses search.sh automatically
 ├── clients/                      # Claude Code environment files (one per endpoint)
 ├── secrets/vllm_api_key          # API key, mode 600 (gitignored)
 ├── .venv/                        # H200 vLLM environment (cu129)
@@ -241,6 +243,33 @@ claude
 OpenAI-compatible tools (Cline, Aider, Continue, OpenHands) work with either engine: base URL
 `http://<host>:8000/v1`, API key from `secrets/vllm_api_key`, model `glm-4.6`, `glm-5.2`, or
 `kimi-k2.7-code`.
+
+### Web search
+
+Claude Code's built-in WebSearch runs on Anthropic infrastructure, so a local endpoint rejects it
+with `400 ... tools.0.input_schema Field required`. Use `scripts/search.sh`, which searches from the
+cluster and needs no API key:
+
+```
+bash scripts/search.sh web "flow field reconstruction deep learning" 5
+bash scripts/search.sh arxiv "velocity field reconstruction" 5
+bash scripts/search.sh fetch https://arxiv.org/abs/2105.09450
+```
+
+Modes are `web`, `arxiv`, `crossref`, `pubmed`, `openalex`, `wiki`, and `fetch`. The last argument is
+the result count (default 5). The first `web` call installs `ddgs` into `.venv-tools`.
+
+To let Claude Code call it on its own, put the script on your PATH and install the skill:
+
+```
+ln -sf "$PWD/scripts/search.sh" ~/.local/bin/search.sh
+mkdir -p ~/.claude/skills && cp -r .claude/skills/local-search ~/.claude/skills/
+```
+
+> [!NOTE]
+> Web search scrapes a search engine, so it is less stable than a paid API and the shared cluster
+> address can be rate-limited. The literature modes use official APIs and are reliable. Fetching a
+> URL always works, because it runs on the client rather than on Anthropic's servers.
 
 Query and benchmark (pass the target hostname from `config.sh` as `<node>`):
 
