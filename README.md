@@ -13,11 +13,14 @@ on either vLLM or SGLang, whichever serves a given model best, and every endpoin
 | GLM-5.2 | FP8 | 2 H200 nodes (4 GPUs each) | TP4 x PP2 | ~13 tok/s | 1M |
 | Kimi-K2.7-Code | INT4 | 1 RTX PRO 6000 node (8 GPUs) | TP8 | ~21 tok/s | 32K |
 | Kimi-K2.7-Code | INT4 | 2 H200 nodes (4 GPUs each) | TP4 x PP2 | ~29 tok/s | 32K |
+| Gemma-4-26B-A4B | bf16 | **1 GPU** (RTX PRO 6000 or H200) | TP1 | ~116 tok/s | 32K (256K max) |
 
-Each serves on `http://<node>:8000/v1` with model name `glm-4.6`, `glm-5.2`, or `kimi-k2.7-code`.
-GLM-5.2 NVFP4 is the fastest and near-FP8 quality; prefer it for reasoning and coding. Kimi-K2.7-Code
-(1T-parameter MoE, native INT4, thinking-mode) is the strongest coder; it fits on one RTX node or two
-H200 nodes and supports up to 256K context (raise `MAX_MODEL_LEN`, subject to KV memory).
+Each serves on `http://<node>:8000/v1` with model name `glm-4.6`, `glm-5.2`, `kimi-k2.7-code`, or
+`gemma-4-26b`. Gemma-4-26B-A4B is the fastest and by far the cheapest, needing only **one GPU**, so it
+is the best default for interactive work. Kimi-K2.7-Code (1T-parameter MoE, native INT4,
+thinking-mode) is the strongest coder; it fits on one RTX node or two H200 nodes. GLM-5.2 NVFP4 is
+near-FP8 quality and suits reasoning. Models supporting longer context accept a higher
+`MAX_MODEL_LEN`, subject to KV memory.
 
 ## Engines
 
@@ -50,6 +53,7 @@ local-agentic-coding/
 │   ├── serve_glm52_nvfp4_ssh.sh  # GLM-5.2 NVFP4 (vLLM, RTX 6000, 1 node)
 │   ├── serve_kimi_rtx_ssh.sh     # Kimi-K2.7     (vLLM, RTX 6000, 1 node)
 │   ├── serve_kimi_h200_ssh.sh    # Kimi-K2.7     (vLLM, H200, 2 nodes, Ray)
+│   ├── serve_gemma4_ssh.sh       # Gemma-4-26B   (vLLM, 1 GPU)
 │   ├── serve_sglang_glm_ssh.sh   # GLM-5.2 FP8   (SGLang, H200, 2 nodes)
 │   ├── slurm_*.sbatch            # Slurm batch jobs (one per model / config)
 │   ├── vllm_*.sh                 # per-model vLLM serve commands
@@ -92,6 +96,7 @@ any value with an environment variable at launch.
 | `GLM52_HEAD`, `GLM52_WORKER` | the two nodes for GLM-5.2 FP8 |
 | `KIMI_NODE` | RTX node for Kimi-K2.7-Code |
 | `KIMI_HEAD`, `KIMI_WORKER` | the two H200 nodes for Kimi-K2.7-Code |
+| `GEMMA4_NODE` | node for Gemma-4-26B (single GPU; set `GPU=<n>` to pin a device) |
 | `MODELS_DIR` | base directory holding the checkpoint folders |
 | `MODEL` | exact checkpoint path to serve (overrides the per-model default) |
 | `API_PORT` | serve port (default 8000) |
@@ -188,7 +193,12 @@ sbatch scripts/slurm_glm46.sbatch         # GLM-4.6 FP8    -> kempner_h200, 1 no
 sbatch scripts/slurm_glm52_fp8.sbatch     # GLM-5.2 FP8    -> kempner_h200, 2 nodes, 4 GPUs each
 sbatch scripts/slurm_kimi_rtx.sbatch      # Kimi-K2.7-Code -> kempner_rtx,  1 node,  8 GPUs
 sbatch scripts/slurm_kimi_h200.sbatch     # Kimi-K2.7-Code -> kempner_h200, 2 nodes, 4 GPUs each
+sbatch scripts/slurm_gemma4.sbatch        # Gemma-4-26B    -> kempner_rtx,  1 node,  1 GPU
 ```
+
+> [!NOTE]
+> `kempner_rtx` allows 16 CPUs and 180 GB of host memory per GPU, which is what
+> `slurm_gemma4.sbatch` requests for its single GPU.
 
 Set your account (and optionally the checkpoint):
 
@@ -224,6 +234,7 @@ of the scheduler), start the server over SSH instead of sbatch:
 ```
 bash scripts/serve_glm52_nvfp4_ssh.sh    # or serve_glm46_ssh.sh / serve_glm_ssh.sh
 bash scripts/serve_kimi_rtx_ssh.sh       # or serve_kimi_h200_ssh.sh  (Kimi-K2.7-Code)
+GPU=1 bash scripts/serve_gemma4_ssh.sh   # Gemma-4-26B on one GPU of a shared node
 bash scripts/serve_sglang_glm_ssh.sh     # GLM-5.2 FP8 via SGLang (alternate engine)
 ```
 
@@ -236,13 +247,45 @@ node from `config.sh`; for a Slurm-allocated host, set the matching node variabl
 `GLM46_NODE`, `GLM52_HEAD`, or `KIMI_NODE`):
 
 ```
-RTX_NODE=<host> source clients/claude-code-glm52-nvfp4.env   # or clients/claude-code-kimi.env
+RTX_NODE=<host> source clients/claude-code-glm52-nvfp4.env   # or claude-code-kimi.env, claude-code-gemma4.env
 claude
 ```
 
+> [!IMPORTANT]
+> The client envs export `ANTHROPIC_AUTH_TOKEN`, not `ANTHROPIC_API_KEY`. vLLM accepts only the
+> `Authorization: Bearer` header, whereas `ANTHROPIC_API_KEY` makes Claude Code send `x-api-key`,
+> which is rejected with HTTP 401. `ANTHROPIC_SMALL_FAST_MODEL` is set for the same reason it matters
+> elsewhere: without it Claude Code tries to reach a Haiku model that these servers do not host.
+
 OpenAI-compatible tools (Cline, Aider, Continue, OpenHands) work with either engine: base URL
-`http://<host>:8000/v1`, API key from `secrets/vllm_api_key`, model `glm-4.6`, `glm-5.2`, or
-`kimi-k2.7-code`.
+`http://<host>:8000/v1`, API key from `secrets/vllm_api_key`, model `glm-4.6`, `glm-5.2`,
+`kimi-k2.7-code`, or `gemma-4-26b`.
+
+### Tuning notes: Gemma-4-26B-A4B on one GPU
+
+Measured on one RTX PRO 6000 GPU, single stream, 256 tokens, greedy. The shipped config is the first
+row, and nothing else beat it.
+
+| Config | Decode | Note |
+|--------|--------|------|
+| bf16, CUDA graphs (shipped) | **116.2 tok/s** | 87.6 GB used, 32K context |
+| plus `--kv-cache-dtype fp8` | 116.2 tok/s | no gain |
+| `--quantization fp8` (weights) | 116.3 tok/s | no gain |
+| n-gram speculative decoding | 60.9 tok/s | roughly half speed, do not use |
+| MTP drafter (`gemma-4-26B-A4B-it-assistant`) | fails to start | see below |
+
+The model activates only 4B of its 26B parameters per token, so decode is limited by per-step
+overhead rather than memory bandwidth. That is why halving the weight bytes and halving the KV bytes
+changed nothing, and it is also why n-gram speculation loses: its drafts are rejected often on
+generated code, and each rejection costs a wasted verification pass.
+
+> [!NOTE]
+> Google ships an official MTP drafter per Gemma 4 checkpoint (`*-it-assistant`, under 1 GB) that
+> promises a large lossless speedup, and `vllm_gemma4.sh` supports it through `SPEC_DRAFT`. It does not
+> work on vLLM 0.25.1 or 0.26.0: the drafter's `pre_projection` expects two backbone-width vectors
+> (2 x 2816) but the engine feeds it backbone plus draft width (2816 + 1024), so startup fails with
+> `a and b must have same reduction dim, but got [s, 3840] X [5632, 1024]`. Upstream `main` fixes this
+> by sharing the target's embedding table with the drafter, so this needs a vLLM newer than 0.26.0.
 
 ### Web search
 
@@ -286,8 +329,11 @@ Checkpoint folders live under `MODELS_DIR` (default
 `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models`):
 
 ```
-GLM-5.2-NVFP4/   GLM-5.2-FP8/   GLM-4.6-FP8/   Kimi-K2.7-Code/
+GLM-5.2-NVFP4/   GLM-5.2-FP8/   GLM-4.6-FP8/   Kimi-K2.7-Code/   gemma-4-26B-A4B-it/
 ```
+
+Gemma-4-26B-A4B also has an optional speculative-decoding drafter,
+`gemma-4-26B-A4B-it-assistant/` (832 MB), which `GEMMA4_DRAFT` points at.
 
 The folder names are the same across locations, so serving a copy elsewhere is just
 `MODEL=<dir>/<folder> ...` or a different `MODELS_DIR`.

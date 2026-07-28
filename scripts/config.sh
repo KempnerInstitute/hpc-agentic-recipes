@@ -11,6 +11,7 @@
 #   GLM-5.2 FP8    : 2 H200 nodes        (4 GPUs each, TP4 x PP2)
 #   GLM-5.2 NVFP4  : 1 RTX PRO 6000 node (8 GPUs, TP8)
 #   Kimi-K2.7-Code : 1 RTX PRO 6000 node (8 GPUs, TP8)  or  2 H200 nodes (TP4 x PP2)
+#   Gemma-4-26B    : 1 GPU (TP1) on either node type
 
 : "${API_PORT:=8000}"
 
@@ -22,6 +23,7 @@
 : "${KIMI_NODE:=holygpu7c1734}"       # Kimi-K2.7-Code -> 1 RTX PRO 6000 node (primary)
 : "${KIMI_HEAD:=holygpu8a10202}"      # Kimi-K2.7-Code -> H200 head   (2-node alternative)
 : "${KIMI_WORKER:=holygpu8a10301}"    # Kimi-K2.7-Code -> H200 worker (2-node alternative)
+: "${GEMMA4_NODE:=holygpu7c2313}"     # Gemma-4-26B    -> 1 GPU on an RTX PRO 6000 node
 
 # Checkpoint paths. Override MODEL at launch to serve a copy elsewhere (e.g. VAST scratch).
 : "${MODELS_DIR:=/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models}"
@@ -29,3 +31,5 @@
 : "${GLM52_MODEL:=$MODELS_DIR/GLM-5.2-FP8}"
 : "${GLM52_NVFP4_MODEL:=$MODELS_DIR/GLM-5.2-NVFP4}"
 : "${KIMI_MODEL:=$MODELS_DIR/Kimi-K2.7-Code}"
+: "${GEMMA4_MODEL:=$MODELS_DIR/gemma-4-26B-A4B-it}"
+: "${GEMMA4_DRAFT:=$MODELS_DIR/gemma-4-26B-A4B-it-assistant}"
