@@ -338,13 +338,22 @@ The three models sit in different regimes, which is why the same flag helps one 
 > is served as TP4 x PP2 rather than TP8.
 
 > [!NOTE]
-> Qwen3-Coder-480B on a **4-GPU H200 node did not start with CUDA graphs**, failing during graph
-> capture even after raising `--gpu-memory-utilization` to 0.96 (which more than doubled free KV, so
-> KV space was not the limit). With `--enforce-eager` it served at 22.2 tok/s, but that is not
-> comparable to the RTX figure above, which used CUDA graphs. Two contributing factors: 482 GB across
-> only 4 GPUs leaves about 15 GB per GPU for graphs, and `lib_env.sh` sets `VLLM_USE_DEEP_GEMM=0`, so
-> H200 compiles the MoE through Triton instead of DeepGEMM. A 2-node H200 run at TP4 x PP2 has not
-> been measured yet.
+> Qwen3-Coder-480B-FP8 **does not run on H200 with CUDA graphs** on vLLM 0.25.1. Four configurations
+> were tried and all failed during graph capture, while the same checkpoint works on the RTX node:
+>
+> | H200 attempt | Outcome |
+> |--------------|---------|
+> | 4 GPUs, TP4, Triton MoE | crash during capture |
+> | 2 nodes, TP4 x PP2, DeepGEMM | `CUDA error: an illegal memory access was encountered` |
+> | 2 nodes, TP4 x PP2, Triton MoE | `cutlass_gemm_caller ... Error Internal`, then illegal memory access |
+> | 4 GPUs, TP4, `--enforce-eager` | works, 22.2 tok/s |
+>
+> Memory is not the constraint: the two-node runs had 65 GiB of KV per GPU and a 2.2M-token cache. The
+> root cause is the CUTLASS w8a8 FP8 GEMM path, which faults on Hopper for this checkpoint during
+> capture. Note that forcing `VLLM_USE_DEEP_GEMM=1` on H200 reproduces the crash `lib_env.sh` disables
+> it for, so leave that flag alone. The eager fallback works but costs roughly 3x, so **serve this
+> model on the RTX node**, where its FP8 kernels are exercised on sm_120 and CUDA graphs capture
+> cleanly.
 
 Context length is the other thing VRAM decides. Gemma-4-31B in bf16 reached a 190K-token KV cache on
 one 96 GB card, while FP8 weights freed enough room for 503K tokens, comfortably covering the model's
