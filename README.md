@@ -13,7 +13,7 @@ on either vLLM or SGLang, whichever serves a given model best, and every endpoin
 | GLM-5.2 | FP8 | 2 H200 nodes (4 GPUs each) | TP4 x PP2 | ~13 tok/s | 1M |
 | Kimi-K2.7-Code | INT4 | 1 RTX PRO 6000 node (8 GPUs) | TP8 | ~21 tok/s | 32K |
 | Kimi-K2.7-Code | INT4 | 2 H200 nodes (4 GPUs each) | TP4 x PP2 | ~29 tok/s | 32K |
-| Gemma-4-26B-A4B | bf16 | **1 GPU** (RTX PRO 6000 or H200) | TP1 | ~116 tok/s | 32K (256K max) |
+| Gemma-4-26B-A4B | bf16 | **1 GPU** (RTX PRO 6000) | TP1 | ~116 tok/s | 32K (256K max) |
 
 Each serves on `http://<node>:8000/v1` with model name `glm-4.6`, `glm-5.2`, `kimi-k2.7-code`, or
 `gemma-4-26b`. Gemma-4-26B-A4B is the fastest and by far the cheapest, needing only **one GPU**, so it
@@ -61,9 +61,11 @@ local-agentic-coding/
 │   ├── ray_head.sh, ray_worker.sh# Ray cluster for the 2-node models
 │   ├── chat.sh, bench.sh, smoke_test.sh  # query / throughput / health (all send the API key)
 │   ├── search.sh                 # web and literature search (no API key needed)
+│   ├── download_model.sh         # fetch a checkpoint into MODELS_DIR
 │   └── stop_ssh.sh               # tear down
 ├── .claude/skills/local-search/  # skill so Claude Code uses search.sh automatically
 ├── clients/                      # Claude Code environment files (one per endpoint)
+├── plan-new-models.md            # sizing and engine-support study for models not yet served
 ├── secrets/vllm_api_key          # API key, mode 600 (gitignored)
 ├── .venv/                        # H200 vLLM environment (cu129)
 ├── .venv-cu130/                  # RTX 6000 vLLM environment (cu130)
@@ -268,14 +270,15 @@ row, and nothing else beat it.
 
 | Config | Decode | Note |
 |--------|--------|------|
-| bf16, CUDA graphs (shipped) | **116.2 tok/s** | 87.6 GB used, 32K context |
+| bf16, CUDA graphs (shipped) | **116.2 tok/s** | 87.6 of 96 GB on the card, 32K context |
 | plus `--kv-cache-dtype fp8` | 116.2 tok/s | no gain |
 | `--quantization fp8` (weights) | 116.3 tok/s | no gain |
 | n-gram speculative decoding | 60.9 tok/s | roughly half speed, do not use |
 | MTP drafter (`gemma-4-26B-A4B-it-assistant`) | fails to start | see below |
 
-The model activates only 4B of its 26B parameters per token, so decode is limited by per-step
-overhead rather than memory bandwidth. That is why halving the weight bytes and halving the KV bytes
+Weights are 51.6 GB, so the model also fits one H200 GPU by memory, but that has not been measured;
+the number above is from an RTX PRO 6000. The model activates only 4B of its 26B parameters per
+token, so decode is limited by per-step overhead rather than memory bandwidth. That is why halving the weight bytes and halving the KV bytes
 changed nothing, and it is also why n-gram speculation loses: its drafts are rejected often on
 generated code, and each rejection costs a wasted verification pass.
 
