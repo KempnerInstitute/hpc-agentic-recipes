@@ -27,6 +27,12 @@ Kimi-K2.7-Code (1T-parameter MoE, native INT4, thinking-mode) is the strongest c
 RTX node or two H200 nodes. GLM-5.2 NVFP4 is near-FP8 quality and suits reasoning. Models supporting
 longer context accept a higher `MAX_MODEL_LEN`, subject to KV memory.
 
+> [!NOTE]
+> The Gemma and Qwen rates were measured with the slope method described under "Measured decode
+> rates". The GLM and Kimi rates predate it and come from a single fixed-length generation, which folds
+> per-request overhead into the rate, so those four are conservative and not directly comparable to the
+> Gemma and Qwen numbers. Re-measure them with the slope method before comparing across families.
+
 ## Engines
 
 Recipes target one of two inference engines; pick whichever serves a given model best.
@@ -59,7 +65,7 @@ local-agentic-coding/
 │   ├── serve_kimi_rtx_ssh.sh     # Kimi-K2.7     (vLLM, RTX 6000, 1 node)
 │   ├── serve_kimi_h200_ssh.sh    # Kimi-K2.7     (vLLM, H200, 2 nodes, Ray)
 │   ├── serve_gemma4_ssh.sh       # Gemma-4-26B and 31B (vLLM, 1 GPU)
-│   ├── serve_qwen3_ssh.sh        # Qwen3-235B    (vLLM, RTX 6000, 1 node)
+│   ├── serve_qwen3_ssh.sh        # Qwen3-235B and Coder-480B (vLLM, RTX 6000, 1 node)
 │   ├── serve_sglang_glm_ssh.sh   # GLM-5.2 FP8   (SGLang, H200, 2 nodes)
 │   ├── slurm_*.sbatch            # Slurm batch jobs (one per model / config)
 │   ├── vllm_*.sh                 # per-model vLLM serve commands
@@ -85,7 +91,7 @@ Two node types. All nodes of a type are identical, so only hostnames change betw
 
 | Type | Per node | Serves |
 |------|----------|--------|
-| RTX PRO 6000 Blackwell | 8x 96 GB, sm_120, PCIe (no NVLink), CUDA 13 | GLM-5.2 NVFP4, Kimi-K2.7-Code, Qwen3-235B, Gemma 4 |
+| RTX PRO 6000 Blackwell | 8x 96 GB, sm_120, PCIe (no NVLink), CUDA 13 | GLM-5.2 NVFP4, Kimi-K2.7-Code, Qwen3-235B, Qwen3-Coder-480B, Gemma 4 |
 | H200 | 4x 141 GB, CUDA 12.9 | GLM-4.6, GLM-5.2 FP8, Kimi-K2.7-Code, Gemma 4 |
 | H100 | 80 GB per GPU, CUDA 12.9 | Gemma 4 (single-GPU models only) |
 

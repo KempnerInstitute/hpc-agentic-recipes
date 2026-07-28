@@ -23,6 +23,11 @@ Two facts drive most decisions below:
 2. The RTX node is **Blackwell (sm_120)**, so it has native FP4 and MXFP4 math. Hopper H200 does not.
    We already proved FP4 works there: GLM-5.2-NVFP4 serves at about 90 tok/s on one RTX node.
 
+> [!NOTE]
+> Gemma-4-26B, Gemma-4-31B, Qwen3-235B, and Qwen3-Coder-480B are now measured and served; see
+> "Measured decode rates" in README.md for the real numbers, which supersede the estimates below.
+> Kimi-K3 remains blocked: support is not merged in vLLM (PR #50000 open) or SGLang.
+
 ## Summary
 
 | Model | On-disk | Params | Recommended target | Engine | Ready today |
@@ -30,7 +35,7 @@ Two facts drive most decisions below:
 | gemma-4-26B-A4B-it | 51.6 GB | 26B MoE, 4B active | 1 GPU (either type) | vLLM | Yes |
 | gemma-4-31B-it | 62.6 GB | 31B dense | 1 GPU (either type) | vLLM | Yes |
 | Qwen3-235B-A22B | 470.2 GB | 235B MoE, 22B active | 1 RTX node TP8, or 1 H200 node TP4 | vLLM | Yes |
-| Qwen3-Coder-480B-A35B | 960.3 GB | 480B MoE, 35B active | 1 RTX node TP8 **using the FP8 repo** | vLLM | Yes, after FP8 download |
+| Qwen3-Coder-480B-A35B | 960.3 GB | 480B MoE, 35B active | 1 RTX node **TP4 x PP2** using the FP8 repo | vLLM | Yes, measured |
 | DeepSeek-V4-Pro | 864.7 GB | 1.6T MoE, 49B active | 2 RTX nodes (Blackwell FP4) | vLLM | Yes, multi-node |
 | Kimi-K3 | 1561.0 GB | 2.8T MoE, 104B active | 3 RTX nodes, or 4 H200 nodes | vLLM | **No, needs a vLLM upgrade** |
 
@@ -114,8 +119,9 @@ Options that help: TP2 for latency, `--kv-cache-dtype fp8` for long context, and
 - **FP8 alternative**: `Qwen3-235B-A22B-FP8` is 239.1 GB upstream. That halves the footprint and would
   fit 2 GPUs, freeing a node. Worth downloading if we want this model resident cheaply.
 
-Add `--enable-expert-parallel` for the MoE, and `--tool-call-parser`/`--reasoning-parser` for the
-Qwen3 family.
+Add `--tool-call-parser`/`--reasoning-parser` for the Qwen3 family. Do **not** add
+`--enable-expert-parallel`: it measured 9 percent slower on the RTX node, which has no NVLink, so the
+extra all-to-all traffic costs more than the sharding saves.
 
 ### Qwen3-Coder-480B-A35B-Instruct
 
@@ -127,11 +133,13 @@ The strongest agentic-coding candidate here. `Qwen3MoeForCausalLM`, bf16, 960.3 
   with room for the full 256K context (482 + 62 = 544 GB of 742), or one H200 node at moderate context
   (482 + 31 = 513 GB of 543 at 128K, tight).
 
-Single node matters: it keeps tensor parallelism inside one box and leaves speculative decoding
-available, which pipeline parallelism would forbid.
+Single node matters: it keeps the collectives inside one box. Note that using PP here does forbid
+speculative decoding, but this checkpoint ships no draft model, so nothing is lost.
 
-Recommended shape: 1 RTX node, TP8, FP8 weights, `--enable-expert-parallel`,
-`--tool-call-parser qwen3_coder`, `--kv-cache-dtype fp8`, `--max-model-len` 131072 to start.
+Measured shape: 1 RTX node, **TP4 x PP2**, FP8 weights, `--tool-call-parser qwen3_coder`,
+`--max-model-len` 131072. TP8 is impossible for this checkpoint: `moe_intermediate_size` is 2560 and
+the FP8 block is 128, so 2560/8 = 320 is not divisible by 128. Skip `--enable-expert-parallel` for the
+same reason as the 235B. It does not run on H200 with CUDA graphs at all; see README.md.
 
 ### DeepSeek-V4-Pro
 
@@ -193,8 +201,9 @@ attempt K3 on 3 RTX nodes once a newer vLLM is built and validated.
 4. **Speculative decoding where the model provides a head.** DeepSeek-V4 has MTP, Kimi-K3 has DSpark
    (3.14x upstream), Gemma 4 may have an MTP draft entry. This is the largest decode-speed lever after
    quantization, and it is single-node only.
-5. **`--enable-expert-parallel`** for the large MoE models, and the MoE backend flags upstream
-   recommends for K3 (`flashinfer_trtllm` for TP > 1).
+5. **MoE backend flags**, such as the `flashinfer_trtllm` runner upstream recommends for K3 at TP > 1.
+   Do not assume `--enable-expert-parallel` helps: on the RTX node, which has no NVLink, it measured 9
+   percent slower than plain tensor parallelism.
 6. **Cap `--max-model-len`.** Agentic coding rarely needs 256K, and dropping to 128K or 32K buys back
    tens of GB on the Qwen models.
 7. **`--enable-prefix-caching`** for agentic sessions, where the system prompt and tool definitions
@@ -208,7 +217,7 @@ attempt K3 on 3 RTX nodes once a newer vLLM is built and validated.
 1. `gemma-4-26B-A4B-it` on 1 GPU. Fastest validation of the Gemma 4 path.
 2. `gemma-4-31B-it` on 1 GPU. Confirms the dense variant and 256K context.
 3. `Qwen3-235B-A22B` on 1 RTX node, TP8, as downloaded.
-4. Download the Qwen3-Coder FP8 repo, then serve it on 1 RTX node, TP8. Expected to be the best
+4. Download the Qwen3-Coder FP8 repo, then serve it on 1 RTX node, TP4 x PP2. Expected to be the best
    coding endpoint of this batch.
 5. `DeepSeek-V4-Pro` on 2 RTX nodes, TP8xPP2. Multi-node, so budget time for Ray and NCCL issues.
 6. Build a vLLM 0.26.0 or nightly environment, then attempt `Kimi-K3` on 3 RTX nodes.
