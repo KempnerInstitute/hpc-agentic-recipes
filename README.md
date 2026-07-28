@@ -16,10 +16,12 @@ on either vLLM or SGLang, whichever serves a given model best, and every endpoin
 | Gemma-4-26B-A4B | bf16 | **1 GPU** (any type) | TP1 | 140 to 236 tok/s | 32K (256K max) |
 | Gemma-4-31B | FP8 | **1 GPU** (any type) | TP1 | 40 to 85 tok/s | 32K (256K max) |
 | Qwen3-235B-A22B | bf16 | 1 RTX PRO 6000 node (8 GPUs) | TP8 | ~63 tok/s | 40K |
+| Qwen3-Coder-480B-A35B | FP8 | 1 RTX PRO 6000 node (8 GPUs) | TP4 x PP2 | ~64 tok/s | 128K (256K max) |
 
 Each serves on `http://<node>:8000/v1` with model name `glm-4.6`, `glm-5.2`, `kimi-k2.7-code`,
-`gemma-4-26b`, `gemma-4-31b`, or `qwen3-235b`. Gemma-4-26B-A4B is the fastest and by far the cheapest,
-needing only **one GPU**, so it is the best default for interactive work. Where a range is given it
+`gemma-4-26b`, `gemma-4-31b`, `qwen3-235b`, or `qwen3-coder-480b`. Gemma-4-26B-A4B is the fastest and
+by far the cheapest, needing only **one GPU**, so it is the best default for interactive work.
+Qwen3-Coder-480B is the largest coding model that fits a single node. Where a range is given it
 spans the GPU types; see "Measured decode rates" below for the per-GPU numbers and the winning config.
 Kimi-K2.7-Code (1T-parameter MoE, native INT4, thinking-mode) is the strongest coder; it fits on one
 RTX node or two H200 nodes. GLM-5.2 NVFP4 is near-FP8 quality and suits reasoning. Models supporting
@@ -105,6 +107,8 @@ any value with an environment variable at launch.
 | `KIMI_HEAD`, `KIMI_WORKER` | the two H200 nodes for Kimi-K2.7-Code |
 | `GEMMA4_NODE` | node for Gemma-4-26B and 31B (single GPU; set `GPU=<n>` to pin a device) |
 | `QWEN3_NODE` | RTX node for Qwen3-235B (uses all 8 GPUs) |
+| `CODER_NODE` | RTX node for Qwen3-Coder-480B (uses all 8 GPUs) |
+| `TP`, `PP` | tensor and pipeline parallel sizes (Coder-480B needs TP4, so PP2 on 8 GPUs) |
 | `QUANT` | quantization for the Gemma and Qwen scripts (`fp8`, or empty for bf16) |
 | `MODELS_DIR` | base directory holding the checkpoint folders |
 | `MODEL` | exact checkpoint path to serve (overrides the per-model default) |
@@ -205,6 +209,7 @@ sbatch scripts/slurm_kimi_h200.sbatch     # Kimi-K2.7-Code -> kempner_h200, 2 no
 sbatch scripts/slurm_gemma4.sbatch        # Gemma-4-26B    -> kempner_rtx,  1 node,  1 GPU
 sbatch scripts/slurm_gemma31.sbatch       # Gemma-4-31B    -> kempner_rtx,  1 node,  1 GPU (FP8)
 sbatch scripts/slurm_qwen3.sbatch         # Qwen3-235B     -> kempner_rtx,  1 node,  8 GPUs
+sbatch scripts/slurm_qwen3_coder.sbatch   # Qwen3-Coder-480B -> kempner_rtx, 1 node, 8 GPUs (TP4xPP2)
 ```
 
 The two Gemma jobs are single-GPU and also run on H200 or H100. Switch partition and runtime env:
@@ -255,6 +260,10 @@ bash scripts/serve_kimi_rtx_ssh.sh       # or serve_kimi_h200_ssh.sh  (Kimi-K2.7
 GPU=1 bash scripts/serve_gemma4_ssh.sh   # Gemma-4-26B on one GPU of a shared node
 bash scripts/serve_qwen3_ssh.sh          # Qwen3-235B across all 8 GPUs of an RTX node
 
+# Qwen3-Coder-480B reuses the same script with TP4 x PP2 and its own parsers:
+QWEN3_NODE="$CODER_NODE" MODEL="$CODER_MODEL" SERVED_NAME=qwen3-coder-480b \
+  TP=4 PP=2 TOOL_PARSER=qwen3_coder REASONING_PARSER= bash scripts/serve_qwen3_ssh.sh
+
 # Gemma-4-31B (dense) reuses the same script, with FP8 and its own served name:
 MODEL="$GEMMA31_MODEL" SERVED_NAME=gemma-4-31b QUANT=fp8 GPU=1 bash scripts/serve_gemma4_ssh.sh
 bash scripts/serve_sglang_glm_ssh.sh     # GLM-5.2 FP8 via SGLang (alternate engine)
@@ -270,7 +279,8 @@ node from `config.sh`; for a Slurm-allocated host, set the matching node variabl
 
 ```
 RTX_NODE=<host> source clients/claude-code-glm52-nvfp4.env
-# others: claude-code-kimi.env, claude-code-gemma4.env, claude-code-gemma31.env, claude-code-qwen3.env
+# others: claude-code-kimi.env, claude-code-gemma4.env, claude-code-gemma31.env,
+#         claude-code-qwen3.env, claude-code-qwen3-coder.env
 claude
 ```
 
@@ -282,7 +292,7 @@ claude
 
 OpenAI-compatible tools (Cline, Aider, Continue, OpenHands) work with either engine: base URL
 `http://<host>:8000/v1`, API key from `secrets/vllm_api_key`, model `glm-4.6`, `glm-5.2`,
-`kimi-k2.7-code`, `gemma-4-26b`, `gemma-4-31b`, or `qwen3-235b`.
+`kimi-k2.7-code`, `gemma-4-26b`, `gemma-4-31b`, `qwen3-235b`, or `qwen3-coder-480b`.
 
 ### Measured decode rates
 
@@ -297,6 +307,7 @@ into the rate and understates decode by up to 40 percent, so prefer the slope wh
 | Gemma-4-31B | **FP8**, TP1 (best) | 40.1 | 68.7 | **85.3** |
 | Gemma-4-31B | bf16, TP1 | 23.0 | 40.7 | 56.3 |
 | Qwen3-235B-A22B | bf16, TP8, full node | **63.0** | n/a | n/a |
+| Qwen3-Coder-480B-A35B | FP8, TP4 x PP2, full node | **63.9** | n/a | see note |
 
 What does and does not help, all measured rather than assumed:
 
@@ -319,6 +330,21 @@ The three models sit in different regimes, which is why the same flag helps one 
   bandwidth alone implies about 3 ms. The RTX node has no NVLink and requires `NCCL_P2P_DISABLE=1`, so
   the tensor-parallel all-reduces in all 94 layers cross host memory. Expert parallelism adds
   all-to-all traffic on the same path and measured slower.
+
+> [!WARNING]
+> Qwen3-Coder-480B-FP8 **cannot run at TP8**. Its `moe_intermediate_size` is 2560 and its FP8
+> quantization block is 128, so TP8 leaves 2560/8 = 320 per shard, which is not divisible by 128, and
+> vLLM refuses to start. Use **TP4**, which on an 8-GPU node means adding `PP2`. This is why the model
+> is served as TP4 x PP2 rather than TP8.
+
+> [!NOTE]
+> Qwen3-Coder-480B on a **4-GPU H200 node did not start with CUDA graphs**, failing during graph
+> capture even after raising `--gpu-memory-utilization` to 0.96 (which more than doubled free KV, so
+> KV space was not the limit). With `--enforce-eager` it served at 22.2 tok/s, but that is not
+> comparable to the RTX figure above, which used CUDA graphs. Two contributing factors: 482 GB across
+> only 4 GPUs leaves about 15 GB per GPU for graphs, and `lib_env.sh` sets `VLLM_USE_DEEP_GEMM=0`, so
+> H200 compiles the MoE through Triton instead of DeepGEMM. A 2-node H200 run at TP4 x PP2 has not
+> been measured yet.
 
 Context length is the other thing VRAM decides. Gemma-4-31B in bf16 reached a 190K-token KV cache on
 one 96 GB card, while FP8 weights freed enough room for 503K tokens, comfortably covering the model's
@@ -376,6 +402,7 @@ Checkpoint folders live under `MODELS_DIR` (default
 ```
 GLM-5.2-NVFP4/   GLM-5.2-FP8/   GLM-4.6-FP8/   Kimi-K2.7-Code/
 gemma-4-26B-A4B-it/   gemma-4-31B-it/   Qwen3-235B-A22B/
+Qwen3-Coder-480B-A35B-Instruct-FP8/
 ```
 
 Each Gemma 4 checkpoint also has an optional speculative-decoding drafter, under 1 GB:

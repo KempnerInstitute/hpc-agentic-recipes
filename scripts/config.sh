@@ -14,6 +14,7 @@
 #   Gemma-4-26B    : 1 GPU (TP1) on any node type
 #   Gemma-4-31B    : 1 GPU (TP1) on any node type, FP8 weights
 #   Qwen3-235B     : 1 RTX PRO 6000 node (8 GPUs, TP8)
+#   Qwen3-Coder-480B: 1 RTX PRO 6000 node (8 GPUs, TP4 x PP2; TP8 is not possible)
 
 : "${API_PORT:=8000}"
 
@@ -27,6 +28,7 @@
 : "${KIMI_WORKER:=holygpu8a10301}"    # Kimi-K2.7-Code -> H200 worker (2-node alternative)
 : "${GEMMA4_NODE:=holygpu7c2313}"     # Gemma-4-26B/31B -> 1 GPU on any GPU node
 : "${QWEN3_NODE:=holygpu7c1913}"      # Qwen3-235B      -> 1 full RTX PRO 6000 node
+: "${CODER_NODE:=holygpu7c1913}"      # Qwen3-Coder-480B -> 1 full RTX PRO 6000 node
 
 # Checkpoint paths. Override MODEL at launch to serve a copy elsewhere (e.g. VAST scratch).
 : "${MODELS_DIR:=/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models}"
@@ -39,3 +41,4 @@
 : "${GEMMA31_MODEL:=$MODELS_DIR/gemma-4-31B-it}"
 : "${GEMMA31_DRAFT:=$MODELS_DIR/gemma-4-31B-it-assistant}"
 : "${QWEN3_MODEL:=$MODELS_DIR/Qwen3-235B-A22B}"
+: "${CODER_MODEL:=$MODELS_DIR/Qwen3-Coder-480B-A35B-Instruct-FP8}"
