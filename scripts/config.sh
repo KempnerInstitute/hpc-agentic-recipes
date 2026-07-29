@@ -18,6 +18,11 @@
 
 : "${API_PORT:=8000}"
 
+# Where the SSH launchers write server logs. Node-local by default, because every rank writes stderr
+# for the life of the endpoint: a log on a network filesystem puts a blocking write on the critical
+# path, and a filesystem stall then freezes the server until its own NCCL watchdog kills it.
+: "${LOG_DIR:=/tmp/$USER/vllm}"
+
 # Target nodes (hostnames only; override per reservation).
 : "${GLM46_NODE:=holygpu8a10201}"     # GLM-4.6 FP8    -> 1 H200 node
 : "${GLM52_HEAD:=holygpu8a10101}"     # GLM-5.2 FP8    -> H200 head

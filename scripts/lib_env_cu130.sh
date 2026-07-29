@@ -2,11 +2,14 @@
 # Separate venv (.venv-cu130, torch cu130) from the H200 CUDA-12.9 envs; only runs on the RTX node.
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export PATH="$HOME/.local/bin:$PATH"
-source "$REPO_DIR/.venv-cu130/bin/activate"
+# Set VENV_DIR and CUDA13_DIR to run from a copy of the environment on faster storage. Startup is
+# dominated by page-faulting the torch shared objects and stat-ing the many small package files, so
+# a parallel filesystem tuned for large sequential I/O makes imports take minutes instead of seconds.
+source "${VENV_DIR:-$REPO_DIR/.venv-cu130}/bin/activate"
 # CUDA 13.0 toolkit for FlashInfer's sm_120 sparse-MLA JIT. The node's /usr/local/cuda-13 is
 # runtime-only and the fragmented pip nvcc wheels mix 13.0/13.2 (nvcc vs cicc/ptxas), which breaks
 # the JIT; use the complete, consistent CUDA 13.0 toolkit installed via conda (nvidia channel).
-_CU13="$REPO_DIR/cuda13"
+_CU13="${CUDA13_DIR:-$REPO_DIR/cuda13}"
 export CUDA_HOME="${CUDA_HOME:-$_CU13}"
 export PATH="$CUDA_HOME/bin:$PATH"
 # Only expose the toolkit for compiling (nvcc/cicc/ptxas find their own libs via rpath).
@@ -34,6 +37,10 @@ mkdir -p "$TRITON_CACHE_DIR" "$TORCHINDUCTOR_CACHE_DIR" "$FLASHINFER_WORKSPACE_D
 # RTX PRO 6000 has no NVLink; P2P over PCIe must be disabled or NCCL init hangs.
 export NCCL_P2P_DISABLE=1
 export VLLM_ENGINE_READY_TIMEOUT_S=3600
+# PyTorch kills the process when the NCCL watchdog thread stops sending heartbeats, on the assumption
+# that the collective hung. A stalled network filesystem freezes every rank the same way, so at the
+# 480s default a storage outage that later recovers still takes the endpoint down permanently.
+export TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC="${TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC:-3600}"
 # API key for the served endpoint (same gitignored secrets file as the H200 models): access
 # requires the key, passed via env (not argv) so it is not visible in `ps`.
 _KEYFILE="$REPO_DIR/secrets/vllm_api_key"

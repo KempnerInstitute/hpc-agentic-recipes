@@ -2,7 +2,9 @@
 # Separate venv from vLLM (.venv-sglang) so both engines coexist.
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export PATH="$HOME/.local/bin:$PATH"
-source "$REPO_DIR/.venv-sglang/bin/activate"
+# Set VENV_DIR to run from a copy of the environment on faster storage. Startup is dominated by
+# page-faulting the torch shared objects and stat-ing the many small package files.
+source "${VENV_DIR:-$REPO_DIR/.venv-sglang}/bin/activate"
 # The pip CUDA stack ships no nvcc, and system gcc 8.5 is too old for the FP8/DSA C++20 kernels;
 # load the cluster CUDA 12.9 + gcc 12.2 toolchain so nvcc JIT works.
 source /etc/profile.d/lmod.sh 2>/dev/null || true
@@ -14,6 +16,10 @@ export PYTHONUNBUFFERED=1
 export TRITON_CACHE_DIR="/tmp/${USER}/triton"
 export TORCHINDUCTOR_CACHE_DIR="/tmp/${USER}/torchinductor"
 mkdir -p "$TRITON_CACHE_DIR" "$TORCHINDUCTOR_CACHE_DIR" 2>/dev/null || true
+# PyTorch kills the process when the NCCL watchdog thread stops sending heartbeats, on the assumption
+# that the collective hung. A stalled network filesystem freezes every rank the same way, so at the
+# 480s default a storage outage that later recovers still takes the endpoint down permanently.
+export TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC="${TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC:-3600}"
 export NCCL_SOCKET_IFNAME=ib0
 export GLOO_SOCKET_IFNAME=ib0
 export NCCL_DEBUG="${NCCL_DEBUG:-WARN}"

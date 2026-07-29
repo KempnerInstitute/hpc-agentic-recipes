@@ -1,7 +1,9 @@
 # Shared runtime environment for multi-node vLLM (source this, do not execute).
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export PATH="$HOME/.local/bin:$PATH"
-source "$REPO_DIR/.venv/bin/activate"
+# Set VENV_DIR to run from a copy of the environment on faster storage. Startup is dominated by
+# page-faulting the torch shared objects and stat-ing the many small package files.
+source "${VENV_DIR:-$REPO_DIR/.venv}/bin/activate"
 # The pip CUDA stack ships no nvcc, and system gcc 8.5 is too old for DeepGEMM's C++20 kernels;
 # load the cluster CUDA 12.9 + gcc 12.2 toolchain (with gmp/mpfr/mpc deps) so nvcc JIT works.
 source /etc/profile.d/lmod.sh 2>/dev/null || true
@@ -16,6 +18,10 @@ export TORCHINDUCTOR_CACHE_DIR="/tmp/${USER}/torchinductor"
 export VLLM_USE_DEEP_GEMM=0
 # Startup (weight load + torch.compile + CUDA-graph capture) can exceed the 600s default.
 export VLLM_ENGINE_READY_TIMEOUT_S=3600
+# PyTorch kills the process when the NCCL watchdog thread stops sending heartbeats, on the assumption
+# that the collective hung. A stalled network filesystem freezes every rank the same way, so at the
+# 480s default a storage outage that later recovers still takes the endpoint down permanently.
+export TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC="${TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC:-3600}"
 export NCCL_SOCKET_IFNAME=ib0
 export GLOO_SOCKET_IFNAME=ib0
 export NCCL_DEBUG="${NCCL_DEBUG:-WARN}"
