@@ -1,6 +1,6 @@
 # GLM-5.2-NVFP4 on one RTX PRO 6000 node
 
-Status: Untested (migrated) - numbers below were measured 2026-07-19 with the pre-restructure scripts, protocol: single-generation
+Status: Validated - 2026-07-29, vLLM 0.25.1, protocol: slope(128,1152)
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -27,6 +27,19 @@ defaults, so a fresh clone runs as is. Four optional overrides, either exported 
 | `ENV_ROOT` | VAST scratch | Where this recipe builds its environment |
 
 ## Status
+
+Validated on 2026-07-29 through the canonical Slurm path. The environment was built from
+`env/build.sh` on a fresh netscratch tree, the job was submitted with
+`sbatch --account=<acct> recipes/GLM-5.2-NVFP4/rtx-8/serve.sbatch`, and the rate was measured with
+`common/tools/bench.sh`. Ready 14 minutes 51 seconds after the job started, which includes loading 47
+shards and compiling the FlashInfer sm_120 kernels from source for the first time. Key gating and the
+Anthropic endpoint were both confirmed.
+
+Measured 101.6 tok/s, against the about 90 tok/s recorded before the restructure. The difference is the
+measurement protocol, not a change in the model: the older figure used a single timed generation, which
+counts prefill and fixed per-request cost as decode time. That bias is largest for fast models, and at
+roughly 100 tok/s a 1152-token generation takes 12 seconds, so about a second of fixed cost was
+suppressing the reported rate by more than 10 percent.
 
 Untested (migrated). The decode rate below was measured before the restructure, with the older
 single-generation protocol rather than the slope method, so treat it as conservative and not directly
@@ -237,7 +250,7 @@ instead of the hosted tool.
 
 | Configuration | Decode rate | Protocol |
 | --- | --- | --- |
-| TP8, CUDA graphs, MTP 3 tokens | about 90 tok/s, peaks about 98 | single-generation |
+| TP8, CUDA graphs, MTP 3 tokens | 101.6 tok/s, peaks about 98 | slope(128,1152) |
 
 Context window 128K as served. The rate is conservative: the single-generation protocol counts prefill
 and fixed per-request cost as decode time, which understates sustained decode by up to 40 percent. To

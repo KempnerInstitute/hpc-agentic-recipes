@@ -43,7 +43,7 @@ not the same as best at coding: the fastest model here activates only 4B paramet
 
 | Model | Precision | Hardware | Parallelism | Decode | Protocol | Context | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| [GLM-5.2](recipes/GLM-5.2-NVFP4/rtx-8) | NVFP4 | 1 RTX node, 8 GPUs | TP8 | about 90 tok/s | single-generation | 128K | Untested (migrated) |
+| [GLM-5.2](recipes/GLM-5.2-NVFP4/rtx-8) | NVFP4 | 1 RTX node, 8 GPUs | TP8 | 101.6 tok/s | slope(128,1152) | 128K | Validated 2026-07-29 |
 | [GLM-5.2](recipes/GLM-5.2-FP8/h200-4-nodes2) | FP8 | 2 H200 nodes | TP4 x PP2 | about 13 tok/s | single-generation | 1M | Untested (migrated) |
 | [GLM-4.6](recipes/GLM-4.6-FP8/h200-4) | FP8 | 1 H200 node, 4 GPUs | TP4 | 18.5 tok/s | slope(128,1152) | 200K | Validated 2026-07-29 |
 | [Kimi-K2.7-Code](recipes/Kimi-K2.7-Code/rtx-8) | INT4 | 1 RTX node, 8 GPUs | TP8 | about 21 tok/s | single-generation | 32K | Untested (migrated) |

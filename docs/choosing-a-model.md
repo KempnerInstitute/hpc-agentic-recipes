@@ -14,8 +14,7 @@ matters more than latency and you can hold a full node.
 **Largest coding model that fits a single node:** Qwen3-Coder-480B-FP8 on one RTX node, at a decode rate
 close to the much smaller Qwen3-235B, which makes it a strong quality-per-second choice.
 
-**Best reasoning and the fastest large model measured here:** GLM-5.2 in NVFP4 on one RTX node, at about
-90 tok/s, helped by MTP speculative decoding that works because the model fits one node with no pipeline
+**Best reasoning and the fastest large model measured here:** GLM-5.2 in NVFP4 on one RTX node, at 101.6 tok/s measured with the slope method, helped by MTP speculative decoding that works because the model fits one node with no pipeline
 parallelism.
 
 **Longest context:** GLM-5.2-FP8 across two H200 nodes reaches 1M tokens, at a much lower decode rate.
