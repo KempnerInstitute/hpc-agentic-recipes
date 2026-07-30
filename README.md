@@ -90,7 +90,7 @@ common/site.conf.example                  optional overrides: your nodes, your a
 common/lib/                               repo root and API key resolution
 common/issues/                            canonical failure-mode text plus the recipe matrix
 common/tools/                             for recipe users: bench.sh, search.sh, stop.sh,
-                                          rebuild_envs_scratch_space.sh
+                                          rebuild_envs.sh
                                           for maintainers: audit_recipes.sh, new_recipe.sh
 common/skills/local-search/               skill that makes a client use search.sh
 docs/                                     cross-model guides

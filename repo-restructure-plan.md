@@ -160,7 +160,7 @@ common/
     download_model.sh
     search.sh
     audit_recipes.sh
-    rebuild_envs_scratch_space.sh
+    rebuild_envs.sh
     new_recipe.sh
 docs/
   quickstart.md               connect to an endpoint someone else is already serving
@@ -460,7 +460,7 @@ omissions: five scripts each serve two recipes and appeared once.
 
 Also corrected: `clients/claude-code.env` to R4 rather than a docs example; `stop_ssh.sh` to
 `stop.sh` with the rename declared; `SKILL.md` edited rather than unchanged; `audit_recipes.sh`,
-`rebuild_envs_scratch_space.sh`, `new_recipe.sh`, and `docs/roadmap.md` added to the tree, since v1 referenced them
+`rebuild_envs.sh`, `new_recipe.sh`, and `docs/roadmap.md` added to the tree, since v1 referenced them
 without creating them.
 
 `env/env.sh` is a complete runtime preamble, not "runtime variables only". v1's description would have

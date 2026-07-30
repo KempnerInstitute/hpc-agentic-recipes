@@ -25,11 +25,25 @@ bash common/tools/bench.sh --host <node> --model <name> --sweep 1,4,16,32 find t
 
 ## Prompt length is a third axis
 
-The slope method cancels prefill, so prompt length does not distort the measurement. But it is not
-neutral to the result: attention reads the whole KV cache on every decode step, so a long context
-genuinely slows decode. A rate measured with a 20-token prompt overstates what you will see at 30K.
-Use `--prompt-tokens 8000` to measure at a realistic context before quoting a number for long-context
-work. The tool reports the prompt length the server actually counted, not an estimate.
+The slope method cancels prefill, so prompt length never distorts the measurement. Whether it changes
+the result is an empirical question, and the answer depends on the model's attention design rather than
+on any general rule.
+
+Measured on GLM-5.2-NVFP4, one RTX node, concurrency 1:
+
+| ISL, input tokens | Decode | TTFT |
+| --- | --- | --- |
+| 21 | 97.0 tok/s | 91 ms |
+| 7052 | 97.8 tok/s | 123 ms |
+| 26379 | 95.0 tok/s | 131 ms |
+
+Decode is flat to 26K within noise. Only time to first token grows, which is prefill doing more work.
+The reason is architectural: MLA compresses the KV cache, this recipe stores it as fp8, and DeepSeek
+sparse attention reads only a subset of the context, so the per-step read barely grows with length.
+
+Do not generalize that. A dense model with full attention and a bf16 KV cache reads the whole cache
+every step and should degrade noticeably. Measure with `--prompt-tokens` rather than assuming, in either
+direction. The tool reports the prompt length the server actually counted, not an estimate.
 
 ## Use the slope method
 

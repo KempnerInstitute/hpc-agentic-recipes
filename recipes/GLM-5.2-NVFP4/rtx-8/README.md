@@ -247,39 +247,42 @@ instead of the hosted tool.
 
 ## Measured performance
 
-| Configuration | Decode rate | Protocol |
+| Configuration | Rate | Per stream | Notes |
+| --- | --- | --- | --- |
+| Single stream, concurrency 1 | 94.3 tok/s | 94.3 tok/s | interactive latency, TTFT 89 ms |
+| Saturated, concurrency 8 | 378.4 tok/s | 47.3 tok/s | aggregate across 8 requests |
+| Saturated, concurrency 32 | 691.7 tok/s | 21.6 tok/s | peak measured |
+
+Measured 2026-07-30 with `common/tools/bench.sh`. Full disclosure, without which a tokens per second
+figure cannot be compared against anything:
+
+| Parameter | Value |
+| --- | --- |
+| ISL, input tokens | 21 |
+| OSL, output tokens | 1152, as the slope between 128 and 1152 |
+| Counted | output tokens only, never input plus output |
+| Protocol | slope(128,1152) |
+| Hardware | one RTX PRO 6000 Blackwell node, 8 GPUs |
+
+Per stream latency degrades sharply under load here, from 94.3 to 21.6 tok/s. That is the MTP
+speculative decoding losing its advantage: speculation spends extra compute to save latency, which pays
+off when the GPU is idle at concurrency 1 and competes with real work once the batch is full.
+
+Quote the single stream figure for interactive coding and the aggregate for serving several people.
+Never compare one against the other.
+
+Context length turned out not to matter much for this model. Measured at concurrency 1:
+
+| ISL, input tokens | Decode | TTFT |
 | --- | --- | --- |
-| TP8, CUDA graphs, MTP 3 tokens | 101.6 tok/s, peaks about 98 | slope(128,1152) |
+| 21 | 97.0 tok/s | 91 ms |
+| 7052 | 97.8 tok/s | 123 ms |
+| 26379 | 95.0 tok/s | 131 ms |
 
-Context window 128K as served. The rate is conservative: the single-generation protocol counts prefill
-and fixed per-request cost as decode time, which understates sustained decode by up to 40 percent. To
-re-measure with the slope method, which cancels those fixed costs:
-
-```
-bash common/tools/bench.sh --host <node> --model glm-5.2
-```
-
-What helped: this hardware. CUDA graphs capture cleanly on sm_120 with CUDA 13, and one node means no
-pipeline parallelism, so MTP speculative decoding is available as well. The same model in FP8 across
-two H200 nodes measured about 13 tok/s, roughly a seventh of this, because there graph capture crashes
-and pipeline parallelism rules out speculative decoding.
-
-Both figures above are **single stream**, meaning one request at a time, which is what an interactive
-coding session feels. That leaves the GPU far from saturated. To measure total throughput with
-concurrent requests, and to find where it stops rising:
-
-```
-bash common/tools/bench.sh --host <node> --model glm-5.2 --sweep 1,4,16,32
-```
-
-Aggregate throughput is several times the single stream figure, while per stream latency falls. On one
-endpoint here, concurrency 8 delivered 404.6 tok/s aggregate against 90.0 tok/s single stream, with
-each stream seeing 50.6 tok/s. Quote the single stream number for interactive use and the aggregate for
-serving several people at once, and never compare one against the other.
-
-Prompt length is a separate axis. The slope method cancels prefill, so a long prompt does not distort
-the measurement, but a large KV cache does slow every decode step. Add `--prompt-tokens 8000` or
-similar to measure decode at the context you actually work at rather than at an empty one.
+Decode is flat to 26K within run-to-run noise, and only time to first token grows, which is prefill
+doing more work. That is a property of the attention design rather than a general rule: MLA compresses
+the KV cache, it is stored as fp8, and sparse attention reads only a subset of the context, so the
+per-step read barely grows. Do not carry this result over to a dense model with full attention.
 
 ## Parallelism and quantization
 

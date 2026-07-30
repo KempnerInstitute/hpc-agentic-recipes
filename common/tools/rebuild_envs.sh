@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # Rebuild recipe environments from their own build scripts.
 #
-# WHEN YOU NEED THIS. Only if ENV_ROOT points at scratch. Scratch has a 90-day retention policy, so
+# WHY THIS EXISTS. Retention-based storage. ENV_ROOT defaults to scratch, which expires after 90 days,
+# so environments there vanish periodically and every recipe has to be rebuilt from its own build.sh.
+# The script itself is not scratch specific and will rebuild any ENV_ROOT.
+#
+# WHEN YOU NEED THIS. Routinely, if ENV_ROOT points at scratch. Scratch has a 90-day retention policy, so
 # environments there vanish periodically and every recipe has to be rebuilt from its own build.sh.
 #
 # WHEN YOU DO NOT. ENV_ROOT is yours to choose. Point it at lab or project space with no retention
@@ -13,9 +17,9 @@
 # The tradeoff is speed, not correctness: scratch is measurably faster to import from, which is why it
 # is the default. See the note in common/defaults.sh.
 #
-#   rebuild_envs_scratch_space.sh                 rebuild every recipe that has no complete environment
-#   rebuild_envs_scratch_space.sh --force         rebuild everything from scratch
-#   rebuild_envs_scratch_space.sh <recipe> ...    rebuild only the named recipes, for example GLM-4.6-FP8/h200-4
+#   rebuild_envs.sh                 rebuild every recipe that has no complete environment
+#   rebuild_envs.sh --force         rebuild everything from scratch
+#   rebuild_envs.sh <recipe> ...    rebuild only the named recipes, for example GLM-4.6-FP8/h200-4
 #
 # ENV_ROOT points at scratch, which has a 90-day retention policy, so environments are expected to
 # disappear periodically. That is fine: they are disposable, and every recipe can rebuild its own.

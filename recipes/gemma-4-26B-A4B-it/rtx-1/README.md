@@ -243,45 +243,29 @@ instead of the hosted tool.
 
 ## Measured performance
 
-| Configuration | Decode rate | Protocol |
-| --- | --- | --- |
-| TP1, bf16, 32K context | 140.5 tok/s | slope(128,1152) |
+| Configuration | Rate | Per stream | Latency |
+| --- | --- | --- | --- |
+| Single stream, concurrency 1 | 140.6 tok/s | 140.6 tok/s | TTFT median 34 ms, n=3 spanning 140.4 to 140.6 |
+| Saturated, concurrency 8 | 842.1 tok/s | 105.3 tok/s | TTFT median 37 ms, p90 52 ms, n=3 spanning 842.1 to 842.2 |
+| Saturated, concurrency 32 | 2178.2 tok/s | 68.1 tok/s | TTFT median 83 ms, p90 101 ms, n=3 spanning 2177.9 to 2178.7 |
 
-Sustained single-stream decode, greedy, measured on one RTX PRO 6000 on 2026-07-27. The slope
-protocol times the same request at 128 and at 1152 output tokens and divides the difference, which
-cancels prefill and per-request overhead; a single timed generation understates decode by up to 40
-percent. Sibling recipes serve this checkpoint on H200 and H100, both of which measured faster.
+Measured 2026-07-30 with `common/tools/bench.sh`, endpoint ready 3m 45s after launch. Full disclosure, without which a
+tokens per second figure cannot be compared against anything:
 
-What did not help, all measured rather than assumed:
-
-| Change | Effect on decode rate |
+| Parameter | Value |
 | --- | --- |
-| FP8 weights | no change |
-| FP8 KV cache | no change |
-| n-gram speculative decoding | halves throughput |
+| ISL, input tokens | 19 |
+| OSL, output tokens | 1152, as the slope between 128 and 1152 |
+| Counted | output tokens only, never input plus output |
+| Protocol | slope(128,1152), 3 repeats per level, median reported |
+| Hardware | one RTX PRO 6000 Blackwell GPU |
 
-To re-measure:
+Quote 140.6 tok/s for interactive coding, where one person waits on one response,
+and 2178.2 tok/s at concurrency 32 when the endpoint serves several people at once.
+Never compare one against the other.
 
-```
-bash common/tools/bench.sh --host <node> --model gemma-4-26b
-```
-
-Both figures above are **single stream**, meaning one request at a time, which is what an interactive
-coding session feels. That leaves the GPU far from saturated. To measure total throughput with
-concurrent requests, and to find where it stops rising:
-
-```
-bash common/tools/bench.sh --host <node> --model gemma-4-26b --sweep 1,4,16,32
-```
-
-Aggregate throughput is several times the single stream figure, while per stream latency falls. On one
-endpoint here, concurrency 8 delivered 404.6 tok/s aggregate against 90.0 tok/s single stream, with
-each stream seeing 50.6 tok/s. Quote the single stream number for interactive use and the aggregate for
-serving several people at once, and never compare one against the other.
-
-Prompt length is a separate axis. The slope method cancels prefill, so a long prompt does not distort
-the measurement, but a large KV cache does slow every decode step. Add `--prompt-tokens 8000` or
-similar to measure decode at the context you actually work at rather than at an empty one.
+The input sequence here is short, which is the best case for decode. Measure with
+`--prompt-tokens` at your working context before quoting a number for long-context work.
 
 ## Parallelism and quantization
 

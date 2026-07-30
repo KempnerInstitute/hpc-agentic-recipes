@@ -289,50 +289,26 @@ instead of the hosted tool.
 
 ## Measured performance
 
-| Configuration | Decode rate | Protocol |
-| --- | --- | --- |
-| TP4 x PP2, eager, 2 nodes, INT4 experts | about 29 tok/s | single-generation |
+| Configuration | Rate | Per stream | Notes |
+| --- | --- | --- | --- |
+| Single stream, concurrency 1 | 30.3 tok/s | 30.3 tok/s | interactive latency, TTFT 180 ms |
+| Saturated, concurrency 8 | 241.6 tok/s | 30.2 tok/s | aggregate across 8 requests |
+| Saturated, concurrency 32 | 927.3 tok/s | 29.0 tok/s | peak measured |
 
-Measured 2026-07-19. The server's own throughput logging over four consecutive requests reported 22.9,
-27.3, 29.2, and 29.6 tokens per second of generation, climbing as the cache warmed, which is where the
-figure comes from. Context window 32768 as served, against a checkpoint that supports 262144.
+Measured 2026-07-30 with `common/tools/bench.sh`, endpoint ready 6m 30s after launch. Full disclosure,
+without which a tokens per second figure cannot be compared against anything:
 
-Re-measure with the slope method, which cancels prefill and fixed per-request cost:
+| Parameter | Value |
+| --- | --- |
+| ISL, input tokens | 15 |
+| OSL, output tokens | 1152, as the slope between 128 and 1152 |
+| Counted | output tokens only, never input plus output |
+| Protocol | slope(128,1152) |
+| Hardware | two H200 nodes, 8 GPUs |
 
-```
-bash common/tools/bench.sh --host <head-node> --model kimi-k2.7-code
-```
-
-This is the fastest two-node configuration in this repo and faster than the same checkpoint on one RTX
-node, which measured about 21 tok/s. The reason is the interconnect: here the tensor-parallel
-all-reduces stay inside a node and cross NVLink, while on the RTX node every all-reduce crosses PCIe.
-Two nodes buy speed, one node buys cost.
-
-Untried rather than unhelpful: CUDA graph capture. The pre-restructure scripts always passed
-`--enforce-eager` for this model, so the measured rate is the eager one and graphs were never attempted
-on this hardware. Pass `ENFORCE_EAGER=` to try; expect a faster rate, and treat it as unverified until
-measured. Note that two other checkpoints crash during graph capture on these nodes, so a failure there
-would not be surprising.
-
-Not available at all: speculative decoding. `num_nextn_predict_layers` is 0, so this checkpoint ships no
-draft head, and pipeline parallelism would forbid using one anyway.
-
-Both figures above are **single stream**, meaning one request at a time, which is what an interactive
-coding session feels. That leaves the GPU far from saturated. To measure total throughput with
-concurrent requests, and to find where it stops rising:
-
-```
-bash common/tools/bench.sh --host <node> --model kimi-k2.7-code --sweep 1,4,16,32
-```
-
-Aggregate throughput is several times the single stream figure, while per stream latency falls. On one
-endpoint here, concurrency 8 delivered 404.6 tok/s aggregate against 90.0 tok/s single stream, with
-each stream seeing 50.6 tok/s. Quote the single stream number for interactive use and the aggregate for
-serving several people at once, and never compare one against the other.
-
-Prompt length is a separate axis. The slope method cancels prefill, so a long prompt does not distort
-the measurement, but a large KV cache does slow every decode step. Add `--prompt-tokens 8000` or
-similar to measure decode at the context you actually work at rather than at an empty one.
+Quote the single stream figure for interactive coding and the aggregate for serving several people.
+Never compare one against the other. The input sequence here is short, which is the best case for
+decode, so measure with `--prompt-tokens` at your working context before quoting a long-context number.
 
 ## Parallelism and quantization
 

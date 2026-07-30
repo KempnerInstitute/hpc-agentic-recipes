@@ -13,7 +13,13 @@ FLASHINFER_VERSION="${FLASHINFER_VERSION:-0.6.15}"
 
 # "Directory exists" is not "environment works": an interrupted install leaves a venv skeleton behind,
 # and skipping on mere existence would then serve from a broken environment.
-venv_healthy () { compgen -G "$VENV"/lib/python*/site-packages/vllm-*.dist-info > /dev/null; }
+venv_healthy () {
+  # bin/python is the proof. An interrupted install leaves site-packages populated while the
+  # interpreter and activate script are missing, so a dist-info check passes on a venv that
+  # cannot be activated or run.
+  [ -x "$VENV/bin/python" ] && [ -f "$VENV/bin/activate" ] \
+    && compgen -G "$VENV"/lib/python*/site-packages/vllm-*.dist-info > /dev/null
+}
 if venv_healthy && [ "${1:-}" != "--force" ]; then
   echo "environment already present and complete at $VENV (pass --force to rebuild)"
   exit 0

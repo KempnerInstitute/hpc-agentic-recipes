@@ -70,6 +70,33 @@ def one_request(url, key, model, prompt, max_tokens, timeout):
     return usage.get("completion_tokens"), usage.get("prompt_tokens")
 
 
+def ttft(url, key, model, prompt, timeout):
+    """Time to first token, measured on a streaming request. Standard practice reports this next to
+    throughput, because it is what determines whether an interactive session feels responsive."""
+    body = json.dumps({
+        "model": model, "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 64, "temperature": 0, "stream": True,
+    }).encode()
+    req = urllib.request.Request(url, data=body, method="POST")
+    req.add_header("Content-Type", "application/json")
+    if key:
+        req.add_header("Authorization", "Bearer " + key)
+    t0 = time.monotonic()
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        for raw in resp:
+            line = raw.decode(errors="replace").strip()
+            if not line.startswith("data:") or line.endswith("[DONE]"):
+                continue
+            try:
+                chunk = json.loads(line[5:].strip())
+            except ValueError:
+                continue
+            delta = (chunk.get("choices") or [{}])[0].get("delta") or {}
+            if delta.get("content") or delta.get("reasoning"):
+                return time.monotonic() - t0
+    return None
+
+
 def timed_batch(url, key, model, prompt, max_tokens, concurrency, timeout):
     """Wall time for `concurrency` simultaneous requests to all finish."""
     with ThreadPoolExecutor(max_workers=concurrency) as pool:
@@ -84,9 +111,10 @@ def timed_batch(url, key, model, prompt, max_tokens, concurrency, timeout):
         raise RuntimeError("only %d of %d requests returned usage" % (len(completed), concurrency))
     short = min(completed)
     if short != max_tokens:
-        # ignore_eos should make this exact. If the server clamped it, the slope denominator is wrong.
-        print("  warning: asked for %d output tokens, got %d; rate may be off"
-              % (max_tokens, short), file=sys.stderr)
+        # ignore_eos should make this exact. A clamped count makes the slope denominator wrong, which
+        # would silently misreport the rate, so fail instead of warning.
+        raise RuntimeError("asked for %d output tokens, server returned %d; slope would be wrong"
+                           % (max_tokens, short))
     return elapsed, prompt_tokens, short
 
 
@@ -102,7 +130,8 @@ def main():
                     help="pad the prompt to about this many tokens to measure decode at context")
     ap.add_argument("--short", type=int, default=128)
     ap.add_argument("--long", type=int, default=1152)
-    ap.add_argument("--repeats", type=int, default=3)
+    ap.add_argument("--repeats", type=int, default=3,
+                    help="samples per concurrency level; 3 or more for a publishable number")
     ap.add_argument("--sweep", default="",
                     help="comma separated concurrency levels, for example 1,4,16,32")
     ap.add_argument("--timeout", type=int, default=1800)
@@ -132,9 +161,20 @@ def main():
         return 0
 
     levels = [int(x) for x in args.sweep.split(",")] if args.sweep else [args.concurrency]
+    if args.repeats < 2:
+        print("NOTE: --repeats %d gives a single sample per level, so there is no median and no way to"
+              % args.repeats)
+        print("      see run to run spread. Use 3 or more for a number you intend to publish.")
     rows = []
     for c in levels:
         rates = []
+        # Warm this exact shape before timing it. Kernel selection and graph capture depend on batch
+        # size, so measuring a cold shape charges one-time setup to the first run.
+        try:
+            timed_batch(url, args.key, args.model, prompt, args.short, c, args.timeout)
+        except Exception as e:  # noqa: BLE001
+            print("  concurrency %d: warmup failed, %s" % (c, str(e)[:120]))
+            continue
         for i in range(args.repeats):
             try:
                 t_s, ptok, _ = timed_batch(url, args.key, args.model, prompt, args.short, c, args.timeout)
@@ -153,32 +193,63 @@ def main():
             print("  concurrency %d: no usable runs" % c)
             continue
         med = statistics.median(rates)
-        rows.append((c, med, ptok))
+        first = []
+        for _ in range(min(3, max(1, args.repeats))):
+            try:
+                with ThreadPoolExecutor(max_workers=c) as pool:
+                    futs = [pool.submit(ttft, url, args.key, args.model, prompt, args.timeout)
+                            for _ in range(c)]
+                    vals = [f.result() for f in futs]
+                first.extend(v for v in vals if v)
+            except Exception:  # noqa: BLE001
+                pass
+        ttft_med = statistics.median(first) if first else None
+        ttft_p90 = sorted(first)[int(len(first) * 0.9)] if len(first) >= 4 else None
+        rows.append((c, med, ptok, ttft_med, ttft_p90, min(rates), max(rates), len(rates)))
 
     if not rows:
         return 1
 
     print()
-    label = "prompt about %d tokens" % rows[0][2] if rows[0][2] else "short prompt"
-    for c, med, _ in rows:
-        per = med / c
+    isl = rows[0][2] or 0
+    for c, med, _, tmed, tp90, lo, hi, n in rows:
         kind = "SUSTAINED DECODE" if c == 1 else "AGGREGATE THROUGHPUT"
-        print("  %s at concurrency %d: %.1f tok/s   (%.2f ms/token, %.1f tok/s per stream)"
-              % (kind, c, med, 1000 / med, per))
-    print("  protocol: slope(%d,%d) c=%s %s"
-          % (args.short, args.long, ",".join(str(c) for c, _, _ in rows), label))
+        spread = "" if n < 2 else "  [n=%d, %.1f to %.1f]" % (n, lo, hi)
+        print("  %s at concurrency %-3d %8.1f tok/s   (%.2f ms/token, %.1f per stream)%s"
+              % (kind, c, med, 1000 / med, med / c, spread))
+        if tmed is not None:
+            extra = "" if tp90 is None else ", p90 %.0f ms" % (tp90 * 1000)
+            print("      time to first token: median %.0f ms%s" % (tmed * 1000, extra))
+
     print()
+    print("  DISCLOSE ALL OF THIS with any rate you quote. A tokens per second figure without the")
+    print("  input length, the output length and the concurrency cannot be compared against anything.")
+    print("    ISL (input tokens)   %d%s" % (isl, "   <-- very short, best case for decode" if isl < 128 else ""))
+    print("    OSL (output tokens)  %d, measured as the slope between %d and %d"
+          % (args.long, args.short, args.long))
+    print("    concurrency          %s" % ",".join(str(r[0]) for r in rows))
+    print("    repeats per level    %d" % args.repeats)
+    print("    counted              output tokens only, never input plus output")
+    print("    protocol             slope(%d,%d)" % (args.short, args.long))
+    if isl < 128:
+        print()
+        print("  WARNING: a %d token prompt is not a realistic workload. Decode may be faster here than" % isl)
+        print("           at a working context. Re-run with --prompt-tokens set before publishing.")
+
+    print()
+    single = next((r[1] for r in rows if r[0] == 1), None)
     best = max(rows, key=lambda r: r[1])
-    if len(rows) > 1:
-        print("  peak aggregate %.1f tok/s at concurrency %d" % (best[1], best[0]))
-        print("  paste into the recipe README: %.1f tok/s single stream, %.1f tok/s aggregate at c=%d,"
-              % (rows[0][1], best[1], best[0]))
-        print("  protocol: slope(%d,%d)" % (args.short, args.long))
+    if len(rows) > 1 and single is not None:
+        print("  paste into the recipe README:")
+        print("    %.1f tok/s single stream, %.1f tok/s aggregate at concurrency %d,"
+              % (single, best[1], best[0]))
+        print("    ISL %d, OSL %d, protocol slope(%d,%d)" % (isl, args.long, args.short, args.long))
     else:
-        c, med, _ = rows[0]
-        tag = "single stream" if c == 1 else "aggregate at c=%d" % c
-        print("  paste into the recipe README: %.1f tok/s %s, protocol: slope(%d,%d)"
-              % (med, tag, args.short, args.long))
+        c, med = rows[0][0], rows[0][1]
+        tag = "single stream" if c == 1 else "aggregate at concurrency %d" % c
+        print("  paste into the recipe README:")
+        print("    %.1f tok/s %s, ISL %d, OSL %d, protocol slope(%d,%d)"
+              % (med, tag, isl, args.long, args.short, args.long))
     return 0
 
 

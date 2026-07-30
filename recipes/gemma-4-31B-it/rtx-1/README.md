@@ -288,9 +288,13 @@ endpoint here, concurrency 8 delivered 404.6 tok/s aggregate against 90.0 tok/s 
 each stream seeing 50.6 tok/s. Quote the single stream number for interactive use and the aggregate for
 serving several people at once, and never compare one against the other.
 
-Prompt length is a separate axis. The slope method cancels prefill, so a long prompt does not distort
-the measurement, but a large KV cache does slow every decode step. Add `--prompt-tokens 8000` or
-similar to measure decode at the context you actually work at rather than at an empty one.
+Prompt length is a separate axis, and how much it costs depends entirely on the model's attention
+design. The slope method cancels prefill, so a long prompt never distorts the measurement, but a larger
+KV cache can slow every decode step because attention reads it on each one. How much is an empirical
+question: measured on GLM-5.2-NVFP4, decode was flat from 21 to 26379 input tokens (97.0, 97.8 and 95.0
+tok/s), because that model combines MLA compression, an fp8 KV cache and sparse attention that reads only
+a subset of the context. A dense model with full attention and a bf16 KV cache should be expected to
+degrade far more. Measure with `--prompt-tokens` rather than assuming either way.
 
 ## Parallelism and quantization
 

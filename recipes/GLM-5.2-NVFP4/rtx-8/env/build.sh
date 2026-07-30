@@ -18,7 +18,13 @@ mkdir -p "$(dirname "$VENV")"
 
 # "Directory exists" is not "environment works": an interrupted install leaves a venv skeleton behind,
 # and skipping on mere existence would then serve from a broken environment.
-venv_healthy () { compgen -G "$VENV"/lib/python*/site-packages/vllm-*.dist-info > /dev/null; }
+venv_healthy () {
+  # bin/python is the proof. An interrupted install leaves site-packages populated while the
+  # interpreter and activate script are missing, so a dist-info check passes on a venv that
+  # cannot be activated or run.
+  [ -x "$VENV/bin/python" ] && [ -f "$VENV/bin/activate" ] \
+    && compgen -G "$VENV"/lib/python*/site-packages/vllm-*.dist-info > /dev/null
+}
 if venv_healthy && [ "$FORCE" = 0 ]; then
   echo "environment already present and complete at $VENV (pass --force to rebuild)"
 else
@@ -55,6 +61,17 @@ fi
 
 "$VENV/bin/python" -c "import importlib.metadata as m; print('vllm', m.version('vllm'), '| torch', m.version('torch'), '| flashinfer', m.version('flashinfer-python'))"
 "$CUDA13/bin/nvcc" --version | tail -1
+# Claiming success requires all three pieces, not just the venv: a build interrupted after the
+# Python install leaves vllm present and the toolkit absent, which then fails at the sm_120 JIT.
+# verify all three
+missing=""
+compgen -G "$VENV"/lib/python*/site-packages/vllm-*.dist-info > /dev/null || missing="$missing vllm"
+compgen -G "$VENV"/lib/python*/site-packages/flashinfer_python-*.dist-info > /dev/null || missing="$missing flashinfer"
+[ -x "$CUDA13/bin/nvcc" ] || missing="$missing cuda13-toolkit"
+if [ -n "$missing" ]; then
+  echo "INCOMPLETE, missing:$missing" >&2
+  exit 1
+fi
 echo "built: $VENV"
 echo "       $CUDA13"
 echo "record the exact resolution with:  uv pip freeze --python $VENV/bin/python > $S/requirements.lock"

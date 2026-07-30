@@ -234,46 +234,29 @@ instead of the hosted tool.
 
 ## Measured performance
 
-| Configuration | Decode rate | Protocol |
-| --- | --- | --- |
-| bf16, TP8, full node | 63.0 tok/s | slope(128,1152) |
+| Configuration | Rate | Per stream | Latency |
+| --- | --- | --- | --- |
+| Single stream, concurrency 1 | 63.4 tok/s | 63.4 tok/s | TTFT median 62 ms, n=3 spanning 62.5 to 63.4 |
+| Saturated, concurrency 8 | 311.4 tok/s | 38.9 tok/s | TTFT median 74 ms, p90 77 ms, n=3 spanning 311.2 to 311.5 |
+| Saturated, concurrency 32 | 818.9 tok/s | 25.6 tok/s | TTFT median 110 ms, p90 125 ms, n=3 spanning 815.9 to 819.7 |
 
-Context window 40960, which is the checkpoint's `max_position_embeddings`. The number is a slope: the
-same greedy request is timed at 128 and at 1152 output tokens and the rate is `(1152-128)/(t2-t1)`,
-which cancels prefill and per-request overhead. Re-measure the same way with:
+Measured 2026-07-30 with `common/tools/bench.sh`, endpoint ready 3m 1s after launch. Full disclosure, without which a
+tokens per second figure cannot be compared against anything:
 
-```
-bash common/tools/bench.sh --host <node> --model qwen3-235b
-```
-
-What did not help, both measured rather than assumed:
-
-| Change | Effect |
+| Parameter | Value |
 | --- | --- |
-| FP8 weights (`QUANT=fp8`) | no change |
-| Expert parallelism (`--enable-expert-parallel`) | about 9 percent slower |
+| ISL, input tokens | 17 |
+| OSL, output tokens | 1152, as the slope between 128 and 1152 |
+| Counted | output tokens only, never input plus output |
+| Protocol | slope(128,1152), 3 repeats per level, median reported |
+| Hardware | one RTX PRO 6000 Blackwell node, 8 GPUs |
 
-Both results follow from the same cause. Decode costs about 16 ms per token where weight bandwidth
-alone implies about 3 ms, so this configuration is communication bound, not memory bandwidth bound.
-Halving the bytes read per weight therefore buys nothing, and adding all-to-all expert traffic on the
-same PCIe path makes it worse.
+Quote 63.4 tok/s for interactive coding, where one person waits on one response,
+and 818.9 tok/s at concurrency 32 when the endpoint serves several people at once.
+Never compare one against the other.
 
-Both figures above are **single stream**, meaning one request at a time, which is what an interactive
-coding session feels. That leaves the GPU far from saturated. To measure total throughput with
-concurrent requests, and to find where it stops rising:
-
-```
-bash common/tools/bench.sh --host <node> --model qwen3-235b --sweep 1,4,16,32
-```
-
-Aggregate throughput is several times the single stream figure, while per stream latency falls. On one
-endpoint here, concurrency 8 delivered 404.6 tok/s aggregate against 90.0 tok/s single stream, with
-each stream seeing 50.6 tok/s. Quote the single stream number for interactive use and the aggregate for
-serving several people at once, and never compare one against the other.
-
-Prompt length is a separate axis. The slope method cancels prefill, so a long prompt does not distort
-the measurement, but a large KV cache does slow every decode step. Add `--prompt-tokens 8000` or
-similar to measure decode at the context you actually work at rather than at an empty one.
+The input sequence here is short, which is the best case for decode. Measure with
+`--prompt-tokens` at your working context before quoting a number for long-context work.
 
 ## Parallelism and quantization
 

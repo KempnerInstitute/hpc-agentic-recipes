@@ -203,43 +203,26 @@ instead of the hosted tool.
 
 ## Measured performance
 
-| Configuration | Decode rate | Protocol |
-| --- | --- | --- |
-| TP4, eager, MTP 1 token | 18.5 tok/s | slope(128,1152) |
+| Configuration | Rate | Per stream | Notes |
+| --- | --- | --- | --- |
+| Single stream, concurrency 1 | 18.9 tok/s | 18.9 tok/s | interactive latency, TTFT 330 ms |
+| Saturated, concurrency 8 | 155.5 tok/s | 19.4 tok/s | aggregate across 8 requests |
+| Saturated, concurrency 32 | 593.8 tok/s | 18.6 tok/s | peak measured |
 
-Context window 200K. Measured 2026-07-29 on an idle node, two runs agreeing to within 0.01 tok/s, at
-54.05 ms per token. Re-measure with:
+Measured 2026-07-30 with `common/tools/bench.sh`, endpoint ready 6m 15s after launch. Full disclosure,
+without which a tokens per second figure cannot be compared against anything:
 
-```
-bash common/tools/bench.sh --host <node> --model glm-4.6
-```
+| Parameter | Value |
+| --- | --- |
+| ISL, input tokens | 14 |
+| OSL, output tokens | 1152, as the slope between 128 and 1152 |
+| Counted | output tokens only, never input plus output |
+| Protocol | slope(128,1152) |
+| Hardware | one H200 node, 4 GPUs |
 
-The pre-restructure single-generation figure for this model was about 18 tok/s, so the slope method
-barely moved it. That is expected here and worth understanding: the single-generation protocol
-overstates decode time by counting prefill and fixed per-request cost, and at 18 tok/s a 1152-token
-generation takes 62 seconds, so a fraction of a second of fixed cost is negligible. The bias matters for
-fast models, not slow ones. On a fast single-GPU model in this repo the same correction moved a
-measurement from 116 to 184 tok/s.
-
-What did not help: CUDA graphs and torch.compile crash outright on this hardware, so the usual decode
-win is unavailable and MTP speculative decoding is the substitute.
-
-Both figures above are **single stream**, meaning one request at a time, which is what an interactive
-coding session feels. That leaves the GPU far from saturated. To measure total throughput with
-concurrent requests, and to find where it stops rising:
-
-```
-bash common/tools/bench.sh --host <node> --model glm-4.6 --sweep 1,4,16,32
-```
-
-Aggregate throughput is several times the single stream figure, while per stream latency falls. On one
-endpoint here, concurrency 8 delivered 404.6 tok/s aggregate against 90.0 tok/s single stream, with
-each stream seeing 50.6 tok/s. Quote the single stream number for interactive use and the aggregate for
-serving several people at once, and never compare one against the other.
-
-Prompt length is a separate axis. The slope method cancels prefill, so a long prompt does not distort
-the measurement, but a large KV cache does slow every decode step. Add `--prompt-tokens 8000` or
-similar to measure decode at the context you actually work at rather than at an empty one.
+Quote the single stream figure for interactive coding and the aggregate for serving several people.
+Never compare one against the other. The input sequence here is short, which is the best case for
+decode, so measure with `--prompt-tokens` at your working context before quoting a long-context number.
 
 ## Parallelism and quantization
 

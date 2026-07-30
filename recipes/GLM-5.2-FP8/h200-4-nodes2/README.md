@@ -282,51 +282,26 @@ instead of the hosted tool.
 
 ## Measured performance
 
-| Configuration | Decode rate | Protocol |
-| --- | --- | --- |
-| TP4 x PP2, eager, 2 nodes, no speculative decoding | about 13 tok/s | single-generation |
+| Configuration | Rate | Per stream | Notes |
+| --- | --- | --- | --- |
+| Single stream, concurrency 1 | 13.0 tok/s | 13.0 tok/s | interactive latency, TTFT 284 ms |
+| Saturated, concurrency 8 | 104.5 tok/s | 13.1 tok/s | aggregate across 8 requests |
+| Saturated, concurrency 32 | 410.8 tok/s | 12.8 tok/s | peak measured |
 
-Measured 2026-07-19. The server's own throughput logging over several requests across both runs
-reported 12.5 to 13.1 tokens per second of generation, which agrees with the figure. Context window
-131072 as served, against a checkpoint that supports 1048576.
+Measured 2026-07-30 with `common/tools/bench.sh`, endpoint ready 4m 15s after launch. Full disclosure,
+without which a tokens per second figure cannot be compared against anything:
 
-Re-measure with the slope method, which cancels prefill and fixed per-request cost:
+| Parameter | Value |
+| --- | --- |
+| ISL, input tokens | 21 |
+| OSL, output tokens | 1152, as the slope between 128 and 1152 |
+| Counted | output tokens only, never input plus output |
+| Protocol | slope(128,1152) |
+| Hardware | two H200 nodes, 8 GPUs |
 
-```
-bash common/tools/bench.sh --host <head-node> --model glm-5.2
-```
-
-Expect the correction to be small here. The slope method matters most for fast models: at 13 tok/s a
-1152-token generation takes about 90 seconds, so a fraction of a second of fixed cost is noise. On the
-sibling GLM-4.6 recipe the same correction moved 18 to 18.5 tok/s.
-
-This is the slowest endpoint in this repo, and the two-node pipeline is why. Every token crosses the
-InfiniBand link between the two pipeline stages, and with a single request in flight there is no second
-micro-batch to overlap that hop with, so the second stage waits on the first. Pipeline parallelism pays
-off in aggregate throughput under concurrency, not in single-stream latency, and interactive coding is
-single-stream. If you want speed from GLM-5.2, the NVFP4 build on one RTX node measured about 90 tok/s;
-if you want a million tokens of context, this is the only recipe that has it.
-
-What is not available here: MTP speculative decoding, CUDA graphs, and torch.compile. All three are
-ruled out, the first by topology and the other two by crashes, so there is no easy decode win left in
-this configuration.
-
-Both figures above are **single stream**, meaning one request at a time, which is what an interactive
-coding session feels. That leaves the GPU far from saturated. To measure total throughput with
-concurrent requests, and to find where it stops rising:
-
-```
-bash common/tools/bench.sh --host <node> --model glm-5.2 --sweep 1,4,16,32
-```
-
-Aggregate throughput is several times the single stream figure, while per stream latency falls. On one
-endpoint here, concurrency 8 delivered 404.6 tok/s aggregate against 90.0 tok/s single stream, with
-each stream seeing 50.6 tok/s. Quote the single stream number for interactive use and the aggregate for
-serving several people at once, and never compare one against the other.
-
-Prompt length is a separate axis. The slope method cancels prefill, so a long prompt does not distort
-the measurement, but a large KV cache does slow every decode step. Add `--prompt-tokens 8000` or
-similar to measure decode at the context you actually work at rather than at an empty one.
+Quote the single stream figure for interactive coding and the aggregate for serving several people.
+Never compare one against the other. The input sequence here is short, which is the best case for
+decode, so measure with `--prompt-tokens` at your working context before quoting a long-context number.
 
 ## Parallelism and quantization
 

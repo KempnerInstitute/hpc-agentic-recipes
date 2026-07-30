@@ -238,40 +238,29 @@ instead of the hosted tool.
 
 ## Measured performance
 
-| Configuration | Decode rate | Protocol |
-| --- | --- | --- |
-| FP8, TP4 x PP2, full node | 63.9 tok/s | slope(128,1152) |
+| Configuration | Rate | Per stream | Latency |
+| --- | --- | --- | --- |
+| Single stream, concurrency 1 | 67.2 tok/s | 67.2 tok/s | TTFT median 44 ms, n=3 spanning 66.4 to 67.3 |
+| Saturated, concurrency 8 | 267.1 tok/s | 33.4 tok/s | TTFT median 63 ms, p90 65 ms, n=3 spanning 235.7 to 289.0 |
+| Saturated, concurrency 32 | 682.8 tok/s | 21.3 tok/s | TTFT median 86 ms, p90 98 ms, n=3 spanning 661.6 to 682.9 |
 
-Context window 128K as served, against a 256K native maximum. The number is a slope: the same greedy
-request is timed at 128 and at 1152 output tokens and the rate is `(1152-128)/(t2-t1)`, which cancels
-prefill and per-request overhead. Re-measure the same way with:
+Measured 2026-07-30 with `common/tools/bench.sh`, endpoint ready 3m 16s after launch. Full disclosure, without which a
+tokens per second figure cannot be compared against anything:
 
-```
-bash common/tools/bench.sh --host <node> --model qwen3-coder-480b
-```
+| Parameter | Value |
+| --- | --- |
+| ISL, input tokens | 17 |
+| OSL, output tokens | 1152, as the slope between 128 and 1152 |
+| Counted | output tokens only, never input plus output |
+| Protocol | slope(128,1152), 3 repeats per level, median reported |
+| Hardware | one RTX PRO 6000 Blackwell node, 8 GPUs |
 
-What did not work: this checkpoint on H200. Four configurations were tried there and every one failed
-during CUDA graph capture; the eager fallback ran at 22.2 tok/s, roughly a third of the rate here. The
-full account is under Gotchas below. Do not enable expert parallelism on this node either: on the same
-hardware it measured about 9 percent slower for Qwen3-235B, because the extra all-to-all traffic lands
-on the same PCIe path that is already the bottleneck.
+Quote 67.2 tok/s for interactive coding, where one person waits on one response,
+and 682.8 tok/s at concurrency 32 when the endpoint serves several people at once.
+Never compare one against the other.
 
-Both figures above are **single stream**, meaning one request at a time, which is what an interactive
-coding session feels. That leaves the GPU far from saturated. To measure total throughput with
-concurrent requests, and to find where it stops rising:
-
-```
-bash common/tools/bench.sh --host <node> --model qwen3-coder-480b --sweep 1,4,16,32
-```
-
-Aggregate throughput is several times the single stream figure, while per stream latency falls. On one
-endpoint here, concurrency 8 delivered 404.6 tok/s aggregate against 90.0 tok/s single stream, with
-each stream seeing 50.6 tok/s. Quote the single stream number for interactive use and the aggregate for
-serving several people at once, and never compare one against the other.
-
-Prompt length is a separate axis. The slope method cancels prefill, so a long prompt does not distort
-the measurement, but a large KV cache does slow every decode step. Add `--prompt-tokens 8000` or
-similar to measure decode at the context you actually work at rather than at an empty one.
+The input sequence here is short, which is the best case for decode. Measure with
+`--prompt-tokens` at your working context before quoting a number for long-context work.
 
 ## Parallelism and quantization
 
