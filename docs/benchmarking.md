@@ -1,5 +1,36 @@
 # Measuring decode rate
 
+## Decide which number you want first
+
+There are two, and they are not comparable.
+
+**Single stream** is one request at a time. It is what an interactive coding session feels, and it is
+the right number for agentic work where one person waits on one response. Every figure in this repo's
+model table is single stream.
+
+**Saturated** is total tokens per second across many simultaneous requests. Continuous batching decodes
+many sequences in one forward pass, so aggregate throughput keeps climbing with concurrency until
+compute, memory bandwidth, or KV cache space runs out. It is the right number when one endpoint serves
+several people.
+
+The gap is large. Measured on an RTX node here: 90.0 tok/s single stream, and 404.6 tok/s aggregate at
+concurrency 8, with each individual stream seeing 50.6 tok/s. Single stream measurement leaves the GPU
+nowhere near saturated, which is correct for latency and misleading for capacity.
+
+```
+bash common/tools/bench.sh --host <node> --model <name>                   single stream
+bash common/tools/bench.sh --host <node> --model <name> --concurrency 16  saturated at 16
+bash common/tools/bench.sh --host <node> --model <name> --sweep 1,4,16,32 find the plateau
+```
+
+## Prompt length is a third axis
+
+The slope method cancels prefill, so prompt length does not distort the measurement. But it is not
+neutral to the result: attention reads the whole KV cache on every decode step, so a long context
+genuinely slows decode. A rate measured with a 20-token prompt overstates what you will see at 30K.
+Use `--prompt-tokens 8000` to measure at a realistic context before quoting a number for long-context
+work. The tool reports the prompt length the server actually counted, not an estimate.
+
 ## Use the slope method
 
 ```

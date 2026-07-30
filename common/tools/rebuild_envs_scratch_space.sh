@@ -1,9 +1,21 @@
 #!/usr/bin/env bash
 # Rebuild recipe environments from their own build scripts.
 #
-#   rebuild_envs.sh                 rebuild every recipe that has no complete environment
-#   rebuild_envs.sh --force         rebuild everything from scratch
-#   rebuild_envs.sh <recipe> ...    rebuild only the named recipes, for example GLM-4.6-FP8/h200-4
+# WHEN YOU NEED THIS. Only if ENV_ROOT points at scratch. Scratch has a 90-day retention policy, so
+# environments there vanish periodically and every recipe has to be rebuilt from its own build.sh.
+#
+# WHEN YOU DO NOT. ENV_ROOT is yours to choose. Point it at lab or project space with no retention
+# policy and environments persist indefinitely, so this script is only useful after an engine version
+# bump or to repair a corrupted environment. Set it in common/site.conf:
+#
+#     ENV_ROOT=/n/<your-lab-space>/<you>/agentic-coding-envs
+#
+# The tradeoff is speed, not correctness: scratch is measurably faster to import from, which is why it
+# is the default. See the note in common/defaults.sh.
+#
+#   rebuild_envs_scratch_space.sh                 rebuild every recipe that has no complete environment
+#   rebuild_envs_scratch_space.sh --force         rebuild everything from scratch
+#   rebuild_envs_scratch_space.sh <recipe> ...    rebuild only the named recipes, for example GLM-4.6-FP8/h200-4
 #
 # ENV_ROOT points at scratch, which has a 90-day retention policy, so environments are expected to
 # disappear periodically. That is fine: they are disposable, and every recipe can rebuild its own.
@@ -34,6 +46,13 @@ if [ "${#targets[@]}" -eq 0 ]; then
 fi
 
 echo "ENV_ROOT: $ENV_ROOT"
+case "$ENV_ROOT" in
+  */netscratch/*|*/scratch/*)
+    echo "  ENV_ROOT is on scratch, which expires. Rebuilding here is expected to be routine." ;;
+  *)
+    echo "  ENV_ROOT is not on scratch, so environments should persist. If one is missing, something"
+    echo "  removed it; a rebuild is fine but is not the routine maintenance this script assumes." ;;
+esac
 built=0; skipped=0; failed=0
 for r in "${targets[@]}"; do
   b="$REPO_ROOT/recipes/$r/env/build.sh"

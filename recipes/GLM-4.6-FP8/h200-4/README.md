@@ -102,7 +102,7 @@ squeue --me                       # NODELIST column
 tail -f glm46-<jobid>.log
 ```
 
-Secondary path, for a node you already hold. Reserved nodes are removed from the scheduler, which is
+Advanced path, for a node you already hold. Most users should use the Slurm submission above; this exists for reservation holders and for administrators deploying an endpoint on behalf of others, because reserved nodes are removed from the scheduler and cannot be reached with sbatch. Reserved nodes are removed from the scheduler, which is
 why this exists:
 
 ```
@@ -224,6 +224,23 @@ measurement from 116 to 184 tok/s.
 What did not help: CUDA graphs and torch.compile crash outright on this hardware, so the usual decode
 win is unavailable and MTP speculative decoding is the substitute.
 
+Both figures above are **single stream**, meaning one request at a time, which is what an interactive
+coding session feels. That leaves the GPU far from saturated. To measure total throughput with
+concurrent requests, and to find where it stops rising:
+
+```
+bash common/tools/bench.sh --host <node> --model glm-4.6 --sweep 1,4,16,32
+```
+
+Aggregate throughput is several times the single stream figure, while per stream latency falls. On one
+endpoint here, concurrency 8 delivered 404.6 tok/s aggregate against 90.0 tok/s single stream, with
+each stream seeing 50.6 tok/s. Quote the single stream number for interactive use and the aggregate for
+serving several people at once, and never compare one against the other.
+
+Prompt length is a separate axis. The slope method cancels prefill, so a long prompt does not distort
+the measurement, but a large KV cache does slow every decode step. Add `--prompt-tokens 8000` or
+similar to measure decode at the context you actually work at rather than at an empty one.
+
 ## Parallelism and quantization
 
 TP4 uses all four GPUs of one node, where all-reduce runs over NVLink. The FP8 weights halve memory
@@ -273,7 +290,7 @@ filesystem stall that write hangs, which freezes the server. `LOG_DIR` defaults 
 
 ## Stop the endpoint
 
-For a Slurm job, `scancel <jobid>`. For the SSH path:
+If you launched with Slurm, which is the default path, `scancel <jobid>` is all you need: Slurm terminates the job step and reclaims the node. The tool below is only for the direct SSH path, which has no scheduler to clean up after it.
 
 ```
 bash common/tools/stop.sh <node>

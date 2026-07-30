@@ -12,7 +12,10 @@
 # interval from process start to the first vLLM log line was about 14 minutes from Lustre and 58
 # seconds from VAST. A bare torch and vLLM import from VAST is 9.2 seconds, so most of that 58
 # seconds is engine startup rather than filesystem cost.
-# Scratch has a 90-day retention policy, so environments are disposable and rebuildable.
+# Scratch has a 90-day retention policy, so environments here are disposable and must be rebuilt
+# periodically with common/tools/rebuild_envs_scratch_space.sh. This is a deliberate speed tradeoff.
+# You can point ENV_ROOT anywhere: lab or project space with no retention policy makes environments
+# permanent, at the cost of slower imports. Set it in common/site.conf.
 : "${ENV_ROOT:=/n/netscratch/kempner_dev/Lab/mmsh/agentic-coding-llm-env}"
 
 # Server logs. Node-local, because every rank writes stderr for the life of the endpoint: a log on a

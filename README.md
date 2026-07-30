@@ -36,6 +36,11 @@ less recipes/gemma-4-31B-it/h200-1/README.md
 Then follow that recipe's README from the top. Every recipe has the same shape: configure once, build
 the environment, launch, verify, connect.
 
+Every recipe launches two ways. **Slurm submission is the default** and is what you want: any cluster
+user can submit it and the scheduler picks the node. **Direct SSH is the advanced path**, for people who
+already hold nodes through a reservation and for administrators standing up an endpoint on behalf of
+others, since reserved nodes are removed from the scheduler and cannot be reached with sbatch.
+
 Choosing between models is [docs/choosing-a-model.md](docs/choosing-a-model.md). Highest decode rate is
 not the same as best at coding: the fastest model here activates only 4B parameters.
 
@@ -84,7 +89,10 @@ common/defaults.sh                        cluster paths, tracked so a fresh clon
 common/site.conf.example                  optional overrides: your nodes, your account
 common/lib/                               repo root and API key resolution
 common/issues/                            canonical failure-mode text plus the recipe matrix
-common/tools/                             benchmarking, smoke tests, search, audit
+common/tools/                             for recipe users: bench.sh, search.sh, stop.sh,
+                                          rebuild_envs_scratch_space.sh
+                                          for maintainers: audit_recipes.sh, new_recipe.sh
+common/skills/local-search/               skill that makes a client use search.sh
 docs/                                     cross-model guides
 ```
 
