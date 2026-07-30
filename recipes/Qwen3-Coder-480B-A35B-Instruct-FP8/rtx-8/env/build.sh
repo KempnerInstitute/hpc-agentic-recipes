@@ -17,10 +17,13 @@ FORCE=0
 command -v uv >/dev/null || { echo "uv is required: https://docs.astral.sh/uv/" >&2; exit 1; }
 mkdir -p "$(dirname "$VENV")"
 
-if [ -d "$VENV" ] && [ "$FORCE" = 0 ]; then
-  echo "environment already present at $VENV (pass --force to rebuild)"
+# "Directory exists" is not "environment works": an interrupted install leaves a venv skeleton behind,
+# and skipping on mere existence would then serve from a broken environment.
+venv_healthy () { compgen -G "$VENV"/lib/python*/site-packages/vllm-*.dist-info > /dev/null; }
+if venv_healthy && [ "$FORCE" = 0 ]; then
+  echo "environment already present and complete at $VENV (pass --force to rebuild)"
 else
-  [ "$FORCE" = 1 ] && rm -rf "$VENV"
+  [ -d "$VENV" ] && { echo "removing incomplete environment at $VENV"; rm -rf "$VENV"; }
   # The vllm wheel comes from the nightly cu130 index rather than PyPI, because sm_120 needs the
   # CUDA 13 build and uv's --torch-backend maxes out at cu129. The version is pinned explicitly:
   # the installed metadata reads a plain 0.25.1 with no local version tag, so an unpinned install

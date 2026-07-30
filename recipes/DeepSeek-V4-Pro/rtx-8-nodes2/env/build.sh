@@ -10,12 +10,15 @@ VENV="${VENV_DIR:-$ENV_ROOT/DeepSeek-V4-Pro/rtx-8-nodes2/venv}"
 CUDA13="${CUDA13_DIR:-$ENV_ROOT/DeepSeek-V4-Pro/rtx-8-nodes2/cuda13}"
 FLASHINFER_VERSION="${FLASHINFER_VERSION:-0.6.15}"
 
-if [ -d "$VENV" ] && [ "${1:-}" != "--force" ]; then
-  echo "environment already present at $VENV (pass --force to rebuild)"
+# "Directory exists" is not "environment works": an interrupted install leaves a venv skeleton behind,
+# and skipping on mere existence would then serve from a broken environment.
+venv_healthy () { compgen -G "$VENV"/lib/python*/site-packages/vllm-*.dist-info > /dev/null; }
+if venv_healthy && [ "${1:-}" != "--force" ]; then
+  echo "environment already present and complete at $VENV (pass --force to rebuild)"
   exit 0
 fi
 command -v uv >/dev/null || { echo "uv is required: https://docs.astral.sh/uv/" >&2; exit 1; }
-[ "${1:-}" = "--force" ] && rm -rf "$VENV" "$CUDA13"
+[ -d "$VENV" ] && { echo "removing incomplete or forced environment"; rm -rf "$VENV" "$CUDA13"; }
 mkdir -p "$(dirname "$VENV")"
 
 # The RTX PRO 6000 is Blackwell sm_120 on a CUDA 13 driver, so this needs the CUDA 13 build of vLLM

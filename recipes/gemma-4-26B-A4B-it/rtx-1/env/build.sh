@@ -11,12 +11,15 @@ VENV="${VENV_DIR:-$ENV_ROOT/gemma-4-26B-A4B-it/rtx-1/venv}"
 CU13="${CUDA13_DIR:-$ENV_ROOT/gemma-4-26B-A4B-it/rtx-1/cuda13}"
 FLASHINFER_VERSION="${FLASHINFER_VERSION:-0.6.15}"
 
-if [ -d "$VENV" ] && [ "${1:-}" != "--force" ]; then
-  echo "environment already present at $VENV (pass --force to rebuild)"
+# "Directory exists" is not "environment works": an interrupted install leaves a venv skeleton behind,
+# and skipping on mere existence would then serve from a broken environment.
+venv_healthy () { compgen -G "$VENV"/lib/python*/site-packages/vllm-*.dist-info > /dev/null; }
+if venv_healthy && [ "${1:-}" != "--force" ]; then
+  echo "environment already present and complete at $VENV (pass --force to rebuild)"
   exit 0
 fi
 command -v uv >/dev/null || { echo "uv is required: https://docs.astral.sh/uv/" >&2; exit 1; }
-[ "${1:-}" = "--force" ] && rm -rf "$VENV" "$CU13"
+[ -d "$VENV" ] && { echo "removing incomplete or forced environment"; rm -rf "$VENV" "$CU13"; }
 mkdir -p "$(dirname "$VENV")"
 
 # sm_120 needs the CUDA 13 build of vLLM, which ships only on the nightly index. unsafe-best-match is

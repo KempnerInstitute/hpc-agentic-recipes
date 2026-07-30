@@ -8,12 +8,15 @@ source "$S/../../../../common/defaults.sh"
 VENV="${VENV_DIR:-$ENV_ROOT/gemma-4-31B-it/h100-1/venv}"
 VLLM_VERSION="${VLLM_VERSION:-0.25.1}"
 
-if [ -d "$VENV" ] && [ "${1:-}" != "--force" ]; then
-  echo "environment already present at $VENV (pass --force to rebuild)"
+# "Directory exists" is not "environment works": an interrupted install leaves a venv skeleton behind,
+# and skipping on mere existence would then serve from a broken environment.
+venv_healthy () { compgen -G "$VENV"/lib/python*/site-packages/vllm-*.dist-info > /dev/null; }
+if venv_healthy && [ "${1:-}" != "--force" ]; then
+  echo "environment already present and complete at $VENV (pass --force to rebuild)"
   exit 0
 fi
 command -v uv >/dev/null || { echo "uv is required: https://docs.astral.sh/uv/" >&2; exit 1; }
-[ "${1:-}" = "--force" ] && rm -rf "$VENV"
+[ -d "$VENV" ] && { echo "removing incomplete or forced environment at $VENV"; rm -rf "$VENV"; }
 mkdir -p "$(dirname "$VENV")"
 
 # These nodes run NVIDIA driver 575 (CUDA 12.9), which cannot run vLLM's default CUDA 13 PyPI wheel,
