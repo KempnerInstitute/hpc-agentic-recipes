@@ -158,11 +158,10 @@ been reached. Assume this is the second obstacle, not a solved problem.
 <!-- issue:pp-forbids-spec-decode begin -->
 **Pipeline parallelism disables speculative decoding.** vLLM rejects a speculative config when
 pipeline parallelism is in use, so no MTP or draft-model speedup is available in any recipe that needs
-PP to span nodes. A checkpoint that ships an MTP head cannot use it in this configuration. This was
-observed when configuring GLM-5.2 across two H200 nodes, and it is the reason the SGLang recipe exists
-at all, since SGLang can run TP8 across two nodes with EAGLE instead. Note that the guard was not
-located in vLLM 0.25.1's config source, so treat it as observed behavior for this version rather than a
-documented API contract, and re-check after an engine upgrade.
+PP to span nodes, even when the checkpoint ships an MTP head. This is why an SGLang recipe exists for
+GLM-5.2: SGLang can run TP8 across two nodes with EAGLE speculative decoding, where vLLM would need PP
+and therefore lose it. The guard is not visible in vLLM 0.25.1's config source, so treat it as behavior
+for this version rather than a documented API contract, and re-check after an engine upgrade.
 <!-- issue:pp-forbids-spec-decode end -->
 
 That constraint is the reason this directory exists. It is a vLLM constraint, and avoiding it is exactly
@@ -191,14 +190,13 @@ The pre-restructure SGLang environment library already set both cache variables 
 reimplementation should keep that.
 
 <!-- issue:lustre-watchdog begin -->
-**A storage stall can kill the endpoint even after it recovers.** PyTorch kills the process when the
-NCCL watchdog thread stops sending heartbeats, on the assumption that a collective hung. A stalled
-network filesystem freezes every rank the same way, so at the 480 second default a storage outage
-that later recovers still takes the endpoint down permanently. Observed on 2026-07-29: a holylfs06
-OSS failover froze two unrelated endpoints on two nodes within one second of each other, and both
-were killed by their own watchdog eight minutes later while reporting `Last enqueued NCCL work: -1`,
-meaning no collective was ever in flight. `env/env.sh` sets
-`TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC=3600` so a transient stall is survivable.
+**A storage stall can kill the endpoint even after the storage recovers.** PyTorch kills the process
+when the NCCL watchdog thread stops sending heartbeats, on the assumption that a collective hung. A
+stalled network filesystem freezes every rank the same way, so at the 480 second default a transient
+storage outage takes the endpoint down permanently rather than pausing it. The signature is every rank
+reporting `Last enqueued NCCL work: -1`, meaning no collective was ever in flight, so the process was
+frozen rather than genuinely hung on communication. `env/env.sh` sets
+`TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC=3600` so a stall that resolves within an hour is survivable.
 <!-- issue:lustre-watchdog end -->
 
 <!-- issue:node-local-logs begin -->
@@ -214,12 +212,11 @@ information. Four of the eight ranks failed in each.
 
 <!-- issue:thinking-model-max-tokens begin -->
 **Give thinking models room, or `content` comes back empty.** This model emits reasoning before its
-answer, and vLLM returns that in a separate `reasoning` field (not `reasoning_content`). With a small
-budget the whole allowance is spent reasoning, `finish_reason` is `length` or `stop_reason` is
-`max_tokens`, and `content` is empty, which looks like a broken endpoint but is not. Measured on
-2026-07-29: GLM-4.6 consumed a full 400-token budget on reasoning alone and returned no answer. Use at
-least 400 output tokens for a smoke test and 800 or more for a model that reasons at length. If
-`content` is empty, raise the budget before suspecting the endpoint.
+answer, and vLLM returns that in a separate `reasoning` field, not `reasoning_content`. With a small
+budget the whole allowance is spent reasoning, `finish_reason` is `length`, and `content` is empty,
+which looks like a broken endpoint but is not. Use at least 400 output tokens for a smoke test, and 800
+or more for a model that reasons at length. If `content` is empty, raise the budget before suspecting
+the endpoint.
 <!-- issue:thinking-model-max-tokens end -->
 
 Field names differ by engine. That text describes vLLM's response shape; SGLang exposes only the
