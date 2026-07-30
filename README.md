@@ -44,16 +44,16 @@ not the same as best at coding: the fastest model here activates only 4B paramet
 | Model | Precision | Hardware | Parallelism | Decode | Protocol | Context | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | [GLM-5.2](recipes/GLM-5.2-NVFP4/rtx-8) | NVFP4 | 1 RTX node, 8 GPUs | TP8 | 101.6 tok/s | slope(128,1152) | 128K | Validated 2026-07-29 |
-| [GLM-5.2](recipes/GLM-5.2-FP8/h200-4-nodes2) | FP8 | 2 H200 nodes | TP4 x PP2 | about 13 tok/s | single-generation | 1M | Untested (migrated) |
+| [GLM-5.2](recipes/GLM-5.2-FP8/h200-4-nodes2) | FP8 | 2 H200 nodes | TP4 x PP2 | 13.0 tok/s | slope(128,1152) | 1M | Validated 2026-07-29 |
 | [GLM-4.6](recipes/GLM-4.6-FP8/h200-4) | FP8 | 1 H200 node, 4 GPUs | TP4 | 18.5 tok/s | slope(128,1152) | 200K | Validated 2026-07-29 |
 | [Kimi-K2.7-Code](recipes/Kimi-K2.7-Code/rtx-8) | INT4 | 1 RTX node, 8 GPUs | TP8 | about 21 tok/s | single-generation | 32K | Untested (migrated) |
-| [Kimi-K2.7-Code](recipes/Kimi-K2.7-Code/h200-4-nodes2) | INT4 | 2 H200 nodes | TP4 x PP2 | about 29 tok/s | single-generation | 32K | Untested (migrated) |
+| [Kimi-K2.7-Code](recipes/Kimi-K2.7-Code/h200-4-nodes2) | INT4 | 2 H200 nodes | TP4 x PP2 | 30.0 tok/s | slope(128,1152) | 32K | Validated 2026-07-29 |
 | [Qwen3-235B-A22B](recipes/Qwen3-235B-A22B/rtx-8) | bf16 | 1 RTX node, 8 GPUs | TP8 | about 63 tok/s | slope(128,1152) | 40K | Untested (migrated) |
 | [Qwen3-Coder-480B](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8) | FP8 | 1 RTX node, 8 GPUs | TP4 x PP2 | 63.9 tok/s | slope(128,1152) | 128K | Untested (migrated) |
 | [Qwen3-Coder-480B](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/h200-4) | FP8 | 1 H200 node, 4 GPUs | TP4 | does not run | n/a | n/a | Blocked, serve on RTX |
-| [Gemma-4-26B-A4B](recipes/gemma-4-26B-A4B-it) | bf16 | 1 GPU | TP1 | 140 to 236 tok/s | slope(128,1152) | 32K | Untested (migrated) |
+| [Gemma-4-26B-A4B](recipes/gemma-4-26B-A4B-it) | bf16 | 1 GPU | TP1 | 140 to 236.1 tok/s | slope(128,1152) | 32K | h200-1 Validated 2026-07-29 |
 | [Gemma-4-31B](recipes/gemma-4-31B-it) | FP8 | 1 GPU | TP1 | 40 to 85.2 tok/s | slope(128,1152) | 32K | h200-1 Validated 2026-07-29 |
-| [DeepSeek-V4-Pro](recipes/DeepSeek-V4-Pro) | FP8 with FP4 experts | 2 RTX nodes | TP8 x PP2 | not measured | n/a | 1M | Untested |
+| [DeepSeek-V4-Pro](recipes/DeepSeek-V4-Pro) | FP8 with FP4 experts | 2 RTX nodes | TP8 x PP2 | not measured | n/a | 1M | Untested on RTX, Blocked on H200 |
 | [Qwen3-Coder-480B](recipes/Qwen3-Coder-480B-A35B-Instruct) | bf16 | 2 to 4 H200 nodes | TP4 x PP | not measured | n/a | 256K | Untested |
 | [Kimi-K3](recipes/Kimi-K3) | MXFP4 | Blackwell only | n/a | n/a | n/a | 1M | Blocked upstream |
 

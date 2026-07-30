@@ -27,8 +27,13 @@ else
 fi
 [ -n "${EXTRA_ARGS:-}" ] && EXTRA+=($EXTRA_ARGS)
 
+# verified 2026-07-29: without --kv-cache-dtype fp8_ds_mla the engine aborts during init with
+# "DeepseekV4 fp8_ds_mla layout only supports fp8 kv-cache, got auto". This model uses MLA with
+# DeepSeek sparse attention, and that layout requires an fp8 KV cache rather than the default.
+# GLM-5.2-NVFP4 needs the same flag for the same reason.
 exec vllm serve "$MODEL" \
   --served-model-name deepseek-v4-pro \
+  --kv-cache-dtype fp8_ds_mla \
   --tensor-parallel-size "${TP:-4}" \
   --pipeline-parallel-size "${PP:-2}" \
   --distributed-executor-backend ray \

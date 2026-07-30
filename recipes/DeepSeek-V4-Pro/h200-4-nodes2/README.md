@@ -1,6 +1,6 @@
 # DeepSeek-V4-Pro on two H200 nodes
 
-Status: Untested - authored 2026-07-29 against vLLM 0.25.1, expected to be problematic, see Status
+Status: Blocked - 2026-07-29, vLLM 0.25.1, CUTLASS w8a8 kernel dispatch fails on Hopper
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -40,6 +40,31 @@ Optional overrides, either exported or set in `common/site.conf`:
 | `ENV_ROOT` | VAST scratch | Where this recipe builds its environment |
 
 ## Status
+
+Blocked as of 2026-07-29, measured rather than predicted. This configuration was run end to end on
+two H200 nodes and does not work. Use `../rtx-8-nodes2` instead.
+
+The environment built, Ray formed an 8-GPU cluster, and all 64 shards loaded in 12 minutes 24 seconds,
+so nothing is wrong with the recipe's plumbing. Engine initialization then failed on every worker:
+
+```
+RuntimeError: dispatch_scaled_mm,
+  csrc/libtorch_stable/quantization/w8a8/cutlass/c3x/scaled_mm_helper.hpp:17
+RuntimeError: Engine core initialization failed
+  [repeated 12x across cluster]
+```
+
+This is the CUTLASS w8a8 scaled matrix multiply refusing to dispatch a kernel for this data type on
+Hopper. It is the same class of failure that blocks Qwen3-Coder-480B-FP8 on H200, and it confirms what
+this model's `config.json` implies: `expert_dtype` is `fp4`, Blackwell executes FP4 natively, and
+Hopper has no such hardware path.
+
+Two things worth knowing before trying to work around it. The checkpoint ships an
+`inference/convert.py` that can emit fp8 experts, and vLLM has an `expert_dtype == "fp8"` path, so
+converting the experts is the only real Hopper option. And an earlier attempt failed differently, with
+`DeepseekV4 fp8_ds_mla layout only supports fp8 kv-cache, got auto`, because the recipe was missing
+`--kv-cache-dtype fp8_ds_mla`; that flag is now present, which is how this run got far enough to reach
+the FP4 problem.
 
 Untested, and expected to be problematic. This recipe has never been launched: no job has been
 submitted, no weights have been loaded, and no decode rate has been measured.

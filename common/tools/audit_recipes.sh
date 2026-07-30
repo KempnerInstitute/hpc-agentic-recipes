@@ -184,6 +184,26 @@ for r in "${RECIPE_LIST[@]}"; do
   done
 done
 
+echo "== comments inside continued commands"
+# A comment on a continued line silently terminates the command, dropping every remaining argument.
+# bash -n accepts it because it is valid syntax, so only a lint catches it. This shipped once: a
+# --kv-cache-dtype flag placed after an explanatory comment never reached the engine, and the model
+# failed at init with a message about the value it was supposed to have been given.
+while read -r f; do
+  python3 - "$f" <<'PYLINT'
+import sys, re
+path = sys.argv[1]
+lines = open(path).read().split("\n")
+for i in range(len(lines) - 1):
+    if lines[i].rstrip().endswith("\\") and lines[i + 1].lstrip().startswith("#"):
+        print("FAIL  %s:%d comment on a continued line silently ends the command" % (path, i + 2))
+PYLINT
+done < <(find "$REPO_ROOT/recipes" "$REPO_ROOT/common" -name '*.sh' -o -name '*.sbatch' 2>/dev/null) > /tmp/contlint.$$ 2>&1
+if [ -s /tmp/contlint.$$ ]; then
+  while read -r l; do bad "${l#FAIL  }"; done < /tmp/contlint.$$
+fi
+rm -f /tmp/contlint.$$
+
 echo "== index coverage"
 # Both directions. A recipe missing from the model table is invisible to users, and a table row pointing
 # at a directory that does not exist is a broken promise. The second is how two multi-node recipes were

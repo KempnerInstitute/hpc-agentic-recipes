@@ -1,6 +1,6 @@
 # GLM-5.2-FP8 on two H200 nodes
 
-Status: Untested (migrated) - numbers below were measured 2026-07-19 with the pre-restructure scripts, protocol: single-generation
+Status: Validated - 2026-07-29, vLLM 0.25.1, protocol: slope(128,1152)
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -32,6 +32,11 @@ same content on both nodes. The Ray worker imports vLLM from `ENV_ROOT` and read
 formed, which reads as an engine problem rather than a path problem.
 
 ## Status
+
+Validated on 2026-07-29. Built from `env/build.sh`, brought up over SSH across two H200 nodes with
+Ray reporting 8 GPUs, and measured with `common/tools/bench.sh`. Ready 3 minutes 49 seconds after
+launch. Measured 13.0 tok/s, matching the figure recorded before the restructure, and the endpoint was
+still serving after the benchmark. Key gating and the Anthropic endpoint were both confirmed.
 
 Untested (migrated). This configuration ran end to end before the restructure, twice on 2026-07-19 on
 vLLM 0.25.1, on two different node pairs, and the decode rate below came from those runs. What has not

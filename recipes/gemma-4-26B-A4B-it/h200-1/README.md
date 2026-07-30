@@ -1,6 +1,6 @@
 # gemma-4-26B-A4B-it on one H200 GPU
 
-Status: Untested (migrated) - numbers below were measured 2026-07-27 with the pre-restructure scripts, protocol: slope(128,1152)
+Status: Validated - 2026-07-29, vLLM 0.25.1, protocol: slope(128,1152)
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -27,6 +27,11 @@ defaults, so a fresh clone runs as is. Optional overrides, either exported or se
 | `ENV_ROOT` | VAST scratch | Where this recipe builds its environment |
 
 ## Status
+
+Validated on 2026-07-29. Built from `env/build.sh`, served over SSH on an H200 node, and measured
+with `common/tools/bench.sh`. Ready 6 minutes 11 seconds after launch. Measured 236.1 tok/s, which
+reproduces the 236.0 tok/s recorded before the restructure. Key gating and the Anthropic endpoint were
+both confirmed.
 
 Untested (migrated). The decode rate below was measured on this GPU type on 2026-07-27, with the
 pre-restructure scripts whose serve flags this recipe reproduces exactly, using the slope protocol.

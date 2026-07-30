@@ -1,6 +1,6 @@
 # Kimi-K2.7-Code on two H200 nodes
 
-Status: Untested (migrated) - numbers below were measured 2026-07-19 with the pre-restructure scripts, protocol: single-generation
+Status: Validated - 2026-07-29, vLLM 0.25.1, protocol: slope(128,1152)
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -32,6 +32,13 @@ same content on both nodes. The Ray worker imports vLLM from `ENV_ROOT` and read
 formed, which reads as an engine problem rather than a path problem.
 
 ## Status
+
+Validated on 2026-07-29. Built from `env/build.sh`, brought up over SSH across two H200 nodes with
+Ray reporting 8 GPUs, and measured with `common/tools/bench.sh`. Ready 20 minutes 13 seconds after
+launch, dominated by loading 64 shards of a 1T-parameter checkpoint. Measured 30.0 tok/s, slightly
+above the about 29 tok/s recorded before the restructure. The multimodal profiling deadlock did not
+occur, confirming that `--skip-mm-profiling --mm-processor-cache-gb 0` is doing its job. The endpoint
+was still serving after the benchmark, and key gating and the Anthropic endpoint were both confirmed.
 
 Untested (migrated). This configuration ran end to end before the restructure, on 2026-07-19 on
 vLLM 0.25.1, and the decode rate and startup times below come from that run's log. What has not been
