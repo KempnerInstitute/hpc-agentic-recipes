@@ -1,0 +1,455 @@
+# DeepSeek-V4-Pro on two RTX PRO 6000 nodes
+
+Status: Untested - authored 2026-07-29 against vLLM 0.25.1, never launched, no rate measured
+
+Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
+
+## Configure once
+
+Create the API key. The endpoint refuses requests without it, and the key is passed through the
+environment rather than the command line so it never appears in `ps` output.
+
+```
+mkdir -p secrets
+printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/vllm_api_key
+chmod 600 secrets/vllm_api_key
+```
+
+One thing is not optional for this recipe: the checkpoint is not in the shared testbed yet. As of
+2026-07-29 the testbed directory `DeepSeek-V4-Pro` exists but is empty, and the only staged copy is on
+scratch, so set `MODELS_DIR` or `MODEL` before launching:
+
+```
+export MODELS_DIR=/n/netscratch/kempner_dev/Lab/mmsh/models
+```
+
+Cluster paths otherwise come from `common/defaults.sh`, which is tracked with working defaults.
+Optional overrides, either exported or set in `common/site.conf`:
+
+| Variable | Default | Why you might change it |
+| --- | --- | --- |
+| `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
+| `DSV4_HEAD`, `DSV4_WORKER` | unset | Two nodes you already hold, for the SSH path |
+| `MODELS_DIR` | shared testbed path | Required here, see above |
+| `ENV_ROOT` | VAST scratch | Where this recipe builds its environment |
+
+## Status
+
+Untested. This recipe has never been launched: no job has been submitted, no weights have been
+loaded, and no decode rate has been measured. It was authored from the checkpoint's own `config.json`
+and safetensors index, from the vLLM 0.25.1 source in the installed environment, and from the sizing
+analysis in the pre-restructure planning notes. Treat every number below that is not labeled as read
+from the checkpoint as a prediction.
+
+What is known to be true, because it was checked rather than assumed: `DeepseekV4ForCausalLM` is in
+the vLLM 0.25.1 model registry, the `deepseek_v4` tool-call and reasoning parsers are registered, and
+vLLM auto-selects its own DeepSeek-V4 prompt encoding for this architecture.
+
+## What this is
+
+DeepSeek-V4-Pro, the larger of the two DeepSeek-V4 preview models: 1.6T total parameters, 49B
+activated, a 1M-token context, and a hybrid attention design combining Compressed Sparse Attention
+with Heavily Compressed Attention, plus manifold-constrained hyper-connections on the residual path.
+It is a thinking model with native tool calling, and it exposes vLLM's Anthropic-compatible API, so
+Claude Code connects to it directly with no proxy.
+
+- Checkpoint directory: `DeepSeek-V4-Pro`
+- Hugging Face repo: `deepseek-ai/DeepSeek-V4-Pro`
+- Staged path as of 2026-07-29: `/n/netscratch/kempner_dev/Lab/mmsh/models/DeepSeek-V4-Pro`
+- Intended path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/DeepSeek-V4-Pro`, empty today
+
+Read from the checkpoint on 2026-07-29, since these are the facts the whole recipe rests on:
+
+| Property | Value |
+| --- | --- |
+| Architecture | `DeepseekV4ForCausalLM`, `model_type` `deepseek_v4` |
+| On disk | 805.4 GiB, 864.7 GB decimal, 64 shards, 145116 tensors |
+| Layers | 61 |
+| Experts | 384 routed plus 1 shared, 6 routed experts per token |
+| `moe_intermediate_size` | 3072 |
+| Attention | 128 heads, `head_dim` 512, `q_lora_rank` 1536, `o_lora_rank` 1024, 1 KV head |
+| Sparse attention indexer | `index_n_heads` 64, `index_head_dim` 128, `index_topk` 1024 |
+| Context | `max_position_embeddings` 1048576, YaRN scaling factor 16 over an original 65536 |
+| Quantization | `quant_method` `fp8`, `weight_block_size` [128, 128], `scale_fmt` `ue8m0`, `fmt` `e4m3`, dynamic activations |
+| Experts precision | `expert_dtype` `fp4`, which is what sends this recipe to Blackwell |
+| Speculative head | `num_nextn_predict_layers` 1, and 2343 `mtp.0.*` tensors ship in the checkpoint |
+
+Two consequences of the checkpoint's contents that are easy to get wrong:
+
+- **It carries no chat template.** `tokenizer_config.json` has no `chat_template` and there is no
+  `chat_template.jinja`. Nothing needs to be supplied: vLLM 0.25.1 implements the DeepSeek-V4 prompt
+  encoding itself and switches `tokenizer_mode` to `deepseek_v4` automatically for this architecture,
+  so do not pass `--chat-template`.
+- **It needs no `--trust-remote-code`.** `config.json` has no `auto_map` and ships no modeling code
+  for the language model, so the engine's own implementation is used.
+
+Copying the checkpoint into VAST scratch loads faster than Lustre for this workload, and the directory
+names are identical in both locations so only `MODELS_DIR` changes. Scratch has a 90-day retention
+policy, so treat it as a fast cache and keep testbed as the system of record once it is populated.
+
+## Hardware
+
+| Requirement | Value |
+| --- | --- |
+| GPU | RTX PRO 6000 Blackwell, 8 per node, 97887 MiB each, sm_120 |
+| Nodes | 2, so 16 GPUs and about 1530 GiB of VRAM |
+| Parallelism | TP8 inside each node, PP2 between them, Ray |
+| Partition | `kempner_rtx` |
+| Per-GPU allocation limit | 16 CPUs, 180 GB host memory |
+| Maximum wall time | 2 days |
+
+All RTX nodes on this cluster share one hardware specification, so any two nodes in the partition
+work.
+
+**Why this model goes to RTX rather than to H200.** The experts are FP4, and only Blackwell executes
+FP4 natively. In vLLM 0.25.1, `expert_dtype: fp4` resolves to the MXFP4 fused-MoE method unless the
+checkpoint also sets `moe_quant_algo: NVFP4`, which this one does not
+(`vllm/models/deepseek_v4/quant_config.py`), so on Hopper the expert layers have no native instruction
+to run on. The pre-restructure planning notes reached the same conclusion from the
+hardware side: two H200 nodes fit by memory, "but Hopper has no FP4 hardware. The FP4 experts would
+fall back to emulation or a Marlin path, which is a correctness and speed risk." Capacity here is not
+the constraint either way: 16 GPUs at 97887 MiB is about 1530 GiB, and at
+`--gpu-memory-utilization 0.90` about 1377 GiB is usable against 806 GiB of weights, leaving roughly
+570 GiB for KV cache and activations. This model is unusually cheap in KV for its context length,
+because the hybrid compressed attention is designed to be.
+
+An H200 sibling of this recipe exists at `recipes/DeepSeek-V4-Pro/h200-4-nodes2` and is documented as
+expected to be problematic, precisely so that the negative result has somewhere to live. This is the
+recommended variant.
+
+## Environment build
+
+This recipe builds its own environment, shared with no other recipe: about 9.0 GB for the Python
+environment, a little more with Ray added, plus 2.9 GB for a private CUDA 13.0 toolkit. Both land under
+`ENV_ROOT` on VAST scratch rather than in the repo, because startup is dominated by page faulting the
+torch shared objects and stat-ing tens of thousands of small package files: measured on GPU nodes,
+the interval from process start to the first vLLM log line was about 14 minutes from Lustre and 58
+seconds from VAST. A bare torch and vLLM import from VAST is 9.2 seconds, so most of that 58 seconds
+is engine startup rather than filesystem cost.
+
+```
+bash recipes/DeepSeek-V4-Pro/rtx-8-nodes2/env/build.sh
+```
+
+That is the only supported build path, because the install needs uv flags a requirements file cannot
+express: a nightly index with `--prerelease=allow --index-strategy unsafe-best-match`, `--no-deps` for
+exactly one package, and a `mamba create` step. What it does, and why:
+
+**Ray is installed here and was not installed before.** Every RTX endpoint in this repo's history ran
+on a single node, so the pre-restructure RTX environment carried no Ray at all; only the Hopper
+environment did. This recipe spans two nodes and therefore needs the Ray executor, so `build.sh` adds
+`ray[default]` to the RTX install. If you reuse an older RTX environment through `VENV_DIR`, check
+that `ray` imports before submitting, or the engine fails at executor startup.
+
+<!-- issue:cuda13-toolkit begin -->
+**The sm_120 JIT needs a complete CUDA 13.0 toolkit, and it must not reach `LD_LIBRARY_PATH`.** The
+node's `/usr/local/cuda-13` is runtime-only, and the fragmented pip nvcc wheels mix 13.0 and 13.2
+between `nvcc`, `cicc`, and `ptxas`, which breaks the JIT. The recipe installs a consistent toolkit
+via conda. `env/env.sh` points `CUDA_HOME` at it and exposes its headers through `CPATH` and
+`LIBRARY_PATH` for compilation only. Do **not** add its libraries to `LD_LIBRARY_PATH`: its
+`libcudart` shadows torch's CUDA 13 runtime and pulls in a `libcupti.so.13` that is not present,
+which breaks import entirely.
+<!-- issue:cuda13-toolkit end -->
+
+<!-- issue:flashinfer-cubin-skew begin -->
+**FlashInfer must be 0.6.15, and its version check must be bypassed.** vLLM 0.25.1 pins
+flashinfer-python 0.6.13, but the sm_120 attention backend passes a `kv_scale_format` argument that
+0.6.13 does not accept, which fails at the first inference request. Install 0.6.15 with `--no-deps`
+so torch is left untouched. No matching 0.6.15 cubin package exists, so `flashinfer-cubin` stays at
+0.6.13 and `env/env.sh` sets `FLASHINFER_DISABLE_VERSION_CHECK=1`; kernels are then compiled from
+source on first launch, which is why the first request after a fresh environment is slow.
+<!-- issue:flashinfer-cubin-skew end -->
+
+Scratch expires after 90 days, so this environment is disposable. Rebuild it with the same command, or
+`--force` to replace an existing one. After a successful build, record the exact resolution in
+`env/requirements.lock` and the non-PyPI artifact URLs with hashes in `env/WHEELS`; the vLLM CUDA 13
+nightly index rotates, so a bare `vllm` requirement will not resolve to the same wheel later.
+
+## Launch
+
+Canonical path, submitted from the repo root:
+
+```
+sbatch --account=<your-account> recipes/DeepSeek-V4-Pro/rtx-8-nodes2/serve.sbatch
+```
+
+The batch script allocates two nodes, starts a Ray head on the first and a worker on the second, then
+runs the engine on the head. The endpoint is on the **first** allocated node:
+
+```
+squeue --me                       # NODELIST column, first name
+tail -f dsv4-rtx-<jobid>.log
+```
+
+Secondary path, for two nodes you already hold. Reserved nodes are removed from the scheduler, which
+is why this exists:
+
+```
+bash recipes/DeepSeek-V4-Pro/rtx-8-nodes2/serve_ssh.sh <head_node> <worker_node>
+```
+
+Submit from the repo root either way. Slurm stages the batch script into its own spool directory, so
+the script cannot locate the repo from its own path and resolves paths against the submit directory
+instead.
+
+## Verify
+
+```
+KEY=$(cat secrets/vllm_api_key)
+NODE=<the head node serving it>
+
+curl -s -H "Authorization: Bearer $KEY" http://$NODE:8000/v1/models
+
+curl -s -o /dev/null -w '%{http_code}\n' http://$NODE:8000/v1/models          # must print 401
+
+curl -s -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
+  http://$NODE:8000/v1/chat/completions \
+  -d '{"model":"deepseek-v4-pro","messages":[{"role":"user","content":"What is 2+2? Answer briefly."}],"max_tokens":400}'
+```
+
+A keyless request returning 401 is the expected, correct behavior.
+
+Reasoning is off by default for this model in vLLM, because the engine's DeepSeek-V4 encoding closes
+the thinking block unless it is asked not to. To exercise the thinking path, pass it explicitly:
+
+```
+  -d '{"model":"deepseek-v4-pro","messages":[{"role":"user","content":"Prove that 2 is irrational."}],
+       "max_tokens":2000,"chat_template_kwargs":{"thinking":true}}'
+```
+
+The model card recommends `temperature 1.0` and `top_p 1.0` for local deployment, and at least a 384K
+context window for its maximum reasoning effort mode.
+
+<!-- issue:thinking-model-max-tokens begin -->
+**Give thinking models room, or `content` comes back empty.** This model emits reasoning before its
+answer, and vLLM returns that in a separate `reasoning` field (not `reasoning_content`). With a small
+budget the whole allowance is spent reasoning, `finish_reason` is `length` or `stop_reason` is
+`max_tokens`, and `content` is empty, which looks like a broken endpoint but is not. Measured on
+2026-07-29: GLM-4.6 consumed a full 400-token budget on reasoning alone and returned no answer. Use at
+least 400 output tokens for a smoke test and 800 or more for a model that reasons at length. If
+`content` is empty, raise the budget before suspecting the endpoint.
+<!-- issue:thinking-model-max-tokens end -->
+
+## Connect a client
+
+```
+export NODE=<the head node serving it>
+source recipes/DeepSeek-V4-Pro/rtx-8-nodes2/client.env
+claude
+```
+
+<!-- issue:anthropic-auth-token begin -->
+**Use `ANTHROPIC_AUTH_TOKEN`, never `ANTHROPIC_API_KEY`.** vLLM accepts only
+`Authorization: Bearer <key>`. Setting `ANTHROPIC_API_KEY` makes Claude Code send an `x-api-key`
+header instead, which vLLM ignores, and every request returns HTTP 401. Also set
+`ANTHROPIC_SMALL_FAST_MODEL` to this same served model, or the client reaches for a hosted Haiku that
+this endpoint does not serve.
+<!-- issue:anthropic-auth-token end -->
+
+For an OpenAI-compatible client instead (Cline, Aider, Continue, OpenHands), use base URL
+`http://<head-node>:8000/v1`, the same key, and model name `deepseek-v4-pro`.
+
+## Tunable inputs
+
+Every variable this recipe honors, with its default and effect.
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `MODEL` | `$MODELS_DIR/DeepSeek-V4-Pro` | Serve a different copy of the checkpoint |
+| `MODELS_DIR` | shared testbed path | Where checkpoints live; must be overridden today |
+| `API_PORT` | 8000 | Listening port |
+| `MAX_MODEL_LEN` | 131072 | Context window; the checkpoint supports 1048576 |
+| `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
+| `TP` | 8 | Tensor parallel size; 8 is one node's GPU count and the largest legal value |
+| `PP` | 2 | Pipeline parallel size; 2 is the node count |
+| `PERF` | unset | Attempt CUDA graph capture instead of eager |
+| `CUDAGRAPH_MODE` | `NONE` | Graph mode passed through when `PERF` is set |
+| `EXTRA_ARGS` | unset | Extra `vllm serve` flags, for experiments |
+| `TOOL_PARSER` | `deepseek_v4` | Tool call parser |
+| `REASONING_PARSER` | `deepseek_v4` | Reasoning parser |
+| `RAY_PORT` | 6379 | Ray head port |
+| `RAY_HEAD_IP` | unset | Head address, when calling `serve.sh` directly |
+| `DSV4_HEAD`, `DSV4_WORKER` | unset | Default nodes for the SSH path |
+| `LOG_DIR` | `/tmp/$USER/vllm` | Where the SSH path writes the server log |
+| `VENV_DIR`, `CUDA13_DIR` | under `ENV_ROOT` | Use an environment built elsewhere |
+
+## Web search
+
+<!-- issue:anthropic-hosted-tools-400 begin -->
+**Anthropic's hosted tools fail against this endpoint with HTTP 400.** Claude Code's built-in web
+search sends tool definitions of type `web_search_20250305` that carry no `input_schema`, and vLLM
+rejects them:
+
+```
+API Error: 400 1 validation error: 'loc': ('body', 'tools', 0, 'input_schema'),
+'msg': 'Field required', 'type': 'web_search_20250305'
+```
+
+Client-side tools (file edits, shell, and anything you define) work normally. For web access, install
+the repo's keyless search tool and skill:
+
+```
+ln -sf "$REPO_ROOT/common/tools/search.sh" ~/.local/bin/search.sh
+cp -r "$REPO_ROOT/.claude/skills/local-search" ~/.claude/skills/
+```
+
+Then the model searches through `search.sh` (web, arxiv, crossref, pubmed, openalex, wiki, fetch)
+instead of the hosted tool.
+<!-- issue:anthropic-hosted-tools-400 end -->
+
+## Measured performance
+
+| Configuration | Decode rate | Protocol |
+| --- | --- | --- |
+| TP8 x PP2, eager, 2 nodes | not measured | not applicable |
+
+**No decode rate has been measured for this model on this cluster.** None is estimated here either: a
+guessed number in this table would be indistinguishable from a measured one later. For reference
+points that were measured, on other models, the closest comparable shapes are Kimi-K2.7-Code at about
+21 tok/s on one RTX node and about 29 tok/s on two H200 nodes, and Qwen3-Coder-480B-FP8 at 63.9 tok/s
+at TP4 x PP2 on one RTX node, protocol slope(128,1152).
+
+When this recipe first comes up, measure it with the slope method rather than timing one generation:
+
+```
+bash common/tools/bench.sh --host <head-node> --model deepseek-v4-pro
+```
+
+Things worth trying in the same session, in this order: `PERF=1` to see whether CUDA graphs capture
+(eager is the default only because nothing here has been run yet), then a longer `MAX_MODEL_LEN`, since
+this architecture is designed to make long context cheap in KV.
+
+## Parallelism and quantization
+
+The shape is TP8 inside each node and PP2 between the two nodes, over Ray.
+
+**TP8 is legal for this checkpoint and TP16 is not.** The FP8 weights are block quantized with
+`weight_block_size` [128, 128], so every tensor-parallel shard of a quantized dimension must be a
+multiple of 128. `moe_intermediate_size` is 3072, so:
+
+| Tensor parallel size | Shard of 3072 | Multiple of 128 | Verdict |
+| --- | --- | --- | --- |
+| 8 | 384 | yes, 3 x 128 | legal, and what this recipe uses |
+| 16 | 192 | no, 1.5 x 128 | rejected at startup |
+
+That is the same class of constraint that forces Qwen3-Coder-480B-FP8 down to TP4, but it lands
+differently here: 3072 divides cleanly by 8 where 2560 does not, so a full RTX node can be used as one
+tensor-parallel group and the second node is reached with pipeline parallelism instead of with a
+wider TP group.
+
+The mixed precision is the other half of the story. Attention and dense weights are FP8 with `ue8m0`
+scales, while the routed experts are FP4, which is the majority of the 806 GiB. FP4 experts are the
+reason for choosing Blackwell, as described under Hardware.
+
+<!-- issue:cross-node-tp-hangs begin -->
+**Keep tensor parallelism inside a node and use pipeline parallelism across nodes.** Pure tensor
+parallelism spanning two nodes hangs at NCCL initialization. The working shape is TP within each node,
+where all-reduce uses NVLink, and PP between nodes.
+<!-- issue:cross-node-tp-hangs end -->
+
+One word of that warning does not apply here: these nodes have no NVLink, so the intra-node all-reduce
+crosses PCIe. The rule still holds, and for the same reason, since PCIe inside a box is still far better
+than a fabric hop between boxes.
+
+<!-- issue:pp-forbids-spec-decode begin -->
+**Pipeline parallelism disables speculative decoding.** vLLM rejects a speculative config when
+pipeline parallelism is in use, so no MTP or draft-model speedup is available in any recipe that needs
+PP to span nodes. A checkpoint that ships an MTP head cannot use it in this configuration. This was
+observed when configuring GLM-5.2 across two H200 nodes, and it is the reason the SGLang recipe exists
+at all, since SGLang can run TP8 across two nodes with EAGLE instead. Note that the guard was not
+located in vLLM 0.25.1's config source, so treat it as observed behavior for this version rather than a
+documented API contract, and re-check after an engine upgrade.
+<!-- issue:pp-forbids-spec-decode end -->
+
+**The in-checkpoint MTP head cannot be used in this configuration, and that is a real cost.** The
+checkpoint ships 2343 `mtp.0.*` tensors and declares `num_nextn_predict_layers: 1`, so a speculative
+head is present and vLLM 0.25.1 has both the MTP methods and a `dspark` draft path that could use it.
+Pipeline parallelism is required to span two nodes, and a speculative config is rejected when pipeline
+parallelism is active, so those weights sit idle. Pure TP16 across both nodes would preserve
+speculative decoding in principle, but it is doubly blocked: TP16 fails the divisibility check above,
+and cross-node tensor parallelism hangs at NCCL initialization on this cluster. If a future engine
+lifts the pipeline restriction, this is the single largest decode-speed lever available to this recipe.
+
+## Gotchas
+
+<!-- issue:rtx-no-nvlink begin -->
+**RTX PRO 6000 nodes have no NVLink, so peer-to-peer must be disabled.** `env/env.sh` sets
+`NCCL_P2P_DISABLE=1`. Without it, NCCL initialization hangs on any multi-GPU job, with no error, and
+the server never becomes ready.
+<!-- issue:rtx-no-nvlink end -->
+
+<!-- issue:rtx-comms-bound begin -->
+**Decode on a full RTX node is limited by cross-GPU communication, not memory bandwidth.** All-reduce
+traffic crosses PCIe rather than NVLink. Two consequences, both measured: do not enable
+`--enable-expert-parallel`, which added all-to-all traffic and measured about 9 percent slower, and
+FP8 weights bought nothing on Qwen3-235B because weight bandwidth was not the bottleneck.
+<!-- issue:rtx-comms-bound end -->
+
+<!-- issue:jit-cache-node-local begin -->
+**JIT caches must be node-local.** Concurrent multi-node compiles against a shared NFS home hit stale
+file handles. `env/env.sh` points `TRITON_CACHE_DIR` and `TORCHINDUCTOR_CACHE_DIR` at
+`/tmp/$USER`, which also means the first launch on a fresh node pays the compile cost again.
+<!-- issue:jit-cache-node-local end -->
+
+<!-- issue:lustre-watchdog begin -->
+**A storage stall can kill the endpoint even after it recovers.** PyTorch kills the process when the
+NCCL watchdog thread stops sending heartbeats, on the assumption that a collective hung. A stalled
+network filesystem freezes every rank the same way, so at the 480 second default a storage outage
+that later recovers still takes the endpoint down permanently. Observed on 2026-07-29: a holylfs06
+OSS failover froze two unrelated endpoints on two nodes within one second of each other, and both
+were killed by their own watchdog eight minutes later while reporting `Last enqueued NCCL work: -1`,
+meaning no collective was ever in flight. `env/env.sh` sets
+`TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC=3600` so a transient stall is survivable.
+<!-- issue:lustre-watchdog end -->
+
+<!-- issue:engine-ready-timeout begin -->
+**Startup exceeds vLLM's default readiness timeout.** Weight load plus torch.compile plus CUDA graph
+capture routinely takes longer than the 600 second default, so `env/env.sh` sets
+`VLLM_ENGINE_READY_TIMEOUT_S=3600`. A first launch that looks hung is usually still loading; check
+the log before killing it.
+<!-- issue:engine-ready-timeout end -->
+
+<!-- issue:node-local-logs begin -->
+**Logs are written to node-local `/tmp`, not to the repo.** Every rank writes stderr for the life of
+the endpoint, so a log on a network filesystem puts a blocking write on the critical path. During a
+filesystem stall that write hangs, which freezes the server. `LOG_DIR` defaults to
+`/tmp/$USER/vllm`, so read logs over SSH on the node that runs the server.
+<!-- issue:node-local-logs end -->
+
+**The cross-node transport for these nodes has not been verified.** `env/env.sh` pins
+`NCCL_SOCKET_IFNAME` and `GLOO_SOCKET_IFNAME` to `ib0` only when the node actually exposes that
+interface, and otherwise leaves NCCL's own interface selection alone, because whether the RTX nodes
+present an InfiniBand interface has not been checked on hardware. The Hopper multi-node recipes pin
+`ib0` unconditionally. If NCCL initialization hangs or picks a slow interface, this is the first thing
+to look at, and `NCCL_DEBUG=INFO` will name the interface it chose.
+
+## Stop the endpoint
+
+For a Slurm job, `scancel <jobid>`, which also tears down both Ray processes. For the SSH path, both
+nodes need attention:
+
+```
+bash common/tools/stop.sh <head_node> <worker_node>
+ssh <head_node> ray stop
+ssh <worker_node> ray stop
+```
+
+That kills the server processes and waits for GPU memory to be released. Confirm with
+`ssh <node> nvidia-smi --query-gpu=memory.used --format=csv,noheader`, which should read 0 MiB on all
+eight GPUs of both nodes before you relaunch, or the next start will fail on memory. A leftover Ray
+cluster is the other common cause of a failed relaunch, which is why `ray stop` is listed separately.
+
+## Expected startup time
+
+| Stage | Cold | Warm |
+| --- | --- | --- |
+| Environment build, one time | 10 to 25 min | skipped |
+| Weight load, 806 GiB across 16 ranks | to be measured | to be measured |
+| FlashInfer sm_120 kernel compilation, first launch only | to be measured | skipped |
+| Total to first token | to be measured | to be measured |
+
+First launch on a fresh node is slower than later ones: page cache is cold, and the FlashInfer sm_120
+kernels are compiled from source once because no cubin package matches the installed version. A launch
+that looks hung during this window is usually still loading. Check the log before killing it. These
+numbers will be filled in when this recipe is run on hardware; they are deliberately blank rather than
+guessed.

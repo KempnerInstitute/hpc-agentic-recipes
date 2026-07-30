@@ -1,13 +1,21 @@
+# Built environments live outside the repo, under ENV_ROOT. These patterns catch the pre-restructure
+# in-repo layout so an older checkout does not accidentally commit one.
 .venv/
 .venv-cu130/
 .venv-sglang/
 .venv-tools/
 cuda13/
+
+# Local overrides and secrets.
+common/site.conf
+secrets/
+.env
+
+# Logs. Server logs go to node-local /tmp by default; Slurm job logs land in the submit directory.
+*.log
 logs/*
 !logs/.gitkeep
-models/
-*.log
+
 __pycache__/
-.env
 .ray/
-secrets/
+models/
