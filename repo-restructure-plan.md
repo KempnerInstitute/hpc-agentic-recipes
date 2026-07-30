@@ -174,7 +174,7 @@ docs/
   web-search.md
   troubleshooting.md          aggregated view only
   roadmap.md                  from plan-new-models.md
-.claude/skills/local-search/SKILL.md   updated, see section 9
+common/skills/local-search/SKILL.md    moved out of .claude, see section 9
 logs/.gitkeep
 ```
 

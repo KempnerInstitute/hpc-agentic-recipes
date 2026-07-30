@@ -204,6 +204,14 @@ if [ -s /tmp/contlint.$$ ]; then
 fi
 rm -f /tmp/contlint.$$
 
+echo "== no client configuration tracked"
+# Claude Code writes settings and session state into .claude when run inside a checkout. The shared
+# skill lives in common/skills, so nothing under .claude should ever be tracked; committing it would
+# leak local state into a public repo.
+if git -C "$REPO_ROOT" ls-files --error-unmatch .claude >/dev/null 2>&1; then
+  bad "tracked files exist under .claude: $(git -C "$REPO_ROOT" ls-files .claude | paste -sd' ')"
+fi
+
 echo "== index coverage"
 # Both directions. A recipe missing from the model table is invisible to users, and a table row pointing
 # at a directory that does not exist is a broken promise. The second is how two multi-node recipes were

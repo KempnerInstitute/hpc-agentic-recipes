@@ -39,7 +39,7 @@ Install the skill so Claude Code reaches for this tool on its own, including whe
 
 ```
 ln -sf "$PWD/common/tools/search.sh" ~/.local/bin/search.sh
-cp -r .claude/skills/local-search ~/.claude/skills/
+cp -r common/skills/local-search ~/.claude/skills/
 ```
 
 The skill tells the model what the tool does, when to use each mode, and specifically to fall back to it

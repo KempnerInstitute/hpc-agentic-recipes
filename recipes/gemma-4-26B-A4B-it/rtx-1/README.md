@@ -235,7 +235,7 @@ the repo's keyless search tool and skill:
 
 ```
 ln -sf "$REPO_ROOT/common/tools/search.sh" ~/.local/bin/search.sh
-cp -r "$REPO_ROOT/.claude/skills/local-search" ~/.claude/skills/
+cp -r "$REPO_ROOT/common/skills/local-search" ~/.claude/skills/
 ```
 
 Then the model searches through `search.sh` (web, arxiv, crossref, pubmed, openalex, wiki, fetch)
