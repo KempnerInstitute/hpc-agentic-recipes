@@ -11,3 +11,7 @@ __pycache__/
 .env
 .ray/
 secrets/
+
+# Planning and research notes. These are our working scratch, not repo content:
+# they record what we were considering, not what a user needs to serve a model.
+plan-new-models.md
