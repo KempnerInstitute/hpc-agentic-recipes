@@ -78,9 +78,11 @@ about how fast a reply feels. Never quote one where the other belongs. The ratio
 big-MoE recipes and smallest for GLM-5.2-NVFP4, whose speculative decoding already spends spare capacity
 on latency rather than leaving it for extra streams. `rising` means throughput had not yet turned over at
 concurrency 512, the top of the sweep, so that figure is a floor rather than a ceiling; only the two
-marked `peak` were measured past their maximum. Above `max_num_seqs`, which vLLM defaults to 256,
-requests queue instead of batching, so part of the gain at the top is the scheduler keeping the batch
-full rather than added parallelism.
+marked `peak` were measured past their maximum. These numbers were taken at vLLM's default
+`max_num_seqs` of 128, so every level above that was queueing rather than running concurrently, and
+raising the cap raises the ceiling: gemma-4-26B on one RTX GPU went from 4290 to 5429 tok/s at
+concurrency 512 when the cap was lifted to 1024. Scheduler counters show KV block availability, not the
+sequence cap, is what binds first at high concurrency, and no preemption occurred.
 
 ## Hardware
 

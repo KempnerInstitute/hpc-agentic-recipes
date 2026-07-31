@@ -273,7 +273,7 @@ The two measure different things and neither substitutes for the other.
 
 Throughput was still rising at concurrency 512, the top of the sweep, so 5403.5 tok/s is a
 floor and not a ceiling. The true saturation point is above what was measured. Note also that
-vLLM defaults `max_num_seqs` to 256, so past that point requests queue rather than batch, and
+vLLM defaults `max_num_seqs` to 128, so past that point requests queue rather than batch, and
 part of the gain at the top is the scheduler keeping the batch full rather than added
 parallelism. Per stream rate in the table above shows that cost.
 

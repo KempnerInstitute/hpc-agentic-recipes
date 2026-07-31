@@ -21,9 +21,15 @@ for capacity.
 
 Sweep far enough to see throughput turn over. Of the 14 recipes measured here on 2026-07-31, only two
 peaked inside a sweep that reached concurrency 512; the other twelve were still climbing at the top, so
-their aggregate figures are floors rather than ceilings. Note also that vLLM defaults `max_num_seqs` to
-256, so past that point requests queue instead of batching, and some of the apparent gain is the
-scheduler keeping the batch full rather than real added parallelism.
+their aggregate figures are floors rather than ceilings, and for a second reason: vLLM defaults
+`max_num_seqs` to 128, so every level above 128 was queueing rather than running concurrently. Raising
+the cap raises the measured ceiling. Instrumenting the scheduler on gemma-4-26B on one RTX GPU gave 4290
+tok/s at concurrency 512 with the cap at 256 and 5429 with it at 1024, with the running batch reaching
+256 and 512 respectively. So report the cap alongside the rate, or the number is not reproducible.
+
+The same run settles what binds first. KV cache usage sat at 99 to 100 percent at concurrency 256 and
+above, requests queued even when the sequence cap was not the limit, and there were zero preemptions. So
+at high concurrency the constraint is KV block availability rather than the sequence cap or preemption.
 
 ```
 bash common/tools/bench.sh --host <node> --model <name>                   single stream
