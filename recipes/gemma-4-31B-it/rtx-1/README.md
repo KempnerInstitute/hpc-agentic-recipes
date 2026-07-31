@@ -280,10 +280,10 @@ response. Quote 2101.3 tok/s at concurrency 512 for a shared endpoint under load
 The two measure different things and neither substitutes for the other.
 
 Throughput was still rising at concurrency 512, the top of the sweep, so 2101.3 tok/s is a
-floor and not a ceiling. The true saturation point is above what was measured. Note also that
-vLLM defaults `max_num_seqs` to 128, so past that point requests queue rather than batch, and
-part of the gain at the top is the scheduler keeping the batch full rather than added
-parallelism. Per stream rate in the table above shows that cost.
+floor and not a ceiling. The true saturation point is above what was measured, and the
+sequence cap is not what stopped it: vLLM resolves `max_num_seqs` from device memory when the flag is
+absent, which is 1024 on this hardware, so the sweep ran entirely below the cap. Per stream rate in the
+table above shows what each added stream costs one user.
 
 The input sequence here is short, which is the best case for decode. Measure with
 `--prompt-tokens` at your working context before quoting a number for long-context work.
