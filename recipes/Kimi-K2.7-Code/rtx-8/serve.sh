@@ -15,6 +15,7 @@ EXTRA=()
 # ${VAR-default} rather than ${VAR:-default}: an explicitly empty ENFORCE_EAGER must stay empty and
 # turn the flag off, while an unset one keeps the tested default.
 [ -n "${ENFORCE_EAGER-1}" ] && EXTRA+=(--enforce-eager)
+[ -n "${EXTRA_ARGS:-}" ] && EXTRA+=($EXTRA_ARGS)
 
 exec vllm serve "$MODEL" \
   --served-model-name kimi-k2.7-code \

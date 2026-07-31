@@ -17,6 +17,7 @@ EXTRA=(--pipeline-parallel-size "${PP:-2}" --distributed-executor-backend "${EXE
 # output as reasoning would move the answer into a field most clients never display.
 _RP="${REASONING_PARSER-}"
 [ -n "$_RP" ] && EXTRA+=(--reasoning-parser "$_RP")
+[ -n "${EXTRA_ARGS:-}" ] && EXTRA+=($EXTRA_ARGS)
 
 exec vllm serve "$MODEL" \
   --served-model-name qwen3-coder-480b \

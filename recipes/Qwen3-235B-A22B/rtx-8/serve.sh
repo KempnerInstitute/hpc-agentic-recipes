@@ -12,6 +12,7 @@ MODEL="${MODEL:-$MODELS_DIR/Qwen3-235B-A22B}"
 
 EXTRA=()
 [ -n "${QUANT:-}" ] && EXTRA+=(--quantization "$QUANT")
+[ -n "${EXTRA_ARGS:-}" ] && EXTRA+=($EXTRA_ARGS)
 
 exec vllm serve "$MODEL" \
   --served-model-name qwen3-235b \

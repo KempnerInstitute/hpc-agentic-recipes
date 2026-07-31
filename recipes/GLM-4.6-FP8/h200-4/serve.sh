@@ -10,6 +10,7 @@ MODEL="${MODEL:-$MODELS_DIR/GLM-4.6-FP8}"
 [ -d "$MODEL" ] || { echo "checkpoint not found: $MODEL" >&2; exit 1; }
 
 EXTRA=()
+[ -n "${EXTRA_ARGS:-}" ] && EXTRA+=($EXTRA_ARGS)
 if [ -n "${PERF:-}" ]; then
   EXTRA+=(--compilation-config "{\"cudagraph_mode\": \"${CUDAGRAPH_MODE:-NONE}\"}")
 else

@@ -12,6 +12,7 @@ MODEL="${MODEL:-$MODELS_DIR/GLM-5.2-NVFP4}"
 
 [ -n "${ATTN_BACKEND:-}" ] && export VLLM_ATTENTION_BACKEND="$ATTN_BACKEND"
 EXTRA=()
+[ -n "${EXTRA_ARGS:-}" ] && EXTRA+=($EXTRA_ARGS)
 [ -z "${NO_MTP:-}" ] && EXTRA+=(--speculative-config "{\"method\": \"mtp\", \"num_speculative_tokens\": ${MTP_TOKENS:-3}}")
 
 exec vllm serve "$MODEL" \
