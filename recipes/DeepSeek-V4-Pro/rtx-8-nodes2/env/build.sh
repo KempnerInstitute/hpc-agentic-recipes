@@ -19,32 +19,38 @@ venv_healthy () {
   [ -x "$VENV/bin/python" ] && [ -f "$VENV/bin/activate" ] \
     && compgen -G "$VENV"/lib/python*/site-packages/vllm-*.dist-info > /dev/null
 }
+# The venv and the toolkit are independent stages. Do not exit here: a recipe can have a
+# healthy venv and a missing toolkit, and exiting would make that unrepairable. Skip only
+# the venv work, and never delete a venv that passed the health check.
+build_venv=1
 if venv_healthy && [ "${1:-}" != "--force" ]; then
   echo "environment already present and complete at $VENV (pass --force to rebuild)"
-  exit 0
+  build_venv=0
 fi
-command -v uv >/dev/null || { echo "uv is required: https://docs.astral.sh/uv/" >&2; exit 1; }
-[ -d "$VENV" ] && { echo "removing incomplete or forced environment"; rm -rf "$VENV" "$CUDA13"; }
-mkdir -p "$(dirname "$VENV")"
+if [ "$build_venv" = 1 ]; then
+  command -v uv >/dev/null || { echo "uv is required: https://docs.astral.sh/uv/" >&2; exit 1; }
+  [ -d "$VENV" ] && { echo "removing incomplete or forced environment"; rm -rf "$VENV"; }
+  mkdir -p "$(dirname "$VENV")"
 
-# The RTX PRO 6000 is Blackwell sm_120 on a CUDA 13 driver, so this needs the CUDA 13 build of vLLM
-# rather than the cu129 wheel the Hopper recipes use. Nightly wheels rotate, so record the exact
-# resolution in env/requirements.lock and the resolved URLs in env/WHEELS after a successful build.
-uv venv --python 3.12 "$VENV"
-uv pip install --python "$VENV/bin/python" --prerelease=allow --index-strategy unsafe-best-match \
-  --extra-index-url https://wheels.vllm.ai/nightly/cu130 \
-  --extra-index-url https://download.pytorch.org/whl/cu130 \
-  vllm
+  # The RTX PRO 6000 is Blackwell sm_120 on a CUDA 13 driver, so this needs the CUDA 13 build of vLLM
+  # rather than the cu129 wheel the Hopper recipes use. Nightly wheels rotate, so record the exact
+  # resolution in env/requirements.lock and the resolved URLs in env/WHEELS after a successful build.
+  uv venv --python 3.12 "$VENV"
+  uv pip install --python "$VENV/bin/python" --prerelease=allow --index-strategy unsafe-best-match \
+    --extra-index-url https://wheels.vllm.ai/nightly/cu130 \
+    --extra-index-url https://download.pytorch.org/whl/cu130 \
+    vllm
 
-# ray[default] is new for this recipe. The pre-restructure RTX environment had no Ray at all, because
-# every RTX endpoint so far ran on a single node; this recipe spans two nodes, so the Ray executor is
-# required. Only the Hopper environment carried Ray before.
-uv pip install --python "$VENV/bin/python" "ray[default]"
+  # ray[default] is new for this recipe. The pre-restructure RTX environment had no Ray at all, because
+  # every RTX endpoint so far ran on a single node; this recipe spans two nodes, so the Ray executor is
+  # required. Only the Hopper environment carried Ray before.
+  uv pip install --python "$VENV/bin/python" "ray[default]"
 
-# flashinfer-python must be 0.6.15, installed --no-deps so torch is left untouched. vLLM pins 0.6.13,
-# whose sm_120 attention backend rejects the kv_scale_format argument vLLM passes, and that failure
-# only appears at the first inference request.
-uv pip install --python "$VENV/bin/python" --no-deps -U "flashinfer-python==${FLASHINFER_VERSION}"
+  # flashinfer-python must be 0.6.15, installed --no-deps so torch is left untouched. vLLM pins 0.6.13,
+  # whose sm_120 attention backend rejects the kv_scale_format argument vLLM passes, and that failure
+  # only appears at the first inference request.
+  uv pip install --python "$VENV/bin/python" --no-deps -U "flashinfer-python==${FLASHINFER_VERSION}"
+fi
 
 # A complete, self-consistent CUDA 13.0 toolkit for FlashInfer's sm_120 just-in-time compilation. The
 # node's /usr/local/cuda-13 is runtime-only and the fragmented pip nvcc wheels mix 13.0 with 13.2

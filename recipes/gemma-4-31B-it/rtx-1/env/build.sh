@@ -20,30 +20,36 @@ venv_healthy () {
   [ -x "$VENV/bin/python" ] && [ -f "$VENV/bin/activate" ] \
     && compgen -G "$VENV"/lib/python*/site-packages/vllm-*.dist-info > /dev/null
 }
+# The venv and the toolkit are independent stages. Do not exit here: a recipe can have a
+# healthy venv and a missing toolkit, and exiting would make that unrepairable. Skip only
+# the venv work, and never delete a venv that passed the health check.
+build_venv=1
 if venv_healthy && [ "${1:-}" != "--force" ]; then
   echo "environment already present and complete at $VENV (pass --force to rebuild)"
-  exit 0
+  build_venv=0
 fi
-command -v uv >/dev/null || { echo "uv is required: https://docs.astral.sh/uv/" >&2; exit 1; }
-[ -d "$VENV" ] && { echo "removing incomplete or forced environment"; rm -rf "$VENV" "$CU13"; }
-mkdir -p "$(dirname "$VENV")"
+if [ "$build_venv" = 1 ]; then
+  command -v uv >/dev/null || { echo "uv is required: https://docs.astral.sh/uv/" >&2; exit 1; }
+  [ -d "$VENV" ] && { echo "removing incomplete or forced environment"; rm -rf "$VENV"; }
+  mkdir -p "$(dirname "$VENV")"
 
-# sm_120 needs the CUDA 13 build of vLLM, which ships only on the nightly index. unsafe-best-match is
-# what lets torch resolve from the PyTorch cu130 index while vLLM resolves from the vLLM one.
-uv venv --python 3.12 "$VENV"
-uv pip install --python "$VENV/bin/python" --prerelease=allow --index-strategy unsafe-best-match \
-  --extra-index-url https://wheels.vllm.ai/nightly/cu130 \
-  --extra-index-url https://download.pytorch.org/whl/cu130 \
-  vllm
+  # sm_120 needs the CUDA 13 build of vLLM, which ships only on the nightly index. unsafe-best-match is
+  # what lets torch resolve from the PyTorch cu130 index while vLLM resolves from the vLLM one.
+  uv venv --python 3.12 "$VENV"
+  uv pip install --python "$VENV/bin/python" --prerelease=allow --index-strategy unsafe-best-match \
+    --extra-index-url https://wheels.vllm.ai/nightly/cu130 \
+    --extra-index-url https://download.pytorch.org/whl/cu130 \
+    vllm
 
-# flashinfer 0.6.15, not the 0.6.13 vLLM pins: the sm_120 attention backend passes a kv_scale_format
-# argument that 0.6.13 rejects at the first inference request. --no-deps leaves torch untouched.
-uv pip install --python "$VENV/bin/python" --no-deps -U "flashinfer-python==$FLASHINFER_VERSION"
+  # flashinfer 0.6.15, not the 0.6.13 vLLM pins: the sm_120 attention backend passes a kv_scale_format
+  # argument that 0.6.13 rejects at the first inference request. --no-deps leaves torch untouched.
+  uv pip install --python "$VENV/bin/python" --no-deps -U "flashinfer-python==$FLASHINFER_VERSION"
+fi
 
 # A complete, self-consistent CUDA 13.0 toolkit for the FlashInfer sm_120 JIT. The node's
 # /usr/local/cuda-13 is runtime only, and the pip nvcc wheels mix 13.0 and 13.2 across nvcc, cicc and
 # ptxas, which breaks the JIT.
-if [ ! -d "$CU13" ]; then
+if [ ! -x "$CU13/bin/nvcc" ]; then
   source /etc/profile.d/lmod.sh 2>/dev/null || true
   module load Mambaforge/23.3.1-fasrc01 2>/dev/null || true
   command -v mamba >/dev/null || { echo "mamba is required for the CUDA 13.0 toolkit step" >&2; exit 1; }
