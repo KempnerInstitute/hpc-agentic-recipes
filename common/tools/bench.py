@@ -70,6 +70,32 @@ def one_request(url, key, model, prompt, max_tokens, timeout):
     return usage.get("completion_tokens"), usage.get("prompt_tokens")
 
 
+def is_first_token(delta):
+    """Whether a streaming delta carries generated text the user would see.
+
+    A thinking model with a reasoning parser installed emits its first tokens under
+    reasoning_content rather than content, and vLLM and SGLang differ on the field name. Watching only
+    content on such a model either reports no first token at all or times the first post-reasoning token,
+    which can be thousands of tokens late. Role-only preambles and tool-call deltas are not text.
+    """
+    return any(delta.get(k) for k in ("content", "reasoning_content", "reasoning"))
+
+
+def slope_rate(concurrency, short_tokens, long_tokens, t_short, t_long):
+    """Output tokens per second across all streams, by the slope method.
+
+    Timing two output lengths and dividing the difference cancels prefill and every other cost that does
+    not scale with output tokens. Raises if the two timings do not separate, because a non-positive
+    denominator means the measurement failed rather than that the model is infinitely fast.
+    """
+    if long_tokens <= short_tokens:
+        raise ValueError("long length %d must exceed short length %d" % (long_tokens, short_tokens))
+    if t_long <= t_short:
+        raise ValueError("long run (%.3fs) must take longer than short run (%.3fs); "
+                         "the slope denominator would be non-positive" % (t_long, t_short))
+    return concurrency * (long_tokens - short_tokens) / (t_long - t_short)
+
+
 def ttft(url, key, model, prompt, timeout):
     """Time to first token, measured on a streaming request. Standard practice reports this next to
     throughput, because it is what determines whether an interactive session feels responsive."""
@@ -92,7 +118,7 @@ def ttft(url, key, model, prompt, timeout):
             except ValueError:
                 continue
             delta = (chunk.get("choices") or [{}])[0].get("delta") or {}
-            if delta.get("content") or delta.get("reasoning"):
+            if is_first_token(delta):
                 return time.monotonic() - t0
     return None
 
@@ -185,7 +211,7 @@ def main():
             if t_l <= t_s:
                 print("  concurrency %d run %d: long batch was not slower than short, skipping" % (c, i + 1))
                 continue
-            rate = c * (args.long - args.short) / (t_l - t_s)
+            rate = slope_rate(c, args.short, args.long, t_s, t_l)
             rates.append(rate)
             print("  c=%-3d run %d: short %.2fs, long %.2fs -> %.1f tok/s aggregate"
                   % (c, i + 1, t_s, t_l, rate))
