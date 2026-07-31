@@ -46,27 +46,41 @@ not the same as best at coding: the fastest model here activates only 4B paramet
 
 ## Models
 
-| Model | Precision | Hardware | Parallelism | Decode | Protocol | Context | Status |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| [GLM-5.2](recipes/GLM-5.2-NVFP4/rtx-8) | NVFP4 | 1 RTX node, 8 GPUs | TP8 | 101.6 tok/s | slope(128,1152) | 128K | Validated 2026-07-29 |
-| [GLM-5.2](recipes/GLM-5.2-FP8/h200-4-nodes2) | FP8 | 2 H200 nodes | TP4 x PP2 | 13.0 tok/s | slope(128,1152) | 1M | Validated 2026-07-29 |
-| [GLM-4.6](recipes/GLM-4.6-FP8/h200-4) | FP8 | 1 H200 node, 4 GPUs | TP4 | 18.5 tok/s | slope(128,1152) | 200K | Validated 2026-07-29 |
-| [Kimi-K2.7-Code](recipes/Kimi-K2.7-Code/rtx-8) | INT4 | 1 RTX node, 8 GPUs | TP8 | about 21 tok/s | single-generation | 32K | Untested (migrated) |
-| [Kimi-K2.7-Code](recipes/Kimi-K2.7-Code/h200-4-nodes2) | INT4 | 2 H200 nodes | TP4 x PP2 | 30.0 tok/s | slope(128,1152) | 32K | Validated 2026-07-29 |
-| [Qwen3-235B-A22B](recipes/Qwen3-235B-A22B/rtx-8) | bf16 | 1 RTX node, 8 GPUs | TP8 | about 63 tok/s | slope(128,1152) | 40K | Untested (migrated) |
-| [Qwen3-Coder-480B](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8) | FP8 | 1 RTX node, 8 GPUs | TP4 x PP2 | 63.9 tok/s | slope(128,1152) | 128K | Untested (migrated) |
-| [Qwen3-Coder-480B](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/h200-4) | FP8 | 1 H200 node, 4 GPUs | TP4 | does not run | n/a | n/a | Blocked, serve on RTX |
-| [Gemma-4-26B-A4B](recipes/gemma-4-26B-A4B-it) | bf16 | 1 GPU | TP1 | 140 to 236.1 tok/s | slope(128,1152) | 32K | h200-1 Validated 2026-07-29 |
-| [Gemma-4-31B](recipes/gemma-4-31B-it) | FP8 | 1 GPU | TP1 | 40 to 85.2 tok/s | slope(128,1152) | 32K | h200-1 Validated 2026-07-29 |
-| [DeepSeek-V4-Pro](recipes/DeepSeek-V4-Pro) | FP8 with FP4 experts | 2 RTX nodes | TP8 x PP2 | not measured | n/a | 1M | Untested on RTX, Blocked on H200 |
-| [Qwen3-Coder-480B](recipes/Qwen3-Coder-480B-A35B-Instruct) | bf16 | 2 to 4 H200 nodes | TP4 x PP | not measured | n/a | 256K | Untested |
-| [Kimi-K3](recipes/Kimi-K3) | MXFP4 | Blackwell only | n/a | n/a | n/a | 1M | Blocked upstream |
+Every rate below was measured on 2026-07-31 with `common/tools/bench.sh` at concurrency 1, 8, 32, 64,
+128, 256 and 512, using slope(128,1152) over output tokens only, 3 repeats per level, median reported.
 
-Two columns deserve care. **Protocol**: slope-measured numbers time two generation lengths and
-subtract, which cancels prefill and fixed per-request cost, while single-generation numbers count those
-as decode time and understate the rate by up to 40 percent. The two are not directly comparable, and
-the single-generation figures are conservative. **Status**: `Untested (migrated)` means the number was
-measured with the pre-restructure scripts and the recipe here has not itself been run end to end.
+| Model | Precision | Hardware | Parallelism | Single stream | Saturated | Context | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| [GLM-5.2](recipes/GLM-5.2-NVFP4/rtx-8) | NVFP4 | 1 RTX node, 8 GPUs | TP8 | 93.4 tok/s | 1389 at c=256, peak | 128K | Validated |
+| [GLM-5.2](recipes/GLM-5.2-FP8/h200-4-nodes2) | FP8 | 2 H200 nodes | TP4 x PP2 | 13.0 tok/s | 5405 at c=512, rising | 1M | Validated |
+| [GLM-4.6](recipes/GLM-4.6-FP8/h200-4) | FP8 | 1 H200 node, 4 GPUs | TP4 | 19.2 tok/s | 6300 at c=512, rising | 200K | Validated |
+| [Kimi-K2.7-Code](recipes/Kimi-K2.7-Code/rtx-8) | INT4 | 1 RTX node, 8 GPUs | TP8 | 20.7 tok/s | 1819 at c=512, rising | 32K | Validated |
+| [Kimi-K2.7-Code](recipes/Kimi-K2.7-Code/h200-4-nodes2) | INT4 | 2 H200 nodes | TP4 x PP2 | 30.4 tok/s | 5669 at c=512, rising | 32K | Validated |
+| [Qwen3-235B-A22B](recipes/Qwen3-235B-A22B/rtx-8) | bf16 | 1 RTX node, 8 GPUs | TP8 | 63.3 tok/s | 3984 at c=512, rising | 40K | Validated |
+| [Qwen3-Coder-480B](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8) | FP8 | 1 RTX node, 8 GPUs | TP4 x PP2 | 67.7 tok/s | 3040 at c=512, rising | 128K | Validated |
+| [DeepSeek-V4-Pro](recipes/DeepSeek-V4-Pro/rtx-8-nodes2) | FP8 with FP4 experts | 2 RTX nodes | TP8 x PP2 | 18.6 tok/s | 2959 at c=512, rising | 1M | Validated |
+| [Gemma-4-26B-A4B](recipes/gemma-4-26B-A4B-it/h200-1) | bf16 | 1 H200 GPU | TP1 | 236.3 tok/s | 10727 at c=256, peak | 32K | Validated |
+| [Gemma-4-26B-A4B](recipes/gemma-4-26B-A4B-it/h100-1) | bf16 | 1 H100 GPU | TP1 | 203.4 tok/s | 7165 at c=512, rising | 32K | Validated |
+| [Gemma-4-26B-A4B](recipes/gemma-4-26B-A4B-it/rtx-1) | bf16 | 1 RTX GPU | TP1 | 140.6 tok/s | 5404 at c=512, rising | 32K | Validated |
+| [Gemma-4-31B](recipes/gemma-4-31B-it/h200-1) | FP8 | 1 H200 GPU | TP1 | 85.1 tok/s | 3097 at c=512, rising | 32K | Validated |
+| [Gemma-4-31B](recipes/gemma-4-31B-it/h100-1) | FP8 | 1 H100 GPU | TP1 | 67.4 tok/s | 2680 at c=512, rising | 32K | Validated |
+| [Gemma-4-31B](recipes/gemma-4-31B-it/rtx-1) | FP8 | 1 RTX GPU | TP1 | 39.5 tok/s | 2101 at c=512, rising | 32K | Validated |
+| [Qwen3-Coder-480B](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/h200-4) | FP8 | 1 H200 node, 4 GPUs | TP4 | does not run | n/a | n/a | Blocked, serve on RTX |
+| [DeepSeek-V4-Pro](recipes/DeepSeek-V4-Pro/h200-4-nodes2) | FP8 with FP4 experts | 2 H200 nodes | TP4 x PP2 | does not run | n/a | n/a | Blocked, serve on RTX |
+| [GLM-5.2 on SGLang](recipes/GLM-5.2-FP8/h200-4-nodes2-sglang) | FP8 | 2 H200 nodes | TP4 x PP2 | never loaded weights | n/a | n/a | Blocked |
+| [Qwen3-Coder-480B](recipes/Qwen3-Coder-480B-A35B-Instruct) | bf16 | 2 to 4 H200 nodes | TP4 x PP | not measured | n/a | 256K | Untested |
+| [Kimi-K3](recipes/Kimi-K3) | MXFP4, QAT | 4 H200 nodes, 16 GPUs | TP16 | not measured | n/a | 1M | Blocked, no vLLM support |
+
+Three columns deserve care. **Single stream** is what one person waiting on one response experiences, and
+it is the only number that describes interactive coding. **Saturated** is total output across all streams
+at the stated concurrency, which here runs from 15x the single stream rate to 416x, and says nothing
+about how fast a reply feels. Never quote one where the other belongs. The ratio is largest for the slow
+big-MoE recipes and smallest for GLM-5.2-NVFP4, whose speculative decoding already spends spare capacity
+on latency rather than leaving it for extra streams. `rising` means throughput had not yet turned over at
+concurrency 512, the top of the sweep, so that figure is a floor rather than a ceiling; only the two
+marked `peak` were measured past their maximum. Above `max_num_seqs`, which vLLM defaults to 256,
+requests queue instead of batching, so part of the gain at the top is the scheduler keeping the batch
+full rather than added parallelism.
 
 ## Hardware
 

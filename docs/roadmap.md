@@ -21,7 +21,8 @@ Two facts drive most decisions below:
 1. Our H200 nodes have **4** GPUs, not the 8 that vendor recipes assume. Anything needing "8x H200"
    is a 2-node Ray job for us.
 2. The RTX node is **Blackwell (sm_120)**, so it has native FP4 and MXFP4 math. Hopper H200 does not.
-   We already proved FP4 works there: GLM-5.2-NVFP4 serves at about 90 tok/s on one RTX node.
+   We already proved FP4 works there: GLM-5.2-NVFP4 serves at 93.4 tok/s single stream on one RTX node,
+   and DeepSeek-V4-Pro, whose experts are FP4, runs on two RTX nodes while failing on H200.
 
 > [!NOTE]
 > Gemma-4-26B, Gemma-4-31B, Qwen3-235B, and Qwen3-Coder-480B are now measured and served; see
@@ -229,6 +230,6 @@ attempt K3 on 3 RTX nodes once a newer vLLM is built and validated.
 - Does pure TP across nodes work in 0.25.1/0.26.0, which would preserve MTP for the multi-node models,
   or does it still hang as it did for Kimi-K2.7?
 - Does Qwen3-235B tolerate YaRN scaling past its native 40960 without quality loss?
-- Actual tok/s on our hardware. Every throughput number in this document is from other people's GPUs;
-  our own reference points are GLM-5.2-NVFP4 at about 90 tok/s on 1 RTX node, and Kimi-K2.7-Code at
-  about 21 tok/s on 1 RTX node and about 29 tok/s on 2 H200 nodes.
+- Throughput numbers for models we have not yet served. Figures quoted for those come from other
+  people's GPUs. Our own 14 recipes were measured on 2026-07-31 across concurrency 1 to 512 and are
+  recorded in each recipe README.

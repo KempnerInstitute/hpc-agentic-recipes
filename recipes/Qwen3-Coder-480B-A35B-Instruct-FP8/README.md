@@ -9,10 +9,10 @@ proxy. It is the largest coding model in this repo that fits a single node.
 
 ## Hardware variants
 
-| Variant | Shape | Decode rate | Protocol |
+| Variant | Shape | Single stream | Saturated |
 | --- | --- | --- | --- |
-| [`rtx-8`](rtx-8/README.md) | 1 RTX PRO 6000 node, 8 GPUs, TP4 x PP2 | 63.9 tok/s | slope(128,1152) |
-| [`h200-4`](h200-4/README.md) | 4 H200 GPUs, TP4 | blocked, 22.2 tok/s eager only | slope(128,1152) |
+| [`rtx-8`](rtx-8/README.md) | 1 RTX PRO 6000 node, 8 GPUs, TP4 x PP2 | 67.7 tok/s | 3040 at c=512, rising |
+| [`h200-4`](h200-4/README.md) | 4 H200 GPUs, TP4 | blocked, 22.2 tok/s eager only | not measurable |
 
 Serve this checkpoint on RTX. Two constraints shape both variants. TP8 is impossible: the
 `moe_intermediate_size` is 2560 against an FP8 quantization block of 128, so a 320-column shard is not

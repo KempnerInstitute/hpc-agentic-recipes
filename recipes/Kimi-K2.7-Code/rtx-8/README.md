@@ -1,6 +1,6 @@
 # Kimi-K2.7-Code on one RTX PRO 6000 node
 
-Status: Untested (migrated) - numbers below were measured 2026-07-19 with the pre-restructure scripts, protocol: single-generation
+Status: Validated - 2026-07-31, vLLM 0.25.1, protocol: slope(128,1152) swept at concurrency 1 through 512
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -28,9 +28,17 @@ defaults, so a fresh clone runs as is. Four optional overrides, either exported 
 
 ## Status
 
-Untested (migrated). The decode rate below was measured before the restructure, with the older
-single-generation protocol rather than the slope method, so treat it as conservative and not directly
-comparable to slope-measured numbers elsewhere in this repo.
+Validated on 2026-07-31. The environment was built from `env/build.sh`, the endpoint was
+launched with `serve_ssh.sh` on one RTX PRO 6000 Blackwell node, and throughput was measured with `common/tools/bench.sh`
+across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 5 minutes 28 seconds after launch. The endpoint was still answering after the sweep finished.
+
+The rate recorded before the restructure, about 21 tok/s, came from a single timed generation, which
+counts prefill and fixed per-request cost as decode time. The 20.7 tok/s here is slope-measured and
+the two agree closely, because at this rate a 1152-token generation runs long enough that fixed cost
+is a small fraction of it.
+
+Single stream and saturated throughput are different measurements and neither substitutes for
+the other. See Measured performance below for the full curve and the disclosure block.
 
 ## What this is
 
@@ -240,26 +248,37 @@ instead of the hosted tool.
 
 ## Measured performance
 
-| Configuration | Rate | Per stream | Latency |
+| Configuration | Aggregate rate | Per stream | Latency |
 | --- | --- | --- | --- |
-| Single stream, concurrency 1 | 20.6 tok/s | 20.6 tok/s | TTFT median 143 ms, n=3 spanning 20.5 to 21.0 |
-| Saturated, concurrency 8 | 162.4 tok/s | 20.3 tok/s | TTFT median 157 ms, p90 166 ms, n=3 spanning 161.9 to 162.5 |
-| Saturated, concurrency 32 | 646.7 tok/s | 20.2 tok/s | TTFT median 223 ms, p90 230 ms, n=3 spanning 644.9 to 648.3 |
+| Single stream, concurrency 1 | 20.7 tok/s | 20.7 tok/s | TTFT median 140 ms, n=3 spanning 20.7 to 20.9 |
+| Concurrency 8 | 163.4 tok/s | 20.4 tok/s | TTFT median 155 ms, p90 163 ms, n=3 spanning 163.0 to 163.6 |
+| Concurrency 32 | 647.4 tok/s | 20.2 tok/s | TTFT median 212 ms, p90 218 ms, n=3 spanning 646.6 to 647.6 |
+| Concurrency 64 | 1094.3 tok/s | 17.1 tok/s | TTFT median 262 ms, p90 316 ms, n=3 spanning 1093.6 to 1097.5 |
+| Concurrency 128 | 1327.5 tok/s | 10.4 tok/s | TTFT median 324 ms, p90 507 ms, n=3 spanning 1325.8 to 1329.4 |
+| Concurrency 256 | 1637.9 tok/s | 6.4 tok/s | TTFT median 625 ms, p90 850 ms, n=3 spanning 1634.4 to 1639.6 |
+| Concurrency 512 (highest measured) | 1819.1 tok/s | 3.6 tok/s | TTFT median 1046 ms, p90 1566 ms, n=3 spanning 1816.8 to 1822.4 |
 
-Measured 2026-07-30 with `common/tools/bench.sh`, endpoint ready 9m 53s after launch. Full disclosure, without which a
-tokens per second figure cannot be compared against anything:
+Measured 2026-07-31 with `common/tools/bench.sh`, endpoint ready 5m 28s after launch. Full disclosure, without which a tokens
+per second figure cannot be compared against anything:
 
 | Parameter | Value |
 | --- | --- |
 | ISL, input tokens | 15 |
 | OSL, output tokens | 1152, as the slope between 128 and 1152 |
 | Counted | output tokens only, never input plus output |
+| Concurrency levels | 1,8,32,64,128,256,512 |
 | Protocol | slope(128,1152), 3 repeats per level, median reported |
 | Hardware | one RTX PRO 6000 Blackwell node, 8 GPUs |
 
-Quote 20.6 tok/s for interactive coding, where one person waits on one response,
-and 646.7 tok/s at concurrency 32 when the endpoint serves several people at once.
-Never compare one against the other.
+Quote 20.7 tok/s for interactive coding, where one person waits on one
+response. Quote 1819.1 tok/s at concurrency 512 for a shared endpoint under load.
+The two measure different things and neither substitutes for the other.
+
+Throughput was still rising at concurrency 512, the top of the sweep, so 1819.1 tok/s is a
+floor and not a ceiling. The true saturation point is above what was measured. Note also that
+vLLM defaults `max_num_seqs` to 256, so past that point requests queue rather than batch, and
+part of the gain at the top is the scheduler keeping the batch full rather than added
+parallelism. Per stream rate in the table above shows that cost.
 
 The input sequence here is short, which is the best case for decode. Measure with
 `--prompt-tokens` at your working context before quoting a number for long-context work.

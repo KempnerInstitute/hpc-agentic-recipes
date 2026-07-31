@@ -1,6 +1,6 @@
 # gemma-4-31B-it on one H200 GPU
 
-Status: Validated - 2026-07-29, vLLM 0.25.1, protocol: slope(128,1152)
+Status: Validated - 2026-07-31, vLLM 0.25.1+cu129, protocol: slope(128,1152) swept at concurrency 1 through 512
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -28,16 +28,12 @@ defaults, so a fresh clone runs as is. Optional overrides, either exported or se
 
 ## Status
 
-Validated on 2026-07-29. This recipe was run end to end on an H200 node: the environment was built
-from `env/build.sh`, the endpoint launched with `serve_ssh.sh`, and the rate measured with
-`common/tools/bench.sh`. Ready in 7 minutes 38 seconds from launch, including CUDA graph capture in 20
-seconds. Measured 85.2 tok/s, which independently reproduces the 85.3 tok/s recorded before the
-restructure. Key gating and the Anthropic endpoint were both confirmed.
+Validated on 2026-07-31. The environment was built from `env/build.sh`, the endpoint was
+launched with `serve_ssh.sh` on one H200 GPU, and throughput was measured with `common/tools/bench.sh`
+across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 4 minutes after launch. The endpoint was still answering after the sweep finished.
 
-Untested (migrated). The decode rates below were measured on this GPU type on 2026-07-27, with the
-pre-restructure scripts whose serve flags this recipe reproduces exactly, using the slope protocol.
-The recipe files themselves have not been run yet, so treat startup behavior as unverified while the
-rates are trustworthy.
+Single stream and saturated throughput are different measurements and neither substitutes for
+the other. See Measured performance below for the full curve and the disclosure block.
 
 ## What this is
 
@@ -240,26 +236,40 @@ instead of the hosted tool.
 
 ## Measured performance
 
-| Configuration | Rate | Per stream | Notes |
+| Configuration | Aggregate rate | Per stream | Latency |
 | --- | --- | --- | --- |
-| Single stream, concurrency 1 | 85.1 tok/s | 85.1 tok/s | interactive latency, TTFT 138 ms |
-| Saturated, concurrency 8 | 626.3 tok/s | 78.3 tok/s | aggregate across 8 requests |
-| Saturated, concurrency 32 | 1654.0 tok/s | 51.7 tok/s | peak measured |
+| Single stream, concurrency 1 | 85.1 tok/s | 85.1 tok/s | TTFT median 37 ms, n=3 spanning 85.0 to 85.1 |
+| Concurrency 8 | 626.3 tok/s | 78.3 tok/s | TTFT median 47 ms, p90 52 ms, n=3 spanning 626.2 to 626.3 |
+| Concurrency 32 | 1654.9 tok/s | 51.7 tok/s | TTFT median 85 ms, p90 126 ms, n=3 spanning 1652.9 to 1654.9 |
+| Concurrency 64 | 2629.3 tok/s | 41.1 tok/s | TTFT median 129 ms, p90 183 ms, n=3 spanning 2627.5 to 2633.0 |
+| Concurrency 128 | 2905.4 tok/s | 22.7 tok/s | TTFT median 189 ms, p90 293 ms, n=3 spanning 2898.8 to 2910.2 |
+| Concurrency 256 | 3037.2 tok/s | 11.9 tok/s | TTFT median 308 ms, p90 474 ms, n=3 spanning 3024.8 to 3037.7 |
+| Concurrency 512 (highest measured) | 3097.2 tok/s | 6.0 tok/s | TTFT median 528 ms, p90 883 ms, n=3 spanning 3094.8 to 3099.5 |
 
-Measured 2026-07-30 with `common/tools/bench.sh`, endpoint ready 4m 45s after launch. Full disclosure,
-without which a tokens per second figure cannot be compared against anything:
+Measured 2026-07-31 with `common/tools/bench.sh`, endpoint ready 4m 0s after launch. Full disclosure, without which a tokens
+per second figure cannot be compared against anything:
 
 | Parameter | Value |
 | --- | --- |
 | ISL, input tokens | 19 |
 | OSL, output tokens | 1152, as the slope between 128 and 1152 |
 | Counted | output tokens only, never input plus output |
-| Protocol | slope(128,1152) |
+| Concurrency levels | 1,8,32,64,128,256,512 |
+| Protocol | slope(128,1152), 3 repeats per level, median reported |
 | Hardware | one H200 GPU |
 
-Quote the single stream figure for interactive coding and the aggregate for serving several people.
-Never compare one against the other. The input sequence here is short, which is the best case for
-decode, so measure with `--prompt-tokens` at your working context before quoting a long-context number.
+Quote 85.1 tok/s for interactive coding, where one person waits on one
+response. Quote 3097.2 tok/s at concurrency 512 for a shared endpoint under load.
+The two measure different things and neither substitutes for the other.
+
+Throughput was still rising at concurrency 512, the top of the sweep, so 3097.2 tok/s is a
+floor and not a ceiling. The true saturation point is above what was measured. Note also that
+vLLM defaults `max_num_seqs` to 256, so past that point requests queue rather than batch, and
+part of the gain at the top is the scheduler keeping the batch full rather than added
+parallelism. Per stream rate in the table above shows that cost.
+
+The input sequence here is short, which is the best case for decode. Measure with
+`--prompt-tokens` at your working context before quoting a number for long-context work.
 
 ## Parallelism and quantization
 

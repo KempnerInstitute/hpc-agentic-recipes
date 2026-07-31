@@ -1,6 +1,6 @@
 # GLM-5.2-NVFP4 on one RTX PRO 6000 node
 
-Status: Validated - 2026-07-29, vLLM 0.25.1, protocol: slope(128,1152)
+Status: Validated - 2026-07-31, vLLM 0.25.1, protocol: slope(128,1152) swept at concurrency 1 through 512
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -28,22 +28,19 @@ defaults, so a fresh clone runs as is. Four optional overrides, either exported 
 
 ## Status
 
-Validated on 2026-07-29 through the canonical Slurm path. The environment was built from
-`env/build.sh` on a fresh netscratch tree, the job was submitted with
-`sbatch --account=<acct> recipes/GLM-5.2-NVFP4/rtx-8/serve.sbatch`, and the rate was measured with
-`common/tools/bench.sh`. Ready 14 minutes 51 seconds after the job started, which includes loading 47
-shards and compiling the FlashInfer sm_120 kernels from source for the first time. Key gating and the
-Anthropic endpoint were both confirmed.
+Validated on 2026-07-31. The environment was built from `env/build.sh`, the endpoint was
+launched with `serve_ssh.sh` on one RTX PRO 6000 Blackwell node, and throughput was measured with `common/tools/bench.sh`
+across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 18 minutes 1 second after launch. The endpoint was still answering after the sweep finished.
 
-Measured 101.6 tok/s, against the about 90 tok/s recorded before the restructure. The difference is the
-measurement protocol, not a change in the model: the older figure used a single timed generation, which
-counts prefill and fixed per-request cost as decode time. That bias is largest for fast models, and at
-roughly 100 tok/s a 1152-token generation takes 12 seconds, so about a second of fixed cost was
-suppressing the reported rate by more than 10 percent.
+This run measured 93.4 tok/s single stream, against 101.6 tok/s measured on 2026-07-29. Both used the
+slope method, so the protocol is not the difference. This recipe serves with MTP speculative decoding
+at 3 draft tokens, and speculative gain depends on how predictable the generated text is, so its
+single stream rate is less reproducible run to run than a non-speculative model's. Treat roughly 93
+to 102 tok/s as the observed range rather than either endpoint as exact. Set `NO_MTP=1` to measure
+the model without speculation if you need a stable baseline.
 
-Untested (migrated). The decode rate below was measured before the restructure, with the older
-single-generation protocol rather than the slope method, so treat it as conservative and not directly
-comparable to slope-measured numbers elsewhere in this repo.
+Single stream and saturated throughput are different measurements and neither substitutes for
+the other. See Measured performance below for the full curve and the disclosure block.
 
 ## What this is
 
@@ -247,42 +244,37 @@ instead of the hosted tool.
 
 ## Measured performance
 
-| Configuration | Rate | Per stream | Notes |
+| Configuration | Aggregate rate | Per stream | Latency |
 | --- | --- | --- | --- |
-| Single stream, concurrency 1 | 94.3 tok/s | 94.3 tok/s | interactive latency, TTFT 89 ms |
-| Saturated, concurrency 8 | 378.4 tok/s | 47.3 tok/s | aggregate across 8 requests |
-| Saturated, concurrency 32 | 691.7 tok/s | 21.6 tok/s | peak measured |
+| Single stream, concurrency 1 | 93.4 tok/s | 93.4 tok/s | TTFT median 121 ms, n=3 spanning 90.7 to 93.7 |
+| Concurrency 8 | 368.3 tok/s | 46.0 tok/s | TTFT median 235 ms, p90 236 ms, n=3 spanning 361.3 to 378.9 |
+| Concurrency 32 | 682.6 tok/s | 21.3 tok/s | TTFT median 628 ms, p90 638 ms, n=3 spanning 669.2 to 688.5 |
+| Concurrency 64 | 1049.0 tok/s | 16.4 tok/s | TTFT median 1038 ms, p90 1068 ms, n=3 spanning 1047.0 to 1050.7 |
+| Concurrency 128 | 1266.6 tok/s | 9.9 tok/s | TTFT median 1826 ms, p90 2035 ms, n=3 spanning 1266.0 to 1271.9 |
+| Concurrency 256 (peak) | 1389.1 tok/s | 5.4 tok/s | TTFT median 3478 ms, p90 3533 ms, n=3 spanning 1357.6 to 1405.3 |
+| Concurrency 512 | 1239.8 tok/s | 2.4 tok/s | TTFT median 5473 ms, p90 7606 ms, n=3 spanning 1179.5 to 1240.4 |
 
-Measured 2026-07-30 with `common/tools/bench.sh`. Full disclosure, without which a tokens per second
-figure cannot be compared against anything:
+Measured 2026-07-31 with `common/tools/bench.sh`, endpoint ready 18m 1s after launch. Full disclosure, without which a tokens
+per second figure cannot be compared against anything:
 
 | Parameter | Value |
 | --- | --- |
 | ISL, input tokens | 21 |
 | OSL, output tokens | 1152, as the slope between 128 and 1152 |
 | Counted | output tokens only, never input plus output |
-| Protocol | slope(128,1152) |
+| Concurrency levels | 1,8,32,64,128,256,512 |
+| Protocol | slope(128,1152), 3 repeats per level, median reported |
 | Hardware | one RTX PRO 6000 Blackwell node, 8 GPUs |
 
-Per stream latency degrades sharply under load here, from 94.3 to 21.6 tok/s. That is the MTP
-speculative decoding losing its advantage: speculation spends extra compute to save latency, which pays
-off when the GPU is idle at concurrency 1 and competes with real work once the batch is full.
+Quote 93.4 tok/s for interactive coding, where one person waits on one
+response. Quote 1389.1 tok/s at concurrency 256 for a shared endpoint under load.
+The two measure different things and neither substitutes for the other.
 
-Quote the single stream figure for interactive coding and the aggregate for serving several people.
-Never compare one against the other.
+Throughput peaks at concurrency 256 and falls to 1239.8 tok/s by 512, so
+1389.1 tok/s is a real ceiling for this recipe rather than the edge of the sweep.
 
-Context length turned out not to matter much for this model. Measured at concurrency 1:
-
-| ISL, input tokens | Decode | TTFT |
-| --- | --- | --- |
-| 21 | 97.0 tok/s | 91 ms |
-| 7052 | 97.8 tok/s | 123 ms |
-| 26379 | 95.0 tok/s | 131 ms |
-
-Decode is flat to 26K within run-to-run noise, and only time to first token grows, which is prefill
-doing more work. That is a property of the attention design rather than a general rule: MLA compresses
-the KV cache, it is stored as fp8, and sparse attention reads only a subset of the context, so the
-per-step read barely grows. Do not carry this result over to a dense model with full attention.
+The input sequence here is short, which is the best case for decode. Measure with
+`--prompt-tokens` at your working context before quoting a number for long-context work.
 
 ## Parallelism and quantization
 

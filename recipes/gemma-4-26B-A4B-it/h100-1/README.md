@@ -1,6 +1,6 @@
 # gemma-4-26B-A4B-it on one H100 GPU
 
-Status: Untested (migrated) - numbers below were measured 2026-07-27 with the pre-restructure scripts, protocol: slope(128,1152)
+Status: Validated - 2026-07-31, vLLM 0.25.1+cu129, protocol: slope(128,1152) swept at concurrency 1 through 512
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -28,10 +28,12 @@ defaults, so a fresh clone runs as is. Optional overrides, either exported or se
 
 ## Status
 
-Untested (migrated). The decode rate below was measured on this GPU type on 2026-07-27, with the
-pre-restructure scripts whose serve flags this recipe reproduces exactly, using the slope protocol.
-The recipe files themselves have not been run yet, so treat startup behavior as unverified while the
-rate is trustworthy.
+Validated on 2026-07-31. The environment was built from `env/build.sh`, the endpoint was
+launched with `serve.sbatch` through Slurm on one H100 GPU, and throughput was measured with `common/tools/bench.sh`
+across concurrency 1, 8, 32, 64, 128, 256 and 512. The endpoint was still answering after the sweep finished.
+
+Single stream and saturated throughput are different measurements and neither substitutes for
+the other. See Measured performance below for the full curve and the disclosure block.
 
 ## What this is
 
@@ -227,26 +229,37 @@ instead of the hosted tool.
 
 ## Measured performance
 
-| Configuration | Rate | Per stream | Latency |
+| Configuration | Aggregate rate | Per stream | Latency |
 | --- | --- | --- | --- |
-| Single stream, concurrency 1 | 214.6 tok/s | 214.6 tok/s | TTFT median 20 ms, n=3 spanning 214.6 to 214.6 |
-| Saturated, concurrency 8 | 1364.8 tok/s | 170.6 tok/s | TTFT median 36 ms, p90 46 ms, n=3 spanning 1364.7 to 1364.9 |
-| Saturated, concurrency 32 | 3605.3 tok/s | 112.7 tok/s | TTFT median 79 ms, p90 98 ms, n=3 spanning 3589.7 to 3605.3 |
+| Single stream, concurrency 1 | 203.4 tok/s | 203.4 tok/s | TTFT median 21 ms, n=3 spanning 203.4 to 203.4 |
+| Concurrency 8 | 1302.8 tok/s | 162.8 tok/s | TTFT median 36 ms, p90 45 ms, n=3 spanning 1302.7 to 1323.4 |
+| Concurrency 32 | 3591.1 tok/s | 112.2 tok/s | TTFT median 79 ms, p90 97 ms, n=3 spanning 3576.4 to 3592.9 |
+| Concurrency 64 | 5273.5 tok/s | 82.4 tok/s | TTFT median 130 ms, p90 166 ms, n=3 spanning 5267.2 to 5345.9 |
+| Concurrency 128 | 5417.1 tok/s | 42.3 tok/s | TTFT median 197 ms, p90 293 ms, n=3 spanning 5275.6 to 5465.3 |
+| Concurrency 256 | 6614.8 tok/s | 25.8 tok/s | TTFT median 332 ms, p90 545 ms, n=3 spanning 6579.0 to 6619.5 |
+| Concurrency 512 (highest measured) | 7164.7 tok/s | 14.0 tok/s | TTFT median 566 ms, p90 974 ms, n=3 spanning 7142.7 to 7173.4 |
 
-Measured 2026-07-30 with `common/tools/bench.sh`. Full disclosure, without which a
-tokens per second figure cannot be compared against anything:
+Measured 2026-07-31 with `common/tools/bench.sh`. Full disclosure, without which a tokens
+per second figure cannot be compared against anything:
 
 | Parameter | Value |
 | --- | --- |
 | ISL, input tokens | 19 |
 | OSL, output tokens | 1152, as the slope between 128 and 1152 |
 | Counted | output tokens only, never input plus output |
+| Concurrency levels | 1,8,32,64,128,256,512 |
 | Protocol | slope(128,1152), 3 repeats per level, median reported |
 | Hardware | one H100 GPU |
 
-Quote 214.6 tok/s for interactive coding, where one person waits on one response,
-and 3605.3 tok/s at concurrency 32 when the endpoint serves several people at once.
-Never compare one against the other.
+Quote 203.4 tok/s for interactive coding, where one person waits on one
+response. Quote 7164.7 tok/s at concurrency 512 for a shared endpoint under load.
+The two measure different things and neither substitutes for the other.
+
+Throughput was still rising at concurrency 512, the top of the sweep, so 7164.7 tok/s is a
+floor and not a ceiling. The true saturation point is above what was measured. Note also that
+vLLM defaults `max_num_seqs` to 256, so past that point requests queue rather than batch, and
+part of the gain at the top is the scheduler keeping the batch full rather than added
+parallelism. Per stream rate in the table above shows that cost.
 
 The input sequence here is short, which is the best case for decode. Measure with
 `--prompt-tokens` at your working context before quoting a number for long-context work.

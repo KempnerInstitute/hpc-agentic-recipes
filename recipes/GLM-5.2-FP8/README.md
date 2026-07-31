@@ -14,7 +14,7 @@ is the slowest configuration in this repo.
 
 | Variant | Engine | Shape | Decode rate | Protocol | Status |
 | --- | --- | --- | --- | --- | --- |
-| [`h200-4-nodes2`](h200-4-nodes2/README.md) | vLLM | 2 H200 nodes, 4 GPUs each, TP4 x PP2 | about 13 tok/s | single-generation | Untested (migrated) |
+| [`h200-4-nodes2`](h200-4-nodes2/README.md) | vLLM | 2 H200 nodes, 4 GPUs each, TP4 x PP2 | 13.0 tok/s single stream, 5405 at c=512 | slope(128,1152) | Validated |
 | [`h200-4-nodes2-sglang`](h200-4-nodes2-sglang/README.md) | SGLang | 2 H200 nodes, TP8, no PP, EAGLE | never measured | none | Blocked |
 
 Use the vLLM variant. The SGLang variant is documentation only: it has never successfully loaded
@@ -23,7 +23,7 @@ speculative head, which vLLM cannot reach here.
 
 There is no single-node H200 variant, and there cannot be one: 756 GB of weights does not fit a 4-GPU
 node, which holds 562 GiB. If you want GLM-5.2 on one node, use the separately quantized NVFP4
-checkpoint on an RTX node, which measured about 90 tok/s at a 128K context. If you want a smaller model
+checkpoint on an RTX node, which measured 93.4 tok/s single stream at a 128K context. If you want a smaller model
 with the same tool calling and reasoning parsers on a single H200 node, use GLM-4.6-FP8.
 
 ## Checkpoint provenance

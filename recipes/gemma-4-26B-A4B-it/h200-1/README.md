@@ -1,6 +1,6 @@
 # gemma-4-26B-A4B-it on one H200 GPU
 
-Status: Validated - 2026-07-29, vLLM 0.25.1, protocol: slope(128,1152)
+Status: Validated - 2026-07-31, vLLM 0.25.1+cu129, protocol: slope(128,1152) swept at concurrency 1 through 512
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -28,15 +28,12 @@ defaults, so a fresh clone runs as is. Optional overrides, either exported or se
 
 ## Status
 
-Validated on 2026-07-29. Built from `env/build.sh`, served over SSH on an H200 node, and measured
-with `common/tools/bench.sh`. Ready 6 minutes 11 seconds after launch. Measured 236.1 tok/s, which
-reproduces the 236.0 tok/s recorded before the restructure. Key gating and the Anthropic endpoint were
-both confirmed.
+Validated on 2026-07-31. The environment was built from `env/build.sh`, the endpoint was
+launched with `serve_ssh.sh` on one H200 GPU, and throughput was measured with `common/tools/bench.sh`
+across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 4 minutes 1 second after launch. The endpoint was still answering after the sweep finished.
 
-Untested (migrated). The decode rate below was measured on this GPU type on 2026-07-27, with the
-pre-restructure scripts whose serve flags this recipe reproduces exactly, using the slope protocol.
-The recipe files themselves have not been run yet, so treat startup behavior as unverified while the
-rate is trustworthy.
+Single stream and saturated throughput are different measurements and neither substitutes for
+the other. See Measured performance below for the full curve and the disclosure block.
 
 ## What this is
 
@@ -230,26 +227,37 @@ instead of the hosted tool.
 
 ## Measured performance
 
-| Configuration | Rate | Per stream | Notes |
+| Configuration | Aggregate rate | Per stream | Latency |
 | --- | --- | --- | --- |
-| Single stream, concurrency 1 | 236.4 tok/s | 236.4 tok/s | interactive latency, TTFT 131 ms |
-| Saturated, concurrency 8 | 1544.2 tok/s | 193.0 tok/s | aggregate across 8 requests |
-| Saturated, concurrency 32 | 4148.9 tok/s | 129.7 tok/s | peak measured |
+| Single stream, concurrency 1 | 236.3 tok/s | 236.3 tok/s | TTFT median 18 ms, n=3 spanning 236.3 to 236.4 |
+| Concurrency 8 | 1543.7 tok/s | 193.0 tok/s | TTFT median 30 ms, p90 37 ms, n=3 spanning 1543.6 to 1544.0 |
+| Concurrency 32 | 4134.3 tok/s | 129.2 tok/s | TTFT median 70 ms, p90 84 ms, n=3 spanning 4133.3 to 4145.6 |
+| Concurrency 64 | 6306.5 tok/s | 98.5 tok/s | TTFT median 109 ms, p90 142 ms, n=3 spanning 6262.9 to 6344.3 |
+| Concurrency 128 | 8767.2 tok/s | 68.5 tok/s | TTFT median 166 ms, p90 252 ms, n=3 spanning 8674.5 to 8770.7 |
+| Concurrency 256 (peak) | 10727.1 tok/s | 41.9 tok/s | TTFT median 294 ms, p90 481 ms, n=3 spanning 10724.0 to 10759.0 |
+| Concurrency 512 | 10571.7 tok/s | 20.6 tok/s | TTFT median 482 ms, p90 829 ms, n=3 spanning 10569.2 to 10573.9 |
 
-Measured 2026-07-30 with `common/tools/bench.sh`, endpoint ready 4m 44s after launch. Full disclosure,
-without which a tokens per second figure cannot be compared against anything:
+Measured 2026-07-31 with `common/tools/bench.sh`, endpoint ready 4m 1s after launch. Full disclosure, without which a tokens
+per second figure cannot be compared against anything:
 
 | Parameter | Value |
 | --- | --- |
 | ISL, input tokens | 19 |
 | OSL, output tokens | 1152, as the slope between 128 and 1152 |
 | Counted | output tokens only, never input plus output |
-| Protocol | slope(128,1152) |
+| Concurrency levels | 1,8,32,64,128,256,512 |
+| Protocol | slope(128,1152), 3 repeats per level, median reported |
 | Hardware | one H200 GPU |
 
-Quote the single stream figure for interactive coding and the aggregate for serving several people.
-Never compare one against the other. The input sequence here is short, which is the best case for
-decode, so measure with `--prompt-tokens` at your working context before quoting a long-context number.
+Quote 236.3 tok/s for interactive coding, where one person waits on one
+response. Quote 10727.1 tok/s at concurrency 256 for a shared endpoint under load.
+The two measure different things and neither substitutes for the other.
+
+Throughput peaks at concurrency 256 and falls to 10571.7 tok/s by 512, so
+10727.1 tok/s is a real ceiling for this recipe rather than the edge of the sweep.
+
+The input sequence here is short, which is the best case for decode. Measure with
+`--prompt-tokens` at your working context before quoting a number for long-context work.
 
 ## Parallelism and quantization
 

@@ -1,6 +1,6 @@
 # gemma-4-31B-it on one RTX PRO 6000 GPU
 
-Status: Untested (migrated) - numbers below were measured 2026-07-27 with the pre-restructure scripts, protocol: slope(128,1152)
+Status: Validated - 2026-07-31, vLLM 0.26.1rc1.dev162+g8700f86a7, protocol: slope(128,1152) swept at concurrency 1 through 512
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -28,10 +28,12 @@ defaults, so a fresh clone runs as is. Optional overrides, either exported or se
 
 ## Status
 
-Untested (migrated). The decode rates below were measured on this GPU type on 2026-07-27, with the
-pre-restructure scripts whose serve flags this recipe reproduces exactly, using the slope protocol.
-The recipe files themselves have not been run yet, so treat startup behavior as unverified while the
-rates are trustworthy.
+Validated on 2026-07-31. The environment was built from `env/build.sh`, the endpoint was
+launched with `serve_ssh.sh` on one RTX PRO 6000 Blackwell GPU, and throughput was measured with `common/tools/bench.sh`
+across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 3 minutes 25 seconds after launch. The endpoint was still answering after the sweep finished.
+
+Single stream and saturated throughput are different measurements and neither substitutes for
+the other. See Measured performance below for the full curve and the disclosure block.
 
 ## What this is
 
@@ -251,50 +253,40 @@ instead of the hosted tool.
 
 ## Measured performance
 
-| Configuration | Decode rate | Protocol |
-| --- | --- | --- |
-| TP1, FP8 weights, 32K context | 40.1 tok/s | slope(128,1152) |
-| TP1, bf16 weights, 32K context | 23.0 tok/s | slope(128,1152) |
+| Configuration | Aggregate rate | Per stream | Latency |
+| --- | --- | --- | --- |
+| Single stream, concurrency 1 | 39.5 tok/s | 39.5 tok/s | TTFT median 75 ms, n=3 spanning 39.5 to 39.5 |
+| Concurrency 8 | 281.4 tok/s | 35.2 tok/s | TTFT median 82 ms, p90 83 ms, n=3 spanning 281.4 to 281.4 |
+| Concurrency 32 | 842.2 tok/s | 26.3 tok/s | TTFT median 120 ms, p90 152 ms, n=3 spanning 841.7 to 842.5 |
+| Concurrency 64 | 1180.9 tok/s | 18.5 tok/s | TTFT median 158 ms, p90 227 ms, n=3 spanning 1180.5 to 1181.5 |
+| Concurrency 128 | 1464.4 tok/s | 11.4 tok/s | TTFT median 270 ms, p90 369 ms, n=3 spanning 1463.4 to 1465.5 |
+| Concurrency 256 | 1796.2 tok/s | 7.0 tok/s | TTFT median 427 ms, p90 625 ms, n=3 spanning 1794.3 to 1797.7 |
+| Concurrency 512 (highest measured) | 2101.3 tok/s | 4.1 tok/s | TTFT median 652 ms, p90 1102 ms, n=3 spanning 2100.4 to 2104.6 |
 
-Sustained single-stream decode, greedy, measured on one RTX PRO 6000 on 2026-07-27. The slope protocol
-times the same request at 128 and at 1152 output tokens and divides the difference, which cancels
-prefill and per-request overhead; a single timed generation understates decode by up to 40 percent.
-This is the slowest of the three GPU types for this checkpoint, which is expected: the model is memory
-bandwidth bound and this card has the least of it.
+Measured 2026-07-31 with `common/tools/bench.sh`, endpoint ready 3m 25s after launch. Full disclosure, without which a tokens
+per second figure cannot be compared against anything:
 
-What did and did not help, all measured rather than assumed:
-
-| Change | Effect on decode rate |
+| Parameter | Value |
 | --- | --- |
-| FP8 weights | 74 percent faster, and the reason it is the default |
-| FP8 KV cache | no change in rate, but halves the cost of context |
+| ISL, input tokens | 19 |
+| OSL, output tokens | 1152, as the slope between 128 and 1152 |
+| Counted | output tokens only, never input plus output |
+| Concurrency levels | 1,8,32,64,128,256,512 |
+| Protocol | slope(128,1152), 3 repeats per level, median reported |
+| Hardware | one RTX PRO 6000 Blackwell GPU |
 
-To re-measure:
+Quote 39.5 tok/s for interactive coding, where one person waits on one
+response. Quote 2101.3 tok/s at concurrency 512 for a shared endpoint under load.
+The two measure different things and neither substitutes for the other.
 
-```
-bash common/tools/bench.sh --host <node> --model gemma-4-31b
-```
+Throughput was still rising at concurrency 512, the top of the sweep, so 2101.3 tok/s is a
+floor and not a ceiling. The true saturation point is above what was measured. Note also that
+vLLM defaults `max_num_seqs` to 256, so past that point requests queue rather than batch, and
+part of the gain at the top is the scheduler keeping the batch full rather than added
+parallelism. Per stream rate in the table above shows that cost.
 
-Both figures above are **single stream**, meaning one request at a time, which is what an interactive
-coding session feels. That leaves the GPU far from saturated. To measure total throughput with
-concurrent requests, and to find where it stops rising:
-
-```
-bash common/tools/bench.sh --host <node> --model gemma-4-31b --sweep 1,4,16,32
-```
-
-Aggregate throughput is several times the single stream figure, while per stream latency falls. On one
-endpoint here, concurrency 8 delivered 404.6 tok/s aggregate against 90.0 tok/s single stream, with
-each stream seeing 50.6 tok/s. Quote the single stream number for interactive use and the aggregate for
-serving several people at once, and never compare one against the other.
-
-Prompt length is a separate axis, and how much it costs depends entirely on the model's attention
-design. The slope method cancels prefill, so a long prompt never distorts the measurement, but a larger
-KV cache can slow every decode step because attention reads it on each one. How much is an empirical
-question: measured on GLM-5.2-NVFP4, decode was flat from 21 to 26379 input tokens (97.0, 97.8 and 95.0
-tok/s), because that model combines MLA compression, an fp8 KV cache and sparse attention that reads only
-a subset of the context. A dense model with full attention and a bf16 KV cache should be expected to
-degrade far more. Measure with `--prompt-tokens` rather than assuming either way.
+The input sequence here is short, which is the best case for decode. Measure with
+`--prompt-tokens` at your working context before quoting a number for long-context work.
 
 ## Parallelism and quantization
 

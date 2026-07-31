@@ -12,13 +12,16 @@ expert, the dense layers, `lm_head` and the vision tower stay bf16.
 
 ## Hardware variants
 
-| Variant | Shape | Decode rate | Protocol |
+| Variant | Shape | Single stream | Saturated |
 | --- | --- | --- | --- |
-| [`rtx-8`](rtx-8/README.md) | 1 RTX PRO 6000 node, 8 GPUs, TP8 | about 21 tok/s | single-generation |
-| [`h200-4-nodes2`](h200-4-nodes2/README.md) | 2 H200 nodes, 4 GPUs each, TP4 x PP2 | about 29 tok/s | single-generation |
+| [`rtx-8`](rtx-8/README.md) | 1 RTX PRO 6000 node, 8 GPUs, TP8 | 20.7 tok/s | 1819 at c=512, rising |
+| [`h200-4-nodes2`](h200-4-nodes2/README.md) | 2 H200 nodes, 4 GPUs each, TP4 x PP2 | 30.4 tok/s | 5669 at c=512, rising |
 
-Both variants are now recipe directories, and both rates above were measured with the pre-restructure
-scripts rather than with the recipes as they now stand.
+Measured 2026-07-31, protocol slope(128,1152) over output tokens only, 3 repeats per level, concurrency
+1 through 512. Single stream is one request at a time; saturated is total output across all concurrent
+streams. `rising` means throughput had not turned over at 512, the top of the sweep, so both saturated
+figures are floors. The two H200 nodes are worth it either way: they are 1.5x the single stream rate and
+3.1x the saturated rate of one RTX node.
 
 The two-node H200 configuration is the faster of the two, because its tensor-parallel all-reduces stay
 inside a node and cross NVLink, while the RTX node has to use PCIe. The RTX variant wins on cost: one

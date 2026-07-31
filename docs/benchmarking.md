@@ -13,9 +13,17 @@ many sequences in one forward pass, so aggregate throughput keeps climbing with 
 compute, memory bandwidth, or KV cache space runs out. It is the right number when one endpoint serves
 several people.
 
-The gap is large. Measured on an RTX node here: 90.0 tok/s single stream, and 404.6 tok/s aggregate at
-concurrency 8, with each individual stream seeing 50.6 tok/s. Single stream measurement leaves the GPU
-nowhere near saturated, which is correct for latency and misleading for capacity.
+The gap is large, and larger than a three-point measurement suggests. GLM-5.2-NVFP4 on one RTX node
+measured 93.4 tok/s single stream and 1389 tok/s aggregate at concurrency 256, a factor of 15. Sweeping
+only to concurrency 32 would have reported 683 and understated the endpoint's capacity by half. Single
+stream measurement leaves the GPU nowhere near saturated, which is correct for latency and misleading
+for capacity.
+
+Sweep far enough to see throughput turn over. Of the 14 recipes measured here on 2026-07-31, only two
+peaked inside a sweep that reached concurrency 512; the other twelve were still climbing at the top, so
+their aggregate figures are floors rather than ceilings. Note also that vLLM defaults `max_num_seqs` to
+256, so past that point requests queue instead of batching, and some of the apparent gain is the
+scheduler keeping the batch full rather than real added parallelism.
 
 ```
 bash common/tools/bench.sh --host <node> --model <name>                   single stream
@@ -65,8 +73,8 @@ A single timed generation includes prefill, scheduling, detokenization, and HTTP
 of it by the output token count as though it were decode. Subtracting two lengths cancels every cost that
 does not scale with output tokens.
 
-This is not a small correction. On one H100 measurement here, a 256-token generation reported 116.2 tok/s
-where the sustained rate was 183.9 tok/s. Short generations can understate decode by up to 40 percent, and
+This is not a small correction. On one H100 measurement here on 2026-07-27, a 256-token generation
+reported 116.2 tok/s where the sustained rate was 183.9 tok/s. Short generations can understate decode by up to 40 percent, and
 the error grows as the generation gets shorter.
 
 `bench.sh --single` still offers the old behavior, and prints a warning naming the bias, because it is

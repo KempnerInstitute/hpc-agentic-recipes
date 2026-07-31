@@ -1,4 +1,8 @@
-# Repo restructure plan (v2)
+# Repo restructure plan
+
+> This is the plan as written before implementation. The per-recipe status values proposed below were
+> superseded on 2026-07-31, when all 14 runnable recipes were measured end to end. Each recipe README
+> carries its own current status. (v2)
 
 Turn this repo into a recipe collection for running open-weight agentic coding models on the Kempner
 AI Cluster. Every model variant becomes a self-contained recipe: its own environment build, its own

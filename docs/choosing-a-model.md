@@ -14,7 +14,7 @@ matters more than latency and you can hold a full node.
 **Largest coding model that fits a single node:** Qwen3-Coder-480B-FP8 on one RTX node, at a decode rate
 close to the much smaller Qwen3-235B, which makes it a strong quality-per-second choice.
 
-**Best reasoning and the fastest large model measured here:** GLM-5.2 in NVFP4 on one RTX node, at 101.6 tok/s measured with the slope method, helped by MTP speculative decoding that works because the model fits one node with no pipeline
+**Best reasoning and the fastest large model measured here:** GLM-5.2 in NVFP4 on one RTX node, at 93.4 tok/s single stream measured with the slope method, helped by MTP speculative decoding that works because the model fits one node with no pipeline
 parallelism.
 
 **Longest context:** GLM-5.2-FP8 across two H200 nodes reaches 1M tokens, at a much lower decode rate.
@@ -33,15 +33,18 @@ Rates measured with different protocols are not comparable:
 - `single-generation` times one request and divides tokens by wall time, counting prefill and fixed cost
   as decode. It understates sustained decode by up to 40 percent.
 
-Where a model shows a single-generation number, treat it as a conservative floor. Re-measuring with
-`common/tools/bench.sh` will usually produce a higher figure. Details in [benchmarking.md](benchmarking.md).
+Every rate in this repo is now slope-measured with `common/tools/bench.sh`. Details in
+[benchmarking.md](benchmarking.md).
 
 ## Read the status column
 
 `Validated` means the recipe in this repo was run end to end on the stated date with the stated engine
-version. `Untested (migrated)` means the number is real but was measured with the older pre-restructure
-scripts, so the recipe itself has not been exercised. `Blocked` means it does not currently run at all,
-and the recipe says why.
+version, and its rates were measured from those files rather than carried over. `Untested` means it has
+never been launched and every number in it is a prediction. `Blocked` means it does not currently run at
+all, and the recipe says why.
+
+Saturated rates marked `rising` had not turned over at concurrency 512, the top of the sweep, so they are
+floors rather than ceilings. Only two recipes were measured past their maximum.
 
 ## Three performance regimes, and why flags help or do not
 

@@ -338,7 +338,7 @@ When and if it comes up, measure with the slope method rather than timing one ge
 bash common/tools/bench.sh --host <head-node> --model deepseek-v4-pro
 ```
 
-For scale, two H200 nodes served Kimi-K2.7-Code at about 29 tok/s, which is the closest measured
+For scale, two H200 nodes served Kimi-K2.7-Code at 30.4 tok/s single stream, which is the closest measured
 two-node Hopper reference point in this repo.
 
 Both figures above are **single stream**, meaning one request at a time, which is what an interactive

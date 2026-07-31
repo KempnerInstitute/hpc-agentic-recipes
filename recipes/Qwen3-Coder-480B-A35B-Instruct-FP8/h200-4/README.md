@@ -8,7 +8,7 @@ serves cleanly on an RTX node. If you came looking for a way to run this model o
 the answer, so that the next person spends five minutes reading rather than a day rediscovering.
 
 **Serve this model at `recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8` instead**, where its FP8
-kernels run on sm_120, CUDA graphs capture, and the measured decode rate is 63.9 tok/s at TP4 x PP2 on
+kernels run on sm_120, CUDA graphs capture, and the measured decode rate is 67.7 tok/s single stream at TP4 x PP2 on
 one node, protocol slope(128,1152).
 
 ## What was tried

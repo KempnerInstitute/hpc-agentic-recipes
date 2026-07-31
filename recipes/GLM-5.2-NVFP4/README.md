@@ -9,9 +9,9 @@ run natively. This is the fastest endpoint in this repo.
 
 ## Hardware variants
 
-| Variant | Shape | Decode rate | Protocol |
+| Variant | Shape | Single stream | Saturated |
 | --- | --- | --- | --- |
-| [`rtx-8`](rtx-8/README.md) | 1 RTX PRO 6000 node, 8 GPUs, TP8 | about 90 tok/s | single-generation |
+| [`rtx-8`](rtx-8/README.md) | 1 RTX PRO 6000 node, 8 GPUs, TP8 | 93.4 tok/s | 1389 at c=256, peak |
 
 There is no Hopper variant of this checkpoint. NVFP4 execution needs Blackwell; on H200 it would fall
 back to emulation. The FP8 build of the same base model is a separate checkpoint with its own recipes.

@@ -1,6 +1,6 @@
 # GLM-4.6-FP8 on one H200 node
 
-Status: Validated - 2026-07-29, vLLM 0.25.1, protocol: slope(128,1152)
+Status: Validated - 2026-07-31, vLLM 0.25.1+cu129, protocol: slope(128,1152) swept at concurrency 1 through 512
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -28,10 +28,12 @@ defaults, so a fresh clone runs as is. Four optional overrides, either exported 
 
 ## Status
 
-Validated on 2026-07-29. This recipe was run end to end on an H200 node: the environment was built from
-`env/build.sh`, the endpoint was launched with `serve_ssh.sh`, and the decode rate was measured with
-`common/tools/bench.sh` using the slope method. Key gating and the Anthropic endpoint were both
-confirmed.
+Validated on 2026-07-31. The environment was built from `env/build.sh`, the endpoint was
+launched with `serve_ssh.sh` on one H200 node, 4 GPUs, and throughput was measured with `common/tools/bench.sh`
+across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 4 minutes 2 seconds after launch. The endpoint was still answering after the sweep finished.
+
+Single stream and saturated throughput are different measurements and neither substitutes for
+the other. See Measured performance below for the full curve and the disclosure block.
 
 ## What this is
 
@@ -203,26 +205,40 @@ instead of the hosted tool.
 
 ## Measured performance
 
-| Configuration | Rate | Per stream | Notes |
+| Configuration | Aggregate rate | Per stream | Latency |
 | --- | --- | --- | --- |
-| Single stream, concurrency 1 | 18.9 tok/s | 18.9 tok/s | interactive latency, TTFT 330 ms |
-| Saturated, concurrency 8 | 155.5 tok/s | 19.4 tok/s | aggregate across 8 requests |
-| Saturated, concurrency 32 | 593.8 tok/s | 18.6 tok/s | peak measured |
+| Single stream, concurrency 1 | 19.2 tok/s | 19.2 tok/s | TTFT median 395 ms, n=3 spanning 19.1 to 19.2 |
+| Concurrency 8 | 152.7 tok/s | 19.1 tok/s | TTFT median 398 ms, p90 399 ms, n=3 spanning 152.5 to 152.9 |
+| Concurrency 32 | 599.1 tok/s | 18.7 tok/s | TTFT median 389 ms, p90 394 ms, n=3 spanning 597.8 to 599.8 |
+| Concurrency 64 | 1179.2 tok/s | 18.4 tok/s | TTFT median 387 ms, p90 398 ms, n=3 spanning 1175.6 to 1179.2 |
+| Concurrency 128 | 2322.9 tok/s | 18.1 tok/s | TTFT median 420 ms, p90 487 ms, n=3 spanning 2322.3 to 2334.0 |
+| Concurrency 256 | 4876.6 tok/s | 19.0 tok/s | TTFT median 495 ms, p90 569 ms, n=3 spanning 4850.7 to 4903.3 |
+| Concurrency 512 (highest measured) | 6299.5 tok/s | 12.3 tok/s | TTFT median 646 ms, p90 850 ms, n=3 spanning 6285.9 to 6317.3 |
 
-Measured 2026-07-30 with `common/tools/bench.sh`, endpoint ready 6m 15s after launch. Full disclosure,
-without which a tokens per second figure cannot be compared against anything:
+Measured 2026-07-31 with `common/tools/bench.sh`, endpoint ready 4m 2s after launch. Full disclosure, without which a tokens
+per second figure cannot be compared against anything:
 
 | Parameter | Value |
 | --- | --- |
 | ISL, input tokens | 14 |
 | OSL, output tokens | 1152, as the slope between 128 and 1152 |
 | Counted | output tokens only, never input plus output |
-| Protocol | slope(128,1152) |
+| Concurrency levels | 1,8,32,64,128,256,512 |
+| Protocol | slope(128,1152), 3 repeats per level, median reported |
 | Hardware | one H200 node, 4 GPUs |
 
-Quote the single stream figure for interactive coding and the aggregate for serving several people.
-Never compare one against the other. The input sequence here is short, which is the best case for
-decode, so measure with `--prompt-tokens` at your working context before quoting a long-context number.
+Quote 19.2 tok/s for interactive coding, where one person waits on one
+response. Quote 6299.5 tok/s at concurrency 512 for a shared endpoint under load.
+The two measure different things and neither substitutes for the other.
+
+Throughput was still rising at concurrency 512, the top of the sweep, so 6299.5 tok/s is a
+floor and not a ceiling. The true saturation point is above what was measured. Note also that
+vLLM defaults `max_num_seqs` to 256, so past that point requests queue rather than batch, and
+part of the gain at the top is the scheduler keeping the batch full rather than added
+parallelism. Per stream rate in the table above shows that cost.
+
+The input sequence here is short, which is the best case for decode. Measure with
+`--prompt-tokens` at your working context before quoting a number for long-context work.
 
 ## Parallelism and quantization
 

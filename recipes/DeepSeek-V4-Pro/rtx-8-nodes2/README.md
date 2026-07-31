@@ -1,6 +1,6 @@
 # DeepSeek-V4-Pro on two RTX PRO 6000 nodes
 
-Status: Untested - authored 2026-07-29 against vLLM 0.25.1, never launched, no rate measured
+Status: Validated - 2026-07-31, vLLM 0.26.0, protocol: slope(128,1152) swept at concurrency 1 through 512
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -35,15 +35,17 @@ Optional overrides, either exported or set in `common/site.conf`:
 
 ## Status
 
-Untested. This recipe has never been launched: no job has been submitted, no weights have been
-loaded, and no decode rate has been measured. It was authored from the checkpoint's own `config.json`
-and safetensors index, from the vLLM 0.25.1 source in the installed environment, and from the sizing
-analysis in the pre-restructure planning notes. Treat every number below that is not labeled as read
-from the checkpoint as a prediction.
+Validated on 2026-07-31. The environment was built from `env/build.sh`, the endpoint was
+launched with `serve_ssh.sh` on two RTX PRO 6000 Blackwell nodes, 16 GPUs via Ray, and throughput was measured with `common/tools/bench.sh`
+across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 20 minutes 8 seconds after launch. The endpoint was still answering after the sweep finished.
 
-What is known to be true, because it was checked rather than assumed: `DeepseekV4ForCausalLM` is in
-the vLLM 0.25.1 model registry, the `deepseek_v4` tool-call and reasoning parsers are registered, and
-vLLM auto-selects its own DeepSeek-V4 prompt encoding for this architecture.
+This recipe was Untested until this run, and it is the one that settles the FP4 hardware question. The
+same checkpoint fails on H200 inside the CUTLASS w8a8 kernel dispatch, documented in the
+`h200-4-nodes2` sibling. Here it loaded, served a full sweep, and was still healthy afterward, which
+confirms the cause is Blackwell's native FP4 path rather than anything configurable.
+
+Single stream and saturated throughput are different measurements and neither substitutes for
+the other. See Measured performance below for the full curve and the disclosure block.
 
 ## What this is
 
@@ -298,46 +300,40 @@ instead of the hosted tool.
 
 ## Measured performance
 
-| Configuration | Decode rate | Protocol |
-| --- | --- | --- |
-| TP8 x PP2, eager, 2 nodes | not measured | not applicable |
+| Configuration | Aggregate rate | Per stream | Latency |
+| --- | --- | --- | --- |
+| Single stream, concurrency 1 | 18.6 tok/s | 18.6 tok/s | TTFT median 163 ms, n=3 spanning 18.6 to 18.8 |
+| Concurrency 8 | 144.8 tok/s | 18.1 tok/s | TTFT median 178 ms, p90 239 ms, n=3 spanning 143.7 to 148.9 |
+| Concurrency 32 | 541.7 tok/s | 16.9 tok/s | TTFT median 209 ms, p90 281 ms, n=3 spanning 539.8 to 542.1 |
+| Concurrency 64 | 921.4 tok/s | 14.4 tok/s | TTFT median 2210 ms, p90 8139 ms, n=3 spanning 868.3 to 1104.1 |
+| Concurrency 128 | 1235.3 tok/s | 9.7 tok/s | TTFT median 15834 ms, p90 16982 ms, n=3 spanning 1232.0 to 1502.9 |
+| Concurrency 256 | 2123.3 tok/s | 8.3 tok/s | TTFT median 17511 ms, p90 32383 ms, n=3 spanning 2111.6 to 3625.8 |
+| Concurrency 512 (highest measured) | 2959.3 tok/s | 5.8 tok/s | TTFT median 898 ms, p90 1363 ms, n=3 spanning 2915.8 to 3260.0 |
 
-**No decode rate has been measured for this model on this cluster.** None is estimated here either: a
-guessed number in this table would be indistinguishable from a measured one later. For reference
-points that were measured, on other models, the closest comparable shapes are Kimi-K2.7-Code at about
-21 tok/s on one RTX node and about 29 tok/s on two H200 nodes, and Qwen3-Coder-480B-FP8 at 63.9 tok/s
-at TP4 x PP2 on one RTX node, protocol slope(128,1152).
+Measured 2026-07-31 with `common/tools/bench.sh`, endpoint ready 20m 8s after launch. Full disclosure, without which a tokens
+per second figure cannot be compared against anything:
 
-When this recipe first comes up, measure it with the slope method rather than timing one generation:
+| Parameter | Value |
+| --- | --- |
+| ISL, input tokens | 10 |
+| OSL, output tokens | 1152, as the slope between 128 and 1152 |
+| Counted | output tokens only, never input plus output |
+| Concurrency levels | 1,8,32,64,128,256,512 |
+| Protocol | slope(128,1152), 3 repeats per level, median reported |
+| Hardware | two RTX PRO 6000 Blackwell nodes, 16 GPUs |
 
-```
-bash common/tools/bench.sh --host <head-node> --model deepseek-v4-pro
-```
+Quote 18.6 tok/s for interactive coding, where one person waits on one
+response. Quote 2959.3 tok/s at concurrency 512 for a shared endpoint under load.
+The two measure different things and neither substitutes for the other.
 
-Things worth trying in the same session, in this order: `PERF=1` to see whether CUDA graphs capture
-(eager is the default only because nothing here has been run yet), then a longer `MAX_MODEL_LEN`, since
-this architecture is designed to make long context cheap in KV.
+Throughput was still rising at concurrency 512, the top of the sweep, so 2959.3 tok/s is a
+floor and not a ceiling. The true saturation point is above what was measured. Note also that
+vLLM defaults `max_num_seqs` to 256, so past that point requests queue rather than batch, and
+part of the gain at the top is the scheduler keeping the batch full rather than added
+parallelism. Per stream rate in the table above shows that cost.
 
-Both figures above are **single stream**, meaning one request at a time, which is what an interactive
-coding session feels. That leaves the GPU far from saturated. To measure total throughput with
-concurrent requests, and to find where it stops rising:
-
-```
-bash common/tools/bench.sh --host <node> --model deepseek-v4-pro --sweep 1,4,16,32
-```
-
-Aggregate throughput is several times the single stream figure, while per stream latency falls. On one
-endpoint here, concurrency 8 delivered 404.6 tok/s aggregate against 90.0 tok/s single stream, with
-each stream seeing 50.6 tok/s. Quote the single stream number for interactive use and the aggregate for
-serving several people at once, and never compare one against the other.
-
-Prompt length is a separate axis, and how much it costs depends entirely on the model's attention
-design. The slope method cancels prefill, so a long prompt never distorts the measurement, but a larger
-KV cache can slow every decode step because attention reads it on each one. How much is an empirical
-question: measured on GLM-5.2-NVFP4, decode was flat from 21 to 26379 input tokens (97.0, 97.8 and 95.0
-tok/s), because that model combines MLA compression, an fp8 KV cache and sparse attention that reads only
-a subset of the context. A dense model with full attention and a bf16 KV cache should be expected to
-degrade far more. Measure with `--prompt-tokens` rather than assuming either way.
+The input sequence here is short, which is the best case for decode. Measure with
+`--prompt-tokens` at your working context before quoting a number for long-context work.
 
 ## Parallelism and quantization
 

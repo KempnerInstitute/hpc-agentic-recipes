@@ -1,6 +1,6 @@
 # Qwen3-Coder-480B-A35B-Instruct-FP8 on one RTX PRO 6000 node
 
-Status: Untested (migrated) - numbers below were measured 2026-07-28 with the pre-restructure scripts, protocol: slope(128,1152)
+Status: Validated - 2026-07-31, vLLM 0.25.1, protocol: slope(128,1152) swept at concurrency 1 through 512
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -28,9 +28,12 @@ defaults, so a fresh clone runs as is. Four optional overrides, either exported 
 
 ## Status
 
-Untested (migrated). The decode rate below was measured before the restructure, with the slope method,
-but with the pre-restructure scripts rather than these recipe files, so the number is comparable to
-other slope-measured numbers in this repo while the recipe itself has not been exercised.
+Validated on 2026-07-31. The environment was built from `env/build.sh`, the endpoint was
+launched with `serve_ssh.sh` on one RTX PRO 6000 Blackwell node, and throughput was measured with `common/tools/bench.sh`
+across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 4 minutes after launch. The endpoint was still answering after the sweep finished.
+
+Single stream and saturated throughput are different measurements and neither substitutes for
+the other. See Measured performance below for the full curve and the disclosure block.
 
 ## What this is
 
@@ -238,26 +241,37 @@ instead of the hosted tool.
 
 ## Measured performance
 
-| Configuration | Rate | Per stream | Latency |
+| Configuration | Aggregate rate | Per stream | Latency |
 | --- | --- | --- | --- |
-| Single stream, concurrency 1 | 67.2 tok/s | 67.2 tok/s | TTFT median 44 ms, n=3 spanning 66.4 to 67.3 |
-| Saturated, concurrency 8 | 267.1 tok/s | 33.4 tok/s | TTFT median 63 ms, p90 65 ms, n=3 spanning 235.7 to 289.0 |
-| Saturated, concurrency 32 | 682.8 tok/s | 21.3 tok/s | TTFT median 86 ms, p90 98 ms, n=3 spanning 661.6 to 682.9 |
+| Single stream, concurrency 1 | 67.7 tok/s | 67.7 tok/s | TTFT median 44 ms, n=3 spanning 66.9 to 67.9 |
+| Concurrency 8 | 263.1 tok/s | 32.9 tok/s | TTFT median 56 ms, p90 58 ms, n=3 spanning 257.8 to 291.5 |
+| Concurrency 32 | 679.8 tok/s | 21.2 tok/s | TTFT median 86 ms, p90 101 ms, n=3 spanning 679.7 to 684.6 |
+| Concurrency 64 | 969.3 tok/s | 15.1 tok/s | TTFT median 104 ms, p90 137 ms, n=3 spanning 961.0 to 975.5 |
+| Concurrency 128 | 1576.8 tok/s | 12.3 tok/s | TTFT median 140 ms, p90 186 ms, n=3 spanning 1561.9 to 1649.5 |
+| Concurrency 256 | 2328.0 tok/s | 9.1 tok/s | TTFT median 208 ms, p90 286 ms, n=3 spanning 2295.0 to 2332.3 |
+| Concurrency 512 (highest measured) | 3040.0 tok/s | 5.9 tok/s | TTFT median 314 ms, p90 458 ms, n=3 spanning 3033.6 to 3049.6 |
 
-Measured 2026-07-30 with `common/tools/bench.sh`, endpoint ready 3m 16s after launch. Full disclosure, without which a
-tokens per second figure cannot be compared against anything:
+Measured 2026-07-31 with `common/tools/bench.sh`, endpoint ready 4m 0s after launch. Full disclosure, without which a tokens
+per second figure cannot be compared against anything:
 
 | Parameter | Value |
 | --- | --- |
 | ISL, input tokens | 17 |
 | OSL, output tokens | 1152, as the slope between 128 and 1152 |
 | Counted | output tokens only, never input plus output |
+| Concurrency levels | 1,8,32,64,128,256,512 |
 | Protocol | slope(128,1152), 3 repeats per level, median reported |
 | Hardware | one RTX PRO 6000 Blackwell node, 8 GPUs |
 
-Quote 67.2 tok/s for interactive coding, where one person waits on one response,
-and 682.8 tok/s at concurrency 32 when the endpoint serves several people at once.
-Never compare one against the other.
+Quote 67.7 tok/s for interactive coding, where one person waits on one
+response. Quote 3040.0 tok/s at concurrency 512 for a shared endpoint under load.
+The two measure different things and neither substitutes for the other.
+
+Throughput was still rising at concurrency 512, the top of the sweep, so 3040.0 tok/s is a
+floor and not a ceiling. The true saturation point is above what was measured. Note also that
+vLLM defaults `max_num_seqs` to 256, so past that point requests queue rather than batch, and
+part of the gain at the top is the scheduler keeping the batch full rather than added
+parallelism. Per stream rate in the table above shows that cost.
 
 The input sequence here is short, which is the best case for decode. Measure with
 `--prompt-tokens` at your working context before quoting a number for long-context work.

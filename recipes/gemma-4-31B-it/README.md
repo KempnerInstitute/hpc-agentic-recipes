@@ -14,14 +14,22 @@ needs torch cu130, a conda CUDA 13.0 toolkit, and FlashInfer 0.6.15, while the H
 575 and need the cu129 release wheel instead. All three are TP1 on one GPU with FP8 weights and serve
 the same name, so they differ only in hardware, environment, and rate.
 
-| Variant | GPU | Decode rate, FP8 | Decode rate, bf16 | Status |
+| Variant | GPU | Single stream, FP8 | Saturated, FP8 | Status |
 | --- | --- | --- | --- | --- |
-| [`h200-1`](h200-1/README.md) | 1 H200, 143771 MiB | 85.3 tok/s | 56.3 tok/s | Untested (migrated) |
-| [`h100-1`](h100-1/README.md) | 1 H100, 80 GB | 68.7 tok/s | 40.7 tok/s | Untested (migrated) |
-| [`rtx-1`](rtx-1/README.md) | 1 RTX PRO 6000 Blackwell, 97887 MiB | 40.1 tok/s | 23.0 tok/s | Untested (migrated) |
+| [`h200-1`](h200-1/README.md) | 1 H200, 143771 MiB | 85.1 tok/s | 3097 at c=512, rising | Validated |
+| [`h100-1`](h100-1/README.md) | 1 H100, 80 GB | 67.4 tok/s | 2680 at c=512, rising | Validated |
+| [`rtx-1`](rtx-1/README.md) | 1 RTX PRO 6000 Blackwell, 97887 MiB | 39.5 tok/s | 2101 at c=512, rising | Validated |
 
-Rates are sustained single-stream decode at 32K context, measured 2026-07-27 with the pre-restructure
-scripts, protocol slope(128,1152). None of the three has been run from these recipe files yet.
+Single stream is one request at a time, which is what interactive coding feels like. Saturated is total
+output across every concurrent stream, and it says nothing about how fast a single reply arrives.
+`rising` on all three means throughput had not turned over at concurrency 512, the top of the sweep, so
+each saturated figure is a floor rather than a ceiling. Measured 2026-07-31 at 32K context, protocol
+slope(128,1152) over output tokens only, 3 repeats per level, concurrency 1 through 512.
+
+Running the same weights in bf16 instead of FP8 measured 56.3, 40.7 and 23.0 tok/s single stream on the
+same three GPUs. Those figures come from the pre-restructure scripts on 2026-07-27 and were not
+re-measured in the 2026-07-31 sweep, so treat them as indicative of the roughly 1.7x FP8 advantage
+rather than as current numbers.
 
 The spread across GPU types is 2.1x and tracks HBM bandwidth, because this model is memory bandwidth
 bound, so unlike the 26B sibling it is worth queueing for the faster card.

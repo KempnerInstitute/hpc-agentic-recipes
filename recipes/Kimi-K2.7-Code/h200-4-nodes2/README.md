@@ -1,6 +1,6 @@
 # Kimi-K2.7-Code on two H200 nodes
 
-Status: Validated - 2026-07-29, vLLM 0.25.1, protocol: slope(128,1152)
+Status: Validated - 2026-07-31, vLLM 0.25.1+cu129, protocol: slope(128,1152) swept at concurrency 1 through 512
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -33,21 +33,15 @@ formed, which reads as an engine problem rather than a path problem.
 
 ## Status
 
-Validated on 2026-07-29. Built from `env/build.sh`, brought up over SSH across two H200 nodes with
-Ray reporting 8 GPUs, and measured with `common/tools/bench.sh`. Ready 20 minutes 13 seconds after
-launch, dominated by loading 64 shards of a 1T-parameter checkpoint. Measured 30.0 tok/s, slightly
-above the about 29 tok/s recorded before the restructure. The multimodal profiling deadlock did not
-occur, confirming that `--skip-mm-profiling --mm-processor-cache-gb 0` is doing its job. The endpoint
-was still serving after the benchmark, and key gating and the Anthropic endpoint were both confirmed.
+Validated on 2026-07-31. The environment was built from `env/build.sh`, the endpoint was
+launched with `serve_ssh.sh` on two H200 nodes, 8 GPUs via Ray, and throughput was measured with `common/tools/bench.sh`
+across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 17 minutes 43 seconds after launch. The endpoint was still answering after the sweep finished.
 
-Untested (migrated). This configuration ran end to end before the restructure, on 2026-07-19 on
-vLLM 0.25.1, and the decode rate and startup times below come from that run's log. What has not been
-done is a run of the recipe in this directory: the environment has not been built from `env/build.sh`,
-and `serve.sbatch` and `serve_ssh.sh` here have not been submitted. The engine invocation, the flags,
-and every warning on this page were carried over from the scripts that produced that run.
+The multimodal profiling deadlock did not occur, confirming that `--skip-mm-profiling
+--mm-processor-cache-gb 0` is still doing its job on this checkpoint.
 
-The rate was measured with the older single-generation protocol rather than the slope method, so it is
-conservative and not directly comparable to the slope-measured numbers elsewhere in this repo.
+Single stream and saturated throughput are different measurements and neither substitutes for
+the other. See Measured performance below for the full curve and the disclosure block.
 
 ## What this is
 
@@ -289,26 +283,40 @@ instead of the hosted tool.
 
 ## Measured performance
 
-| Configuration | Rate | Per stream | Notes |
+| Configuration | Aggregate rate | Per stream | Latency |
 | --- | --- | --- | --- |
-| Single stream, concurrency 1 | 30.3 tok/s | 30.3 tok/s | interactive latency, TTFT 180 ms |
-| Saturated, concurrency 8 | 241.6 tok/s | 30.2 tok/s | aggregate across 8 requests |
-| Saturated, concurrency 32 | 927.3 tok/s | 29.0 tok/s | peak measured |
+| Single stream, concurrency 1 | 30.4 tok/s | 30.4 tok/s | TTFT median 102 ms, n=3 spanning 30.3 to 30.5 |
+| Concurrency 8 | 241.4 tok/s | 30.2 tok/s | TTFT median 100 ms, p90 148 ms, n=3 spanning 240.9 to 242.0 |
+| Concurrency 32 | 929.0 tok/s | 29.0 tok/s | TTFT median 175 ms, p90 239 ms, n=3 spanning 927.9 to 930.2 |
+| Concurrency 64 | 1755.1 tok/s | 27.4 tok/s | TTFT median 221 ms, p90 314 ms, n=3 spanning 1751.6 to 1759.4 |
+| Concurrency 128 | 2648.9 tok/s | 20.7 tok/s | TTFT median 302 ms, p90 406 ms, n=3 spanning 2645.7 to 2649.9 |
+| Concurrency 256 | 3641.4 tok/s | 14.2 tok/s | TTFT median 410 ms, p90 585 ms, n=3 spanning 3640.5 to 3641.6 |
+| Concurrency 512 (highest measured) | 5668.7 tok/s | 11.1 tok/s | TTFT median 630 ms, p90 988 ms, n=3 spanning 5667.3 to 5676.9 |
 
-Measured 2026-07-30 with `common/tools/bench.sh`, endpoint ready 6m 30s after launch. Full disclosure,
-without which a tokens per second figure cannot be compared against anything:
+Measured 2026-07-31 with `common/tools/bench.sh`, endpoint ready 17m 43s after launch. Full disclosure, without which a tokens
+per second figure cannot be compared against anything:
 
 | Parameter | Value |
 | --- | --- |
 | ISL, input tokens | 15 |
 | OSL, output tokens | 1152, as the slope between 128 and 1152 |
 | Counted | output tokens only, never input plus output |
-| Protocol | slope(128,1152) |
+| Concurrency levels | 1,8,32,64,128,256,512 |
+| Protocol | slope(128,1152), 3 repeats per level, median reported |
 | Hardware | two H200 nodes, 8 GPUs |
 
-Quote the single stream figure for interactive coding and the aggregate for serving several people.
-Never compare one against the other. The input sequence here is short, which is the best case for
-decode, so measure with `--prompt-tokens` at your working context before quoting a long-context number.
+Quote 30.4 tok/s for interactive coding, where one person waits on one
+response. Quote 5668.7 tok/s at concurrency 512 for a shared endpoint under load.
+The two measure different things and neither substitutes for the other.
+
+Throughput was still rising at concurrency 512, the top of the sweep, so 5668.7 tok/s is a
+floor and not a ceiling. The true saturation point is above what was measured. Note also that
+vLLM defaults `max_num_seqs` to 256, so past that point requests queue rather than batch, and
+part of the gain at the top is the scheduler keeping the batch full rather than added
+parallelism. Per stream rate in the table above shows that cost.
+
+The input sequence here is short, which is the best case for decode. Measure with
+`--prompt-tokens` at your working context before quoting a number for long-context work.
 
 ## Parallelism and quantization
 
