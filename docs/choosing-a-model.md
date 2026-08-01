@@ -126,7 +126,7 @@ Rates measured with different protocols are not comparable:
 - `slope(128,1152)` times the same request at two output lengths and divides the difference, which
   cancels prefill and fixed per-request cost. This is the honest sustained decode rate.
 - `single-generation` times one request and divides tokens by wall time, counting prefill and fixed cost
-  as decode. It understates sustained decode by up to 40 percent.
+  as decode, so it understates sustained decode. The shorter the generation, the larger the error.
 
 Every rate in this repo is now slope-measured with `common/tools/bench.sh`. Details in
 [benchmarking.md](benchmarking.md).

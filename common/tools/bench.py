@@ -19,7 +19,9 @@ Both use the slope method: time the same request at two output lengths and divid
 
 which cancels prefill, scheduling, queueing, and detokenization, since those do not scale with the
 number of output tokens. Timing a single generation instead counts all of that as decode time and
-understates the rate by up to 40 percent, with the error growing as the model gets faster.
+understates the rate, by more the shorter the generation. Measured on H200 with a warm endpoint and a
+short prompt the gap is under 2 percent, but it is unbounded on a cold endpoint or a long prompt, which is
+why the slope is the default.
 
 Prompt length matters separately. Long context does not change prefill's contribution to the slope,
 because that cancels, but it does slow every decode step, since attention reads a larger KV cache per
@@ -180,7 +182,7 @@ def main():
 
     if args.single:
         print("WARNING: --single times one generation, which counts prefill and fixed per-request")
-        print("         cost as decode and understates the sustained rate by up to 40 percent.")
+        print("         cost as decode and understates the sustained rate.")
         el, ptok, got = timed_batch(url, args.key, args.model, prompt, args.long, 1, args.timeout)
         print("  %d tokens in %.3fs = %.1f tok/s   protocol: single-generation(%d)"
               % (got, el, got / el, args.long))
