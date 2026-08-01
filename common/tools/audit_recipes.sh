@@ -3,10 +3,10 @@
 #
 # Recipes deliberately duplicate text: an issue that affects nine recipes is written out in all nine,
 # because a user reading one recipe must not have to open another file. Hand-maintained duplication
-# rots, so it is generated from a canonical source and verified here.
+# rots, so it is generated from a single source and verified here.
 #
 #   audit_recipes.sh          verify, exit non-zero on any failure
-#   audit_recipes.sh --fix    inject canonical issue text into marked blocks, then verify
+#   audit_recipes.sh --fix    inject the shared issue text into marked blocks, then verify
 #
 # Blocks are delimited in recipe READMEs by:
 #   <!-- issue:<slug> begin -->  ...  <!-- issue:<slug> end -->
@@ -245,7 +245,9 @@ echo "== no dates or internal vocabulary in recipe prose"
 # Delegated to check_prose.py because it has to be fence-aware: dates inside code blocks are verbatim
 # engine output pasted as evidence, and editing a quoted log line to drop its timestamp would falsify it.
 if ! out="$(python3 "$S/check_prose.py" 2>&1)"; then
-  echo "$out" | grep -E '^ +(DATE|JARGON)' | while read -r line; do bad "$line"; done
+  # A while-read pipeline runs in a subshell, so incrementing the failure count inside one is lost
+  # and the audit prints every finding and then reports PASS.
+  while read -r line; do bad "$line"; done < <(echo "$out" | grep -E '^ +(DATE|JARGON)')
 fi
 
 echo "== syntax and hygiene"

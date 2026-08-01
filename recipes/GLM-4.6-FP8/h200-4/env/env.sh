@@ -27,13 +27,13 @@ export TORCHINDUCTOR_CACHE_DIR="/tmp/${USER}/torchinductor"
 mkdir -p "$TRITON_CACHE_DIR" "$TORCHINDUCTOR_CACHE_DIR" 2>/dev/null || true
 
 # verified: DeepGEMM MoE takes an illegal memory access on GLM-5.2 sparse attention, and forcing it on
-# for Qwen3-Coder-480B on H200 reproduced the same crash independently, 2026-07-27. Load-bearing for
+# for Qwen3-Coder-480B on H200 reproduced the same crash independently. Load-bearing for
 # more than one model on this hardware; do not flip without re-testing.
 export VLLM_USE_DEEP_GEMM=0
 
 # required: weight load plus graph work exceeds the 600s default readiness timeout
 export VLLM_ENGINE_READY_TIMEOUT_S=3600
 
-# verified: a holylfs06 OSS failover froze every rank on 2026-07-29 and PyTorch's heartbeat monitor
+# verified: a holylfs06 OSS failover froze every rank and PyTorch's heartbeat monitor
 # killed two endpoints eight minutes later, at the 480s default, for a stall that later recovered
 export TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC="${TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC:-3600}"

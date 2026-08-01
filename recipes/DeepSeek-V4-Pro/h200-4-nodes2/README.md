@@ -21,14 +21,6 @@ printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/vllm_api_key
 chmod 600 secrets/vllm_api_key
 ```
 
-One thing is not optional for this recipe: the checkpoint is not in the shared testbed yet. As of
-The testbed directory `DeepSeek-V4-Pro` exists but is empty, and the only staged copy is on
-scratch, so set `MODELS_DIR` or `MODEL` before launching:
-
-```
-export MODELS_DIR=/n/netscratch/kempner_dev/Lab/mmsh/models
-```
-
 Cluster paths otherwise come from `common/defaults.sh`, which is tracked with working defaults.
 Optional overrides, either exported or set in `common/site.conf`:
 
@@ -100,8 +92,7 @@ Claude Code connects to it directly with no proxy.
 
 - Checkpoint directory: `DeepSeek-V4-Pro`
 - Hugging Face repo: `deepseek-ai/DeepSeek-V4-Pro`
-- Staged path: `/n/netscratch/kempner_dev/Lab/mmsh/models/DeepSeek-V4-Pro`
-- Intended path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/DeepSeek-V4-Pro`, empty today
+- Testbed path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/DeepSeek-V4-Pro`
 
 Read from the checkpoint, since these are the facts the whole recipe rests on:
 
@@ -201,8 +192,8 @@ tail -f dsv4-h200-<jobid>.log
 Watch that log closely on the first attempt. The interesting moment is when the MoE layers are built,
 which is where an FP4 expert format on Hopper either falls back or fails.
 
-Advanced path, for two nodes you already hold. Most users should use the Slurm submission above; this exists for reservation holders and for administrators deploying an endpoint on behalf of others, because reserved nodes are removed from the scheduler and cannot be reached with sbatch. Reserved nodes are removed from the scheduler, which
-is why this exists:
+Advanced path, for two nodes you already hold. Use the Slurm submission above unless you already have
+the nodes, or you are deploying an endpoint on behalf of others:
 
 ```
 bash recipes/DeepSeek-V4-Pro/h200-4-nodes2/serve_ssh.sh <head_node> <worker_node>

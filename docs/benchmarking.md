@@ -28,20 +28,22 @@ GLM-5.2-NVFP4 endpoint reports 683 tok/s if the sweep stops at concurrency 32, h
 between 512 and 1024, and 4 still climbing at 1024 whose figures remain floors.
 
 **Report the sequence cap next to the rate.** vLLM sets `max_num_seqs` from device memory when the flag is
-absent, which is 1024 on every GPU here. Forcing it down throttles the result: gemma-4-26B on one RTX GPU
-gives 5429 tok/s at concurrency 512 at the default and 4290 with the cap at 256. A rate quoted without its
-cap is not reproducible.
+absent, which is 1024 on every GPU here. That cap binds: every recipe in this repo reached a running batch
+of 1024 at the top of its sweep. A rate quoted without its cap is not reproducible, and forcing the cap
+down throttles the result.
 
-**What binds first is model-dependent, so measure it.** On gemma-4-26B on one RTX GPU, KV cache usage sits at
-99 to 100 percent from concurrency 256 upward and requests queue on KV blocks. On Qwen3-235B across a whole
-node, KV usage stays near 24 percent and the sequence count is the limit. Neither preempts at any level.
+**What binds first is model-dependent, so measure it.** KV cache usage reached 100 percent in most recipes,
+so requests queue on KV blocks. It reached only 78 percent for DeepSeek-V4-Pro across two RTX nodes and 73
+percent for Kimi-K2.7-Code across two H200 nodes, where the sequence cap alone is the limit. Nothing
+preempted at any level anywhere.
 
 ## Prompt length is a third axis
 
 The slope method cancels prefill, so prompt length never distorts the measurement. Whether it changes the
 result depends on the model's attention design.
 
-GLM-5.2-NVFP4, one RTX node, concurrency 1:
+GLM-5.2-NVFP4, one RTX node, concurrency 1. All three rows come from one run, separate from the sweep in
+that recipe, so compare them against each other rather than against the recipe's 93.4 tok/s:
 
 | ISL, input tokens | Decode | TTFT |
 | --- | --- | --- |
@@ -69,7 +71,8 @@ It times the same greedy request at 128 and 1152 output tokens, three times, and
 rate = (1152 - 128) / (t_1152 - t_128)
 ```
 
-along with the protocol string `slope(128,1152)` to paste into a recipe README.
+along with the protocol string `slope(128,1152)` to paste into a recipe README. It posts to
+`/v1/chat/completions`, so it measures a vLLM or an SGLang endpoint the same way.
 
 Timing one generation instead counts prefill, scheduling, detokenization, and HTTP overhead as decode.
 Subtracting two lengths cancels every cost that does not scale with output tokens, whatever it happens to be.

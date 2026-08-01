@@ -1,7 +1,7 @@
 # Adding a model
 
-A recipe is one model on one hardware shape. Adding one means creating a directory, and updating two
-tables. Everything else lives inside the directory.
+A recipe is one model on one hardware shape. Adding one means creating a directory and updating the
+indexes that point at it. Everything else lives inside the directory.
 
 ## Before you write anything
 
@@ -56,8 +56,9 @@ Each recipe builds its own environment and shares with nobody, so a torch bump i
 another. Write `env/build.sh` with exact versions, then record what you actually got:
 
 ```
-bash recipes/<Checkpoint-Name>/<hardware>/env/build.sh
-uv pip freeze --python "$ENV_ROOT/<Checkpoint-Name>/<hardware>/venv/bin/python" > env/requirements.lock
+R=recipes/<Checkpoint-Name>/<hardware>
+bash $R/env/build.sh
+uv pip freeze --python "$ENV_ROOT/<Checkpoint-Name>/<hardware>/venv/bin/python" > $R/env/requirements.lock
 ```
 
 If any artifact comes from somewhere other than PyPI, put its resolved URL and sha256 in `env/WHEELS`.
@@ -71,7 +72,7 @@ an environment stops rebuilding months later.
 one without it:
 
 ```
-# verified: <symptom>, <date>
+# verified: <symptom>, <engine version>
 # inherited from <source>, untested for this model
 # required: <reason>
 ```
@@ -121,8 +122,8 @@ bash common/tools/audit_recipes.sh --fix
 bash common/tools/audit_recipes.sh
 ```
 
-Do not write issue text by hand. It is duplicated across recipes on purpose, and the canonical copy in
-`common/issues/` is what keeps the copies identical.
+Do not write issue text by hand. It is duplicated across recipes on purpose, and the source copy in
+`common/issues/` is what keeps every copy identical.
 
 ## Update the indexes
 

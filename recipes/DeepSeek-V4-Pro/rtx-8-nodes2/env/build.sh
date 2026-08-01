@@ -41,9 +41,8 @@ if [ "$build_venv" = 1 ]; then
     --extra-index-url https://download.pytorch.org/whl/cu130 \
     vllm
 
-  # ray[default] is new for this recipe. The pre-restructure RTX environment had no Ray at all, because
-  # every RTX endpoint so far ran on a single node; this recipe spans two nodes, so the Ray executor is
-  # required. Only the Hopper environment carried Ray before.
+  # ray[default] is needed because this recipe spans two nodes and vLLM drives them through the Ray
+  # executor. Single-node RTX recipes do not install it.
   uv pip install --python "$VENV/bin/python" "ray[default]"
 
   # flashinfer-python must be 0.6.15, installed --no-deps so torch is left untouched. vLLM pins 0.6.13,

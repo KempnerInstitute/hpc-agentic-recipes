@@ -29,18 +29,18 @@ export TRITON_CACHE_DIR="/tmp/${USER}/triton"
 export TORCHINDUCTOR_CACHE_DIR="/tmp/${USER}/torchinductor"
 mkdir -p "$TRITON_CACHE_DIR" "$TORCHINDUCTOR_CACHE_DIR" 2>/dev/null || true
 
-# Load-bearing for two other checkpoints on this hardware, both verified 2026-07-27: the DeepGEMM MoE
+# Load-bearing for two other checkpoints on this hardware, both verified: the DeepGEMM MoE
 # path takes an illegal memory access on GLM-5.2's sparse attention, and forcing it on for
 # Qwen3-Coder-480B-FP8 on H200 reproduced the same crash independently.
-# inherited from lib_env.sh, which the 2026-07-19 two-node run of this model used, and untested for this
+# inherited from lib_env.sh, which the two-node run of this model used, and untested for this
 # model either way
 export VLLM_USE_DEEP_GEMM=0
 
 # required: weight load of 64 shards across 8 ranks plus warmup approaches the 600s default readiness
-# timeout; the measured launch on 2026-07-19 reached serving 9 min 11 s after the vLLM banner
+# timeout; the measured launch reached serving 9 min 11 s after the vLLM banner
 export VLLM_ENGINE_READY_TIMEOUT_S=3600
 
-# verified: a holylfs06 OSS failover froze every rank on 2026-07-29 and PyTorch's heartbeat monitor
+# verified: a holylfs06 OSS failover froze every rank and PyTorch's heartbeat monitor
 # killed two endpoints eight minutes later, at the 480s default, for a stall that later recovered
 export TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC="${TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC:-3600}"
 
@@ -49,7 +49,7 @@ export TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC="${TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC:-360
 # two-node endpoint and one that never finishes initialization.
 export NCCL_SOCKET_IFNAME=ib0
 export GLOO_SOCKET_IFNAME=ib0
-# verified: raw two-node NCCL all_reduce had to be proven healthy on 2026-07-19 to establish that the
+# verified: raw two-node NCCL all_reduce had to be proven healthy to establish that the
 # multimodal profiling hang was not a fabric problem, and that check is only interpretable when the
 # transport and its logging are pinned rather than auto-selected per run
 export NCCL_DEBUG="${NCCL_DEBUG:-WARN}"
@@ -64,7 +64,7 @@ for _d in /sys/class/infiniband/*; do
   _l="$(cat "$_d/ports/1/link_layer" 2>/dev/null || true)"
   [[ "$_s" == *ACTIVE* && "$_l" == InfiniBand* ]] && _hca+="${_hca:+,}$_n"
 done
-# inherited from lib_env.sh, where the two-node run of this model on 2026-07-19 used it
+# inherited from lib_env.sh, where the two-node run of this model used it
 export NCCL_IB_HCA="$_hca"
 unset _hca _d _n _s _l
 

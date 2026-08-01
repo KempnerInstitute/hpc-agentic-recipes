@@ -8,20 +8,22 @@ one you want for hard agentic work.
 **Best default for interactive coding on one GPU:** Gemma-4-26B-A4B. It is a mixture of experts with 4B
 active parameters, so it is fast and cheap to schedule, and one GPU means the shortest queue wait.
 
-**Largest coding-specialised checkpoint here:** Kimi-K2.7-Code, a 1T-parameter MoE quantized to INT4. Use
-it when quality matters more than latency and you can hold a full node. No published source ranks the
-runnable models here against each other, so pick on the scores below and on your own task, not on this
-ordering.
+**Fastest large model:** GLM-5.2 in NVFP4 on one RTX node, at 93.4 tok/s single stream, helped by MTP
+speculative decoding that works because the model fits one node with no pipeline parallelism. Its NVFP4
+card measures no meaningful quality loss against FP8; see below.
 
-**Largest coding model that fits a single node:** Qwen3-Coder-480B-FP8 on one RTX node, at a decode rate
-close to the much smaller Qwen3-235B, which makes it a strong quality-per-second choice.
+**Best quality-per-second on one node:** Qwen3-Coder-480B-FP8 on one RTX node at 67.7 tok/s, slightly
+faster than the much smaller Qwen3-235B on the same hardware.
 
-**Fastest large model measured here:** GLM-5.2 in NVFP4 on one RTX node, at 93.4 tok/s single stream,
-helped by MTP speculative decoding that works because the model fits one node with no pipeline parallelism.
-Its NVFP4 card measures no meaningful quality loss against FP8; see below.
+**Highest published coding scores:** Kimi-K3, a 2.8T MoE in MXFP4, which needs 4 H200 nodes and runs only
+under SGLang. Kimi-K2.7-Code, 1T in INT4, is the largest coding-specialized checkpoint and fits a single
+RTX node. Both trade a lot of latency for that quality: 40.3 and 20.7 tok/s.
 
-**Longest context:** GLM-5.2-FP8 across two H200 nodes supports 1M tokens, though the recipe serves 128K
-by default and raising it costs decode rate. Kimi-K3 also supports 1M but runs only under SGLang.
+**Longest context:** GLM-5.2-FP8 across two H200 nodes and Kimi-K3 both support 1M tokens. The recipes
+serve less by default and raising it costs decode rate.
+
+No published source ranks all of these against each other, so pick on the scores below and on your own
+task rather than on this ordering.
 
 ## The table
 
@@ -128,8 +130,9 @@ Rates measured with different protocols are not comparable:
 - `single-generation` times one request and divides tokens by wall time, counting prefill and fixed cost
   as decode, so it understates sustained decode. The shorter the generation, the larger the error.
 
-Every rate in this repo is now slope-measured with `common/tools/bench.sh`. Details in
-[benchmarking.md](benchmarking.md).
+Every rate in this repo is slope-measured. The vLLM recipes use `common/tools/bench.sh`; Kimi-K3 was
+measured by a separate harness applying the same `slope(128,1152)` protocol, because it runs in a container
+outside this repo. Details in [benchmarking.md](benchmarking.md).
 
 ## Read the status column
 

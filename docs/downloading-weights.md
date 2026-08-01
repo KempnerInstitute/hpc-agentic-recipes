@@ -6,7 +6,7 @@ Checkpoints are read from `MODELS_DIR`, which defaults to the shared testbed loc
 /n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/<Checkpoint-Name>
 ```
 
-Most models a recipe references are already there. Check before downloading hundreds of gigabytes.
+Every model a recipe references is already there. Check before downloading hundreds of gigabytes.
 
 ## Fetching a new checkpoint
 
@@ -14,18 +14,15 @@ Most models a recipe references are already there. Check before downloading hund
 bash common/tools/download_model.sh <hf-repo> [local-name]
 ```
 
-Do this from a compute node, not a login node. These are large transfers, and login nodes are shared.
+Run it from a compute node, not a login node. These are large transfers and login nodes are shared.
 
-The tool sets `HF_HUB_ENABLE_HF_TRANSFER=0` deliberately. The accelerated transfer path has been
-unreliable for very large repositories here, and the plain path resumes cleanly, which matters more than
-peak speed for a 500 GB download. For the same reason `HF_HUB_DISABLE_XET=1` is worth setting: the Xet
-backend has caused stalls on multi-hundred-gigabyte checkpoints.
-
-Downloads resume, so an interrupted transfer can simply be rerun.
+The tool turns off both accelerated Hugging Face transfer backends, `HF_HUB_ENABLE_HF_TRANSFER` and the Xet
+backend. The plain path resumes cleanly after an interruption, which matters more than peak speed for a
+several-hundred-gigabyte repository. An interrupted transfer can simply be rerun.
 
 ## Verify before serving
 
-A truncated shard produces a confusing failure deep inside weight loading, so confirm the download is
+A truncated shard fails deep inside weight loading with a confusing error, so confirm the download is
 complete first. Compare the shard count against the index:
 
 ```
@@ -42,6 +39,6 @@ print('missing:', sorted(want - have)[:5])
 
 ## Faster storage
 
-Copying a checkpoint to your own VAST scratch space loads measurably faster than Lustre, and the
-directory names are identical in both locations, so only `MODELS_DIR` changes. Scratch has a 90-day
-retention policy: treat it as a fast cache and keep the testbed copy as the system of record.
+Scratch (`/n/netscratch`) is faster than the Lustre testbed path (`/n/holylfs06`) for this workload, and
+directory names are identical in both, so only `MODELS_DIR` changes. Scratch has a 90-day retention policy:
+treat a copy there as a cache and keep the testbed copy as the permanent one.

@@ -45,16 +45,16 @@ mkdir -p "$TRITON_CACHE_DIR" "$TORCHINDUCTOR_CACHE_DIR" "$FLASHINFER_WORKSPACE_D
 
 # verified: flashinfer-python is 0.6.15, which accepts the kv_scale_format argument vLLM 0.25.1's
 # sm_120 attention backend passes, but no flashinfer-cubin 0.6.15 exists, so the version check has
-# to be bypassed and the kernels are compiled from source on first launch, 2026-07-19
+# to be bypassed and the kernels are compiled from source on first launch
 export FLASHINFER_DISABLE_VERSION_CHECK=1
 
 # verified: RTX PRO 6000 has no NVLink, so peer-to-peer over PCIe must be off or NCCL init hangs with
-# no error and the server never becomes ready, 2026-07-19
+# no error and the server never becomes ready
 export NCCL_P2P_DISABLE=1
 
 # required: weight load plus first-time JIT plus graph capture exceeds the 600s default timeout
 export VLLM_ENGINE_READY_TIMEOUT_S=3600
 
-# verified: a holylfs06 OSS failover froze every rank on 2026-07-29 and PyTorch's heartbeat monitor
+# verified: a holylfs06 OSS failover froze every rank and PyTorch's heartbeat monitor
 # killed two endpoints eight minutes later, at the 480s default, for a stall that later recovered
 export TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC="${TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC:-3600}"

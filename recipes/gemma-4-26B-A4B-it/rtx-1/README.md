@@ -138,8 +138,8 @@ squeue --me                       # NODELIST column
 tail -f gemma26-rtx-1-<jobid>.log
 ```
 
-Advanced path, for a node you already hold. Most users should use the Slurm submission above; this exists for reservation holders and for administrators deploying an endpoint on behalf of others, because reserved nodes are removed from the scheduler and cannot be reached with sbatch. Reserved nodes are removed from the scheduler, which is
-why this exists:
+Advanced path, for a node you already hold. Use the Slurm submission above unless you already have
+the node, or you are deploying an endpoint on behalf of others:
 
 ```
 bash recipes/gemma-4-26B-A4B-it/rtx-1/serve_ssh.sh <node>

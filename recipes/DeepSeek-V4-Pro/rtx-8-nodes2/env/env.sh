@@ -49,7 +49,7 @@ export NCCL_P2P_DISABLE=1
 # required: weight load of 806 GiB across 16 ranks plus graph work exceeds the 600s default
 export VLLM_ENGINE_READY_TIMEOUT_S=3600
 
-# verified: a holylfs06 OSS failover froze every rank on 2026-07-29 and PyTorch's heartbeat monitor
+# verified: a holylfs06 OSS failover froze every rank and PyTorch's heartbeat monitor
 # killed two endpoints eight minutes later, at the 480s default, for a stall that later recovered
 export TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC="${TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC:-3600}"
 

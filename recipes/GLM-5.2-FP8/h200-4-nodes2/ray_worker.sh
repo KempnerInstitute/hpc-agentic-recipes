@@ -4,10 +4,9 @@
 # Set RAY_BLOCK=1 to stay in the foreground, which is what serve.sbatch needs so Slurm keeps the step
 # alive. Leave it unset for the SSH path, where ray start daemonizes and the shell returns.
 #
-# Two changes from the pre-restructure scripts/ray_worker.sh, both required by the restructure: it
-# sourced a sibling lib_env.sh, which no longer exists now that each recipe carries its own
-# environment, and it hardcoded --num-gpus=4, which silently under- or over-subscribed any node with a
-# different GPU count. The count now comes from the allocation, with 4 as the H200 default.
+# The GPU count comes from the allocation rather than a hardcoded value, so a node with a different
+# GPU count is neither under- nor over-subscribed; 4 is the H200 default. Environment settings come
+# from this recipe's own env/env.sh.
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/env/env.sh"

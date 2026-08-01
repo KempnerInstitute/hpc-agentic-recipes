@@ -151,8 +151,8 @@ squeue --me                       # NODELIST column, first name
 tail -f glm52-fp8-<jobid>.log
 ```
 
-Advanced path, for two nodes you already hold. Most users should use the Slurm submission above; this exists for reservation holders and for administrators deploying an endpoint on behalf of others, because reserved nodes are removed from the scheduler and cannot be reached with sbatch. Reserved nodes are removed from the scheduler, which is
-why this exists:
+Advanced path, for two nodes you already hold. Use the Slurm submission above unless you already have
+the nodes, or you are deploying an endpoint on behalf of others:
 
 ```
 bash recipes/GLM-5.2-FP8/h200-4-nodes2/serve_ssh.sh <head_node> <worker_node>

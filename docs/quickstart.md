@@ -1,10 +1,9 @@
 # Quickstart: connect to an endpoint someone else is serving
 
-The fastest path to a local coding model is to use one that is already running. No environment build,
-no queue wait.
+Using an endpoint someone else runs needs no environment build and no queue wait.
 
-You need three things from whoever is serving it: the node name, the port (8000 unless they say
-otherwise), and the API key.
+Get three things from whoever is serving it: the node name, the port (8000 unless they say otherwise), and
+the API key.
 
 ```
 export ANTHROPIC_BASE_URL=http://<node>:8000
@@ -14,14 +13,18 @@ export ANTHROPIC_SMALL_FAST_MODEL=<the same name>
 claude
 ```
 
-Ask the endpoint for the served model name rather than guessing it, since it differs from the
-checkpoint directory name:
+Ask the endpoint for the served model name rather than guessing it, since it differs from the checkpoint
+directory name:
 
 ```
 curl -s -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" http://<node>:8000/v1/models
 ```
 
-## Three things that will bite you
+Ask which engine it is too. The variables above work against vLLM, which serves an Anthropic-compatible API.
+An SGLang endpoint serves only the OpenAI-compatible API, so Claude Code cannot reach it directly; use an
+OpenAI-compatible client instead, covered in [clients.md](clients.md).
+
+## Three common mistakes
 
 **Use `ANTHROPIC_AUTH_TOKEN`, not `ANTHROPIC_API_KEY`.** vLLM accepts only `Authorization: Bearer`.
 `ANTHROPIC_API_KEY` makes Claude Code send `x-api-key` instead, which vLLM ignores, so every request

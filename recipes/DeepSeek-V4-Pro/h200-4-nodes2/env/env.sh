@@ -30,13 +30,13 @@ mkdir -p "$TRITON_CACHE_DIR" "$TORCHINDUCTOR_CACHE_DIR" 2>/dev/null || true
 # Kept off as a counter-warning, not flipped on optimistically. Nothing about DeepSeek-V4 has been
 # tested with DeepGEMM either way, and the two models that were tested on this hardware both crashed.
 # verified: illegal memory access on GLM-5.2's sparse attention, and the same crash reproduced
-# independently for Qwen3-Coder-480B-FP8 on H200, 2026-07-27
+# independently for Qwen3-Coder-480B-FP8 on H200
 export VLLM_USE_DEEP_GEMM=0
 
 # required: weight load of 806 GiB across 8 ranks plus graph work exceeds the 600s default
 export VLLM_ENGINE_READY_TIMEOUT_S=3600
 
-# verified: a holylfs06 OSS failover froze every rank on 2026-07-29 and PyTorch's heartbeat monitor
+# verified: a holylfs06 OSS failover froze every rank and PyTorch's heartbeat monitor
 # killed two endpoints eight minutes later, at the 480s default, for a stall that later recovered
 export TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC="${TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC:-3600}"
 

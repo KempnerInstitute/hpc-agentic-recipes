@@ -12,7 +12,7 @@ nodes at TP16 with EP16 through Marlin W4A16, using `lmsysorg/sglang:kimi-k3-cu1
 
 | | |
 | --- | --- |
-| Single stream | 40.3 tok/s, and 87.1 with the DSpark draft, a 2.16x speedup |
+| Single stream | 40.3 tok/s, and 87.1 with the DSpark draft, a 2.16x speedup, protocol `slope(128,1152)` |
 | Aggregate | 1405 tok/s at concurrency 128, its highest measured |
 | Concurrency limit | 156 requests, set by the KDA state pool rather than by KV or compute |
 | Long context | 38.9 tok/s at a 131,072-token prompt, only 3.5 percent below its short-prompt rate |
@@ -31,7 +31,6 @@ what to re-check when a newer vLLM lands.
 - Checkpoint directory: `Kimi-K3`
 - Hugging Face repo: `moonshotai/Kimi-K3`
 - Testbed path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/Kimi-K3`
-- Also on scratch: `/n/netscratch/kempner_dev/Lab/mmsh/models/Kimi-K3`
 - On disk: 1453.8 GiB, 1561.0 GB decimal, about 1.5 TiB, in 96 shards
 
 Read from `config.json` and the model card:

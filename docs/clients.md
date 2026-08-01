@@ -1,8 +1,8 @@
 # OpenAI-compatible clients
 
 Every vLLM recipe here also serves an OpenAI-compatible API at `/v1`, so tools that speak that protocol
-work without a proxy. SGLang serves only this API, with no Anthropic-compatible endpoint, though the SGLang
-recipe here has never loaded weights and ships nothing to run.
+work without a proxy. SGLang serves only this API and no Anthropic-compatible endpoint, so an
+SGLang-served model such as Kimi-K3 needs a client from this page rather than Claude Code.
 
 Three settings, whatever the client:
 
@@ -18,14 +18,15 @@ Confirm the model name from the endpoint rather than guessing:
 curl -s -H "Authorization: Bearer $(cat secrets/vllm_api_key)" http://<node>:8000/v1/models
 ```
 
-Known-working clients include Cline, Aider, Continue, and OpenHands. Any library that accepts a custom
-base URL works too, including the official `openai` Python package:
+Cline, Aider, Continue, and OpenHands all take these three settings. Any library that accepts a custom base
+URL works too, including the official `openai` Python package:
 
 ```
 from openai import OpenAI
 client = OpenAI(base_url="http://<node>:8000/v1", api_key=open("secrets/vllm_api_key").read().strip())
 ```
 
-Thinking models return their reasoning in a separate field rather than inside `content`. If `content`
-comes back empty, raise `max_tokens` to at least 400: with a small budget the entire allowance is spent
-on reasoning before any answer is emitted.
+Thinking models return their reasoning in a separate field rather than inside `content`: vLLM calls it
+`reasoning`, SGLang calls it `reasoning_content`. If `content` comes back empty and `finish_reason` is
+`length`, raise `max_tokens` to at least 400, because a small budget is spent entirely on reasoning before
+any answer is emitted.

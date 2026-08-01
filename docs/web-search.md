@@ -45,8 +45,8 @@ cp -r common/skills/local-search ~/.claude/skills/
 The skill tells the model what the tool does, when to use each mode, and specifically to fall back to it
 when a hosted web search fails.
 
-## A caveat worth knowing
+## Reliability
 
 Web mode scrapes a search engine, so it is the least stable of the seven: results can change format or
-rate-limit without notice. The literature modes (arxiv, crossref, pubmed, openalex) call documented
-APIs and are considerably more reliable. Prefer them when the question is academic.
+rate-limit without notice. The literature modes (arxiv, crossref, pubmed, openalex) call documented APIs
+and are more reliable. Prefer them when the question is academic.

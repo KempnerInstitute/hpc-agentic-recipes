@@ -31,14 +31,14 @@ mkdir -p "$TRITON_CACHE_DIR" "$TORCHINDUCTOR_CACHE_DIR" 2>/dev/null || true
 
 # verified: the DeepGEMM MoE path takes an illegal memory access on this model's sparse attention on
 # vLLM 0.25.1, and forcing it on for Qwen3-Coder-480B-FP8 on H200 reproduced the same crash
-# independently, 2026-07-27. Load-bearing for more than one model here; do not flip without re-testing.
+# independently. Load-bearing for more than one model here; do not flip without re-testing.
 export VLLM_USE_DEEP_GEMM=0
 
 # required: weight load of 141 shards across 8 ranks plus warmup exceeds the 600s default readiness
-# timeout; a cold two-node start measured 19 min 36 s on 2026-07-19
+# timeout; a cold two-node start measured 19 min 36 s
 export VLLM_ENGINE_READY_TIMEOUT_S=3600
 
-# verified: a holylfs06 OSS failover froze every rank on 2026-07-29 and PyTorch's heartbeat monitor
+# verified: a holylfs06 OSS failover froze every rank and PyTorch's heartbeat monitor
 # killed two endpoints eight minutes later, at the 480s default, for a stall that later recovered
 export TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC="${TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC:-3600}"
 
@@ -60,7 +60,7 @@ for _d in /sys/class/infiniband/*; do
   _l="$(cat "$_d/ports/1/link_layer" 2>/dev/null || true)"
   [[ "$_s" == *ACTIVE* && "$_l" == InfiniBand* ]] && _hca+="${_hca:+,}$_n"
 done
-# inherited from lib_env.sh, where the two-node runs of this model on 2026-07-19 used it
+# inherited from lib_env.sh, where the two-node runs of this model used it
 export NCCL_IB_HCA="$_hca"
 unset _hca _d _n _s _l
 

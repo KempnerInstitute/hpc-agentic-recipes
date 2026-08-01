@@ -139,7 +139,7 @@ snapshot, which is what the failed attempt used.
 
 Everything below applies to this configuration on this hardware, and all of it is inherited rather than
 observed here, because this recipe has never run long enough to observe anything but the weight load
-failure. The canonical text refers to `env/env.sh` and `serve.sh`, which this directory does not ship;
+failure. The shared text refers to `env/env.sh` and `serve.sh`, which this directory does not ship;
 read those references as what an implementation would have to set, not as what is set today.
 
 <!-- issue:cross-node-tp-hangs begin -->

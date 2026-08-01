@@ -26,8 +26,8 @@ export TRITON_CACHE_DIR="/tmp/${USER}/triton"
 export TORCHINDUCTOR_CACHE_DIR="/tmp/${USER}/torchinductor"
 mkdir -p "$TRITON_CACHE_DIR" "$TORCHINDUCTOR_CACHE_DIR" 2>/dev/null || true
 
-# inherited from the pre-restructure lib_env.sh: the DeepGEMM MoE path took an illegal memory access
-# on GLM-5.2 and independently on Qwen3-Coder-480B-FP8 on this hardware, 2026-07-27. This checkpoint
+# inherited: the DeepGEMM MoE path took an illegal memory access
+# on GLM-5.2 and independently on Qwen3-Coder-480B-FP8 on this hardware. This checkpoint
 # is an MoE, so the same kernels are in play; it was measured with the flag at 0 and untested at 1.
 export VLLM_USE_DEEP_GEMM=0
 

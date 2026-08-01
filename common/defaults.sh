@@ -3,20 +3,20 @@
 # environment. Nothing here is user-specific.
 [ -n "${REPO_ROOT:-}" ] || source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/repo_root.sh"
 
-# Where checkpoints live. This shared testbed copy is readable by any cluster user and is the system
-# of record. A copy on your own VAST scratch loads faster; override MODELS_DIR to use one.
+# Where checkpoints live. This shared testbed copy is readable by any cluster user and is the permanent
+# one. A copy on your own scratch space loads faster; override MODELS_DIR to use it.
 : "${MODELS_DIR:=/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models}"
 
-# Where per-recipe environments are built. VAST scratch, because startup is dominated by page
+# Where per-recipe environments are built. Scratch, because startup is dominated by page
 # faulting the torch shared objects and stat-ing tens of thousands of small package files: measured on GPU nodes, the
 # interval from process start to the first vLLM log line was about 14 minutes from Lustre and 58
-# seconds from VAST. A bare torch and vLLM import from VAST is 9.2 seconds, so most of that 58
+# seconds from scratch. A bare torch and vLLM import from scratch is 9.2 seconds, so most of that 58
 # seconds is engine startup rather than filesystem cost.
 # Scratch has a 90-day retention policy, so environments here are disposable and must be rebuilt
 # periodically with common/tools/rebuild_envs.sh. This is a deliberate speed tradeoff.
 # You can point ENV_ROOT anywhere: lab or project space with no retention policy makes environments
 # permanent, at the cost of slower imports. Set it in common/site.conf.
-: "${ENV_ROOT:=/n/netscratch/kempner_dev/Lab/mmsh/agentic-coding-llm-env}"
+: "${ENV_ROOT:=/n/netscratch/kempner_dev/Lab/$USER/agentic-coding-llm-env}"
 
 # Server logs. Node-local, because every rank writes stderr for the life of the endpoint: a log on a
 # network filesystem puts a blocking write on the critical path, and a filesystem stall then freezes

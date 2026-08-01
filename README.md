@@ -6,9 +6,9 @@ build, the launch scripts, the measured performance, and every known failure mod
 configuration. A few entries in the table below are documentation only, recording why a configuration does
 not work; those ship no scripts and say so.
 
-Every runnable recipe uses vLLM, which serves an Anthropic-compatible endpoint that Claude Code talks to
-directly. SGLang appears twice in the table and runs neither model here; see
-[docs/engines.md](docs/engines.md).
+Both vLLM and SGLang are used here. vLLM serves an Anthropic-compatible endpoint that Claude Code talks to
+directly, and runs every recipe with scripts. SGLang serves Kimi-K3, which no vLLM release available here can
+load, over an OpenAI-compatible API. See [docs/engines.md](docs/engines.md).
 
 ## If someone is already serving a model
 
@@ -51,8 +51,8 @@ Then start with a single-GPU recipe, which needs one GPU rather than a whole nod
 Runnable recipes all have the same steps: configure once, build the environment, launch, verify, connect.
 Run them from the repo root.
 
-Each launches two ways. Use the Slurm path unless you already hold nodes through a reservation, which puts
-them outside the scheduler.
+Each launches two ways: an sbatch submission and a direct launch on nodes you already hold. Use the
+sbatch path unless you have a reason not to.
 
 To choose a model, see [docs/choosing-a-model.md](docs/choosing-a-model.md). The fastest model here is not
 the best coder.
@@ -83,7 +83,7 @@ Rates measured with `common/tools/bench.sh`; method in [docs/benchmarking.md](do
 | [DeepSeek-V4-Pro](recipes/DeepSeek-V4-Pro/h200-4-nodes2) | FP8 with FP4 experts | 2 H200 nodes | TP4 x PP2 | does not run | n/a | n/a | Blocked, serve on RTX |
 | [GLM-5.2 on SGLang](recipes/GLM-5.2-FP8/h200-4-nodes2-sglang) | FP8 | 2 H200 nodes | TP4 x PP2 | never loaded weights | n/a | n/a | Blocked |
 | [Qwen3-Coder-480B](recipes/Qwen3-Coder-480B-A35B-Instruct) | bf16 | 2 to 4 H200 nodes | TP4 x PP | not measured | n/a | n/a | Untested |
-| [Kimi-K3](recipes/Kimi-K3) | MXFP4, QAT | 4 H200 nodes, 16 GPUs | TP16 x EP16 | 40.3 tok/s | 1405 at c=128 | n/a | Blocked for vLLM, SGLang only |
+| [Kimi-K3](recipes/Kimi-K3) | MXFP4, QAT | 4 H200 nodes, 16 GPUs | TP16 x EP16 | 40.3 tok/s | 1405 at c=128 | 32K | Blocked for vLLM, SGLang only |
 
 **Single stream** is one request at a time, and it is the only number that describes how fast a reply feels
 to one person. **Aggregate** is total output across every concurrent stream at the stated concurrency, tens
@@ -129,7 +129,7 @@ hardware level, just the checkpoint directory.
 | [quickstart.md](docs/quickstart.md) | Connecting to an endpoint someone else runs |
 | [choosing-a-model.md](docs/choosing-a-model.md) | Which model to serve, and what the rates mean |
 | [clients.md](docs/clients.md) | Cline, Aider, Continue, or any OpenAI-compatible client |
-| [engines.md](docs/engines.md) | Why vLLM is the default and when SGLang is worth it |
+| [engines.md](docs/engines.md) | Which engine a model needs, and what each one serves |
 | [hardware.md](docs/hardware.md) | Node types, partitions, allocation limits |
 | [downloading-weights.md](docs/downloading-weights.md) | Fetching a new checkpoint |
 | [benchmarking.md](docs/benchmarking.md) | How the rates here were measured, and how to measure your own |
