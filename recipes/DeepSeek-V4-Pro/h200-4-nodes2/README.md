@@ -454,19 +454,19 @@ has with other checkpoints.
 
 ## Stop the endpoint
 
-For a Slurm job, `scancel <jobid>`, which also tears down both Ray processes. For the SSH path, both
-nodes need attention:
+For a Slurm job, `scancel <jobid>` is all of it: the job requests both nodes and starts Ray through
+`srun` inside that allocation, so Slurm's cgroups own every process on both nodes and remove them.
+
+The SSH path has no such owner, so name both nodes explicitly:
 
 ```
 bash common/tools/stop.sh <head_node> <worker_node>
-ssh <head_node> ray stop
-ssh <worker_node> ray stop
 ```
 
-That kills the server processes and waits for GPU memory to be released. Confirm with
-`ssh <node> nvidia-smi --query-gpu=memory.used --format=csv,noheader`, which should read 0 MiB on all
-four GPUs of both nodes before you relaunch, or the next start will fail on memory. A leftover Ray
-cluster is the other common cause of a failed relaunch, which is why `ray stop` is listed separately.
+That stops Ray as well as the server, then confirms both the GPUs and the host are clear. Do not reach for
+`ssh <node> ray stop` by hand: `ray` lives in the recipe venv and is not on `PATH` in a non-interactive
+shell, so it silently does nothing. A leftover Ray cluster is the other common cause of a failed relaunch,
+and it fails on resources rather than on memory, which reads like a different problem entirely.
 
 ## Expected startup time
 
