@@ -345,7 +345,7 @@ check only that device: another job may legitimately be holding the other three.
 | --- | --- | --- |
 | Environment build, one time | 5 to 15 min | skipped |
 | Weight load | to be measured | to be measured |
-| Total to first token | to be measured | to be measured |
+| Total, launch to serving | 4 min 1 s | 4 min 1 s |
 
 First launch on a fresh node is slower than later ones: page cache is cold and any just-in-time kernel
 compilation happens once. A launch that looks hung during this window is usually still loading. Check

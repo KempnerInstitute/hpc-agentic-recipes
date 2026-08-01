@@ -238,7 +238,7 @@ instead of the hosted tool.
 | Concurrency 128 | 5417.1 tok/s | 42.3 tok/s | TTFT median 197 ms, p90 293 ms, n=3 spanning 5275.6 to 5465.3 |
 | Concurrency 256 | 6614.8 tok/s | 25.8 tok/s | TTFT median 332 ms, p90 545 ms, n=3 spanning 6579.0 to 6619.5 |
 | Concurrency 512 | 7164.7 tok/s | 14.0 tok/s | TTFT median 566 ms, p90 974 ms, n=3 spanning 7142.7 to 7173.4 |
-| Concurrency 640 (peak) | 7242.8 tok/s | 11.3 tok/s | TTFT median 703 ms, p90 1214 ms, n=3 spanning 7236.1 to 7251.9 |
+| Concurrency 640 (saturated) | 7242.8 tok/s | 11.3 tok/s | TTFT median 703 ms, p90 1214 ms, n=3 spanning 7236.1 to 7251.9 |
 | Concurrency 768 | 7196.0 tok/s | 9.4 tok/s | TTFT median 835 ms, p90 1443 ms, n=3 spanning 7161.1 to 7243.5 |
 | Concurrency 896 | 7147.8 tok/s | 8.0 tok/s | TTFT median 948 ms, p90 1653 ms, n=3 spanning 7139.1 to 7218.1 |
 | Concurrency 1024 | 7082.7 tok/s | 6.9 tok/s | TTFT median 1107 ms, p90 1929 ms, n=3 spanning 7073.2 to 7137.4 |
@@ -260,8 +260,8 @@ Quote 203.4 tok/s for interactive coding, where one person waits on one
 response. Quote 7242.8 tok/s at concurrency 640 for a shared endpoint under load.
 The two measure different things and neither substitutes for the other.
 
-Throughput **peaks at concurrency 640** and falls to 7083 tok/s by concurrency 1024, so 7242.8 tok/s is a
-measured ceiling for this recipe rather than the edge of the sweep.
+Throughput is **saturated**: the levels from concurrency 512 upward vary by 2.2 percent, so more
+concurrency buys only queueing delay. The highest value measured is 7242.8 tok/s at concurrency 640.
 
 Concurrency 512 was measured in both runs, at 7164.7 and 6773.9 tok/s, a -5.5 percent
 difference. That is the check that the two halves of this curve are comparable.

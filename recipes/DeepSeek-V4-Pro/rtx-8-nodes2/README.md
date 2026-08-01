@@ -318,7 +318,7 @@ Quote 18.6 tok/s for interactive coding, where one person waits on one
 response. Quote 3581.9 tok/s at concurrency 1024 for a shared endpoint under load.
 The two measure different things and neither substitutes for the other.
 
-Throughput was **still rising at concurrency 1024**, 22 percent above its own concurrency 512 at the top of the sweep,
+Throughput was **still rising at concurrency 1024**, 21 percent above its own concurrency 512 at the top of the sweep,
 so 3581.9 tok/s is a floor rather than a ceiling. The sequence cap is not what stopped it:
 `max_num_seqs` resolves to 1024 on this hardware and the sweep ran to that level, so finding the
 true peak needs the cap raised, which is a different serving configuration.
@@ -464,7 +464,7 @@ which reads like a different problem entirely. `stop.sh` clears both.
 | Environment build, one time | 10 to 25 min | skipped |
 | Weight load, 806 GiB across 16 ranks | to be measured | to be measured |
 | FlashInfer sm_120 kernel compilation, first launch only | to be measured | skipped |
-| Total to first token | to be measured | to be measured |
+| Total, launch to serving | 20 min 8 s | 20 min 8 s |
 
 First launch on a fresh node is slower than later ones: page cache is cold, and the FlashInfer sm_120
 kernels are compiled from source once because no cubin package matches the installed version. A launch

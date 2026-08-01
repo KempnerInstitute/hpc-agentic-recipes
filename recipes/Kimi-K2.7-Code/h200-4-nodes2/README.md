@@ -108,8 +108,10 @@ same checkpoint on one node. This recipe is the faster of the two and the more e
 
 This recipe builds its own environment, shared with no other recipe. Roughly 13 GB, and it lands under
 `ENV_ROOT` on scratch rather than in the repo, because startup is dominated by page faulting the
-torch shared objects and stat-ing tens of thousands of small package files: measured on one node,
-importing torch and vLLM took about 14 minutes from Lustre and 9.2 seconds from scratch.
+torch shared objects and stat-ing tens of thousands of small package files: measured on GPU nodes, the interval from
+process start to the first vLLM log line was about 14 minutes from Lustre and 58 seconds from scratch.
+A bare torch and vLLM import from scratch is 9.2 seconds, so most of that 58 seconds is engine
+startup rather than filesystem cost.
 
 ```
 bash recipes/Kimi-K2.7-Code/h200-4-nodes2/env/build.sh

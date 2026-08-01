@@ -82,8 +82,9 @@ variants of this checkpoint are three separate recipes rather than one recipe wi
 This recipe builds its own environment, shared with no other recipe: roughly 9.0 GB for the virtual
 environment plus 2.9 GB for a CUDA 13.0 toolkit. Both land under `ENV_ROOT` on scratch rather
 than in the repo, because startup is dominated by page faulting the torch shared objects and stat-ing
-tens of thousands of small package files: measured on one node, importing torch and vLLM took about
-14 minutes from Lustre and 9.2 seconds from scratch.
+tens of thousands of small package files: measured on GPU nodes, the interval from process start to the first vLLM log line was about 14
+minutes from Lustre and 58 seconds from scratch. A bare torch and vLLM import from scratch is 9.2
+seconds, so most of that 58 seconds is engine startup rather than filesystem cost.
 
 ```
 bash recipes/gemma-4-26B-A4B-it/rtx-1/env/build.sh
@@ -364,7 +365,7 @@ check only that device: another job may legitimately be holding the other seven.
 | --- | --- | --- |
 | Environment build, one time | 5 to 20 min | skipped |
 | Weight load | to be measured | to be measured |
-| Total to first token | to be measured | to be measured |
+| Total, launch to serving | 10 min 48 s | 10 min 48 s |
 
 First launch on a fresh node is slower than later ones: page cache is cold, and the FlashInfer sm_120
 kernels are compiled from source on the first request after a fresh environment because no matching

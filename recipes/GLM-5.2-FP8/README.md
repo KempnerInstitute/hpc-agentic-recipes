@@ -6,7 +6,8 @@ and it serves through vLLM's Anthropic-compatible API as `glm-5.2`, so Claude Co
 proxy.
 
 This is the long-context endpoint in this repo. The checkpoint's `max_position_embeddings` is 1048576,
-a million tokens, which no other checkpoint here reaches. The price is speed: at 756 GB the weights need
+a million tokens, which DeepSeek-V4-Pro, the NVFP4 build of this same base model, and Kimi-K3 also
+reach. The price is speed: at 756 GB the weights need
 two H200 nodes, two nodes need pipeline parallelism, and a two-stage pipeline with one request in flight
 is the slowest configuration in this repo.
 

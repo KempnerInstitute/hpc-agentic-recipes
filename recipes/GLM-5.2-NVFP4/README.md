@@ -26,4 +26,4 @@ back to emulation. The FP8 build of the same base model is a separate checkpoint
 - Architecture: `GlmMoeDsaForCausalLM`, native to vLLM 0.25.1
 
 Quantization is 4-bit weights and 4-bit input activations at group size 16, with the embeddings,
-`lm_head` and the first layer left unquantized.
+`lm_head`, the first three layers and the last left unquantized.

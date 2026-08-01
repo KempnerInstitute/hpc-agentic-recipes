@@ -157,9 +157,9 @@ weights halve the bytes moved and gave a large speedup, scaling with the GPU's m
 finishes each step before the host can feed it the next. Utilization sat at 35 to 40 percent and power at
 roughly 210 W of a 700 W budget. FP8 gave exactly zero benefit, because bandwidth was never the limit.
 
-**Communication bound.** A large model at TP8 on an RTX node spends about 16 ms per token on all-reduce
-against roughly 3 ms of weight reading, because there is no NVLink. FP8 weights again bought nothing, and
-expert parallelism made it worse by adding all-to-all traffic.
+**Communication bound.** A large model at TP8 on an RTX node is limited by all-reduce traffic crossing
+PCIe, because there is no NVLink. FP8 weights again bought nothing, and expert parallelism made it worse
+by adding all-to-all traffic, measuring about 9 percent slower.
 
 The practical rule: FP8 weights pay off for dense models on high-bandwidth GPUs, and do nothing for sparse
 MoE models or for anything already limited by the interconnect.

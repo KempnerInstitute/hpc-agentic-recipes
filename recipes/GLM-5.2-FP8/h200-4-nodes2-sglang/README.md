@@ -112,7 +112,7 @@ used was a dated dev snapshot from a git hash rather than a release.
 
 No decode rate has ever been measured for this configuration, and none is estimated here. The engine
 never reached a state where it could answer a request. For reference, the vLLM variant of the same
-checkpoint on the same two nodes measured about 13 tok/s with a single-generation protocol, and that is
+checkpoint on the same two nodes measured 13.0 tok/s with protocol `slope(128,1152)`, and that is
 the number to beat if this is ever made to work.
 
 ## Environment build

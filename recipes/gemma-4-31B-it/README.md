@@ -22,8 +22,9 @@ the same name, so they differ only in hardware, environment, and rate.
 
 Single stream is one request at a time, which is what interactive coding feels like. Saturated is total
 output across every concurrent stream, and it says nothing about how fast a single reply arrives.
-All three are `saturated`, meaning throughput varies by under 4 percent across concurrency 512 to 1024,
-so these are real ceilings and adding concurrency past them buys only queueing delay. This model reaches
+The H200 and RTX variants are `saturated`, varying by under 4 percent across concurrency 512 to 1024, so
+adding concurrency past them buys only queueing delay. The H100 turned over at 512, so its figure is a
+measured `peak`. All three are real ceilings. This model reaches
 its limit at lower concurrency than its 26B sibling, which is consistent with it being memory bandwidth
 bound. Measured at 32K context, protocol slope(128,1152) over output tokens only, 3 repeats
 per level, concurrency 1 through 1024.

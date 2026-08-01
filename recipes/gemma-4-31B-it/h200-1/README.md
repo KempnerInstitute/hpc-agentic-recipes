@@ -366,7 +366,7 @@ check only that device: another job may legitimately be holding the other three.
 | --- | --- | --- |
 | Environment build, one time | 5 to 15 min | skipped |
 | Weight load | to be measured | to be measured |
-| Total to first token | to be measured | to be measured |
+| Total, launch to serving | 4 min | 4 min |
 
 First launch on a fresh node is slower than later ones: page cache is cold, any just-in-time kernel
 compilation happens once, and FP8 quantization happens during weight load. A launch that looks hung

@@ -24,7 +24,7 @@ output tokens only, 3 repeats per level.
 - Checkpoint directory: `GLM-4.6-FP8`
 - Hugging Face repo: `zai-org/GLM-4.6-FP8`
 - Documented path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/GLM-4.6-FP8`
-- Size: about 337 GB across 93 shards
+- Size: about 361 GB, 336 GiB, across 93 shards
 - License: MIT
 - Architecture: `Glm4MoeForCausalLM`, native to vLLM
 

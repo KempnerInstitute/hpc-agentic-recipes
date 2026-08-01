@@ -45,7 +45,7 @@ the other. See Measured performance below for the full curve and the disclosure 
 GLM-5.2, FP8 quantized: a 753B-parameter mixture-of-experts, 40B activated per token, reasoning and coding model that uses
 DeepSeek-style sparse attention for long context. It is a thinking model with native tool calling, and
 it exposes vLLM's Anthropic-compatible API, so Claude Code connects to it directly with no proxy. Its
-reason to exist in this repo is context length: this is the only endpoint here whose checkpoint reaches
+reason to exist in this repo is context length: this is a vLLM endpoint whose checkpoint reaches
 a million tokens.
 
 - Checkpoint directory: `GLM-5.2-FP8`
@@ -106,8 +106,10 @@ not identical in weight footprint. That is expected, not a misconfiguration.
 
 This recipe builds its own environment, shared with no other recipe. Roughly 13 GB, and it lands under
 `ENV_ROOT` on scratch rather than in the repo, because startup is dominated by page faulting the
-torch shared objects and stat-ing tens of thousands of small package files: measured on one node,
-importing torch and vLLM took about 14 minutes from Lustre and 9.2 seconds from scratch.
+torch shared objects and stat-ing tens of thousands of small package files: measured on GPU nodes, the interval from
+process start to the first vLLM log line was about 14 minutes from Lustre and 58 seconds from scratch.
+A bare torch and vLLM import from scratch is 9.2 seconds, so most of that 58 seconds is engine
+startup rather than filesystem cost.
 
 ```
 bash recipes/GLM-5.2-FP8/h200-4-nodes2/env/build.sh

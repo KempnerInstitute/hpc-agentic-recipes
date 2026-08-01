@@ -236,7 +236,7 @@ Quote 19.2 tok/s for interactive coding, where one person waits on one
 response. Quote 8130.2 tok/s at concurrency 1024 for a shared endpoint under load.
 The two measure different things and neither substitutes for the other.
 
-Throughput was **still rising at concurrency 1024**, 31 percent above its own concurrency 512 at the top of the sweep,
+Throughput was **still rising at concurrency 1024**, 29 percent above its own concurrency 512 at the top of the sweep,
 so 8130.2 tok/s is a floor rather than a ceiling. The sequence cap is not what stopped it:
 `max_num_seqs` resolves to 1024 on this hardware and the sweep ran to that level, so finding the
 true peak needs the cap raised, which is a different serving configuration.
@@ -316,6 +316,7 @@ four GPUs before you relaunch, or the next start will fail on memory.
 | --- | --- |
 | Environment build, one time | about 6 min, 215 packages |
 | Launch to serving, cold page cache | 6 min 6 s |
+| Launch to serving, warm page cache | 4 min 2 s |
 
 Measured with the checkpoint read from scratch rather than the default testbed path;
 reading from Lustre is slower. First launch on a fresh node is slower than later ones, because the page

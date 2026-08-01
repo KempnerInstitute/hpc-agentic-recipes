@@ -81,8 +81,9 @@ whole node.
 This recipe builds its own environment, shared with no other recipe: about 9.0 GB for the Python
 environment plus 2.9 GB for a private CUDA 13.0 toolkit. Both land under `ENV_ROOT` on scratch
 rather than in the repo, because startup is dominated by page faulting the torch shared objects and
-stat-ing tens of thousands of small package files: measured on one node, importing torch and vLLM took
-about 14 minutes from Lustre and 9.2 seconds from scratch.
+stat-ing tens of thousands of small package files: measured on GPU nodes, the interval from process start to the first vLLM log line was about 14
+minutes from Lustre and 58 seconds from scratch. A bare torch and vLLM import from scratch is 9.2
+seconds, so most of that 58 seconds is engine startup rather than filesystem cost.
 
 ```
 bash recipes/GLM-5.2-NVFP4/rtx-8/env/build.sh
@@ -284,7 +285,7 @@ ceiling on this configuration, so nothing that adds cross-GPU traffic is worth e
 
 NVFP4 is what makes a 753B-parameter model fit one node: 4-bit weights and 4-bit input activations at
 group size 16. The `ignore` list in `quantization_config` keeps `lm_head`, `model.embed_tokens`, the
-first two layers, and every layer's attention and shared experts at full precision. The KV cache is
+first three layers and the last, and every other layer's attention and shared experts, at full precision. The KV cache is
 FP8 in DeepSeek's sparse-MLA layout (`--kv-cache-dtype fp8_ds_mla`), which is the format vLLM's sm_120
 sparse-MLA backend reads, and it is what leaves room for a 128K context.
 
@@ -349,7 +350,7 @@ eight GPUs before you relaunch, or the next start will fail on memory.
 | Environment build, one time | to be measured | skipped |
 | First-time FlashInfer JIT | to be measured | skipped, cached under `/tmp/$USER/flashinfer` |
 | Weight load | to be measured | to be measured |
-| Total to first token | to be measured | to be measured |
+| Total, launch to serving | 18 min 1 s | 18 min 1 s |
 
 First launch on a fresh node is slower than later ones: page cache is cold, and the sm_120 attention
 kernels are compiled from source once because no matching cubin package exists. Both caches are
