@@ -99,7 +99,8 @@ stopped at 512 because throughput had already turned over at 256, and both are `
 in [docs/choosing-a-model.md](docs/choosing-a-model.md).
 
 Kimi-K3 carries no label: it was measured under SGLang on a shorter sweep, capped at 156 concurrent
-requests, so a rule defined from concurrency 512 upward does not apply.
+requests, so a rule defined from concurrency 512 upward does not apply. Its `Context` cell is the
+32K the measured run served, not a recipe default and not a ceiling; the checkpoint supports 1M.
 
 ## Hardware
 

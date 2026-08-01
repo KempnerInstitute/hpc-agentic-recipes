@@ -325,18 +325,15 @@ bash common/tools/bench.sh --host <head-node> --model deepseek-v4-pro
 For scale, two H200 nodes served Kimi-K2.7-Code at 30.4 tok/s single stream, which is the closest measured
 two-node Hopper reference point in this repo.
 
-Both figures above are **single stream**, meaning one request at a time, which is what an interactive
-coding session feels. That leaves the GPU far from saturated. To measure total throughput with
-concurrent requests, and to find where it stops rising:
+To measure total throughput with concurrent requests, and to find where it stops rising:
 
 ```
-bash common/tools/bench.sh --host <node> --model deepseek-v4-pro --sweep 1,4,16,32
+bash common/tools/bench.sh --host <head-node> --model deepseek-v4-pro --sweep 1,8,32,128
 ```
 
-Aggregate throughput is several times the single stream figure, while per stream latency falls. On one
-endpoint here, concurrency 8 delivered 404.6 tok/s aggregate against 90.0 tok/s single stream, with
-each stream seeing 50.6 tok/s. Quote the single stream number for interactive use and the aggregate for
-serving several people at once, and never compare one against the other.
+Aggregate throughput is several times the single stream figure, while per stream latency falls. Quote
+the single stream number for interactive use and the aggregate for serving several people at once, and
+never compare one against the other.
 
 Prompt length is a separate axis, and how much it costs depends entirely on the model's attention
 design. The slope method cancels prefill, so a long prompt never distorts the measurement, but a larger

@@ -65,7 +65,7 @@ justified it.
 
 ## Why the eager fallback is not the answer
 
-Eager mode does work: 22.2 tok/s at TP4 on 4 GPUs. That is roughly a third of the 64 tok/s the same
+Eager mode does work: 22.2 tok/s at TP4 on 4 GPUs. That is roughly a third of the 67.7 tok/s the same
 checkpoint reaches on one RTX node, so the fallback costs about 3x for a full H200 node held for a day.
 Given that an RTX node runs the model properly, spending Hopper capacity on a 3x-slower configuration
 is a poor trade unless there is a specific reason to hold H200 hardware.

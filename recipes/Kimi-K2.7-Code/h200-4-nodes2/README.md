@@ -47,7 +47,7 @@ the other. See Measured performance below for the full curve and the disclosure 
 
 Kimi-K2.7-Code, a 1T-parameter mixture-of-experts coding model with 32B parameters active per token,
 MLA attention, and a MoonViT vision tower, so it accepts images as well as text. It is thinking-mode
-only: it always emits reasoning before its answer, and it is the strongest coder in this repo. The
+only: it always emits reasoning before its answer. The
 checkpoint is natively INT4 quantization-aware trained, not post-quantized. It exposes vLLM's
 Anthropic-compatible API, so Claude Code connects to it directly with no proxy.
 

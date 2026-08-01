@@ -15,7 +15,8 @@ common/issues by common/tools/audit_recipes.sh --fix, so add empty marker pairs 
 
 ## Status
 
-<!-- Validated needs a date, an engine version, and a protocol label, or the audit rejects it. -->
+<!-- Validated needs an engine version and a protocol label, or the audit rejects it. No dates: the
+     prose checker rejects them, because a version says whether a number still holds and a date does not. -->
 
 ## What this is
 

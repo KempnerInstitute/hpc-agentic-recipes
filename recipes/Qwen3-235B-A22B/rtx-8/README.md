@@ -268,7 +268,7 @@ Quote 63.3 tok/s for interactive coding, where one person waits on one
 response. Quote 3983.5 tok/s at concurrency 512 for a shared endpoint under load.
 The two measure different things and neither substitutes for the other.
 
-Throughput **peaks at concurrency 512** and falls to 3750 tok/s by concurrency 1024, so 3979.4 tok/s is a
+Throughput **peaks at concurrency 512** and falls to 3750 tok/s by concurrency 1024, so 3983.5 tok/s is a
 measured ceiling for this recipe rather than the edge of the sweep.
 
 Concurrency 512 was measured in both runs, at 3983.5 and 3979.4 tok/s, a -0.1 percent
