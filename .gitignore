@@ -31,3 +31,7 @@ models/
 # A planning document that used to live here. Deleted, and ignored so it cannot return: this repo
 # records what works, not what was being considered.
 plan-new-models.md
+
+# Local verification scripts kept beside the repo, never shipped: they check that the numbers in the
+# recipes still match the tables, checkpoints and files they came from.
+repo-checks/
