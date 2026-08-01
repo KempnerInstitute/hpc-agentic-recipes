@@ -471,6 +471,9 @@ which reads like a different problem entirely. `stop.sh` clears both.
 | Engine init: profile, KV cache, warmup | 165 s |
 | Total, vLLM banner to serving | 9 min 11 s |
 
+The validated run reached serving 17 minutes 43 seconds after the launcher was invoked. The difference
+from the total above is Ray bring-up and the Python import of torch and vLLM, before vLLM logs anything.
+
 Measured from the server log, with the checkpoint read from scratch rather than the Lustre testbed
 path. The table starts at the vLLM banner; everything before it is the Python import of torch and
 vLLM, which is fast because `ENV_ROOT` is on scratch and slow from Lustre.

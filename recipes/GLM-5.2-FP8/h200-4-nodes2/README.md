@@ -457,6 +457,10 @@ which reads like a different problem entirely. `stop.sh` clears both.
 | Engine init: profile, KV cache, warmup | 109 s | 84 s |
 | Total, vLLM banner to serving | 5 min 5 s | 19 min 36 s |
 
+The table starts at the vLLM banner. The validated run reached serving 16 minutes 23 seconds after the
+launcher was invoked; the extra time is Ray bring-up and the Python import of torch and vLLM, before
+vLLM logs anything.
+
 Both columns are measured on two different node pairs, with the checkpoint read from
 scratch in both cases. The difference is page cache: the fast pair had already loaded this
 checkpoint, the freshly allocated pair had not. Reading from the Lustre testbed path instead is slower

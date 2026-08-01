@@ -90,8 +90,9 @@ Candidates to consider: attention backend, `VLLM_USE_DEEP_GEMM`, `NCCL_P2P_DISAB
 
 `serve.sh` holds the engine command. The decisions that actually take time:
 
-- `--served-model-name` must be unique across recipes and must match `ANTHROPIC_MODEL` in `client.env`.
-  The audit checks this, because a mismatch produces a confusing model-not-found at first use.
+- `--served-model-name` must match `ANTHROPIC_MODEL` in `client.env`, which the audit checks, because a
+  mismatch produces a confusing model-not-found at first use. Recipes for the same model on different
+  hardware share one name on purpose, so a client does not change when the endpoint moves.
 - `--tool-call-parser` and `--reasoning-parser` must be names the engine has registered. Find them by
   listing the registry rather than guessing from filenames, which do not match the registered names.
 - `--enable-auto-tool-choice` is required for agentic use.

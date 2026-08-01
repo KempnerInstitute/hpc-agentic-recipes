@@ -6,8 +6,8 @@ This is a documentation-only entry. There is no hardware subdirectory and there 
 this checkpoint has never been served here. It is kept because it answers a question the FP8 twin
 cannot, and this page records what it is, why it is interesting, and what shape it would need.
 
-The FP8 version of this model is the one in production use: it serves at 67.7 tok/s single stream at TP4 x PP2 on
-one RTX node. This bf16 version is twice the size and has no measured rate at all.
+The FP8 version of this model is the validated one: it serves at 67.7 tok/s single stream at TP4 x PP2
+on one RTX node. This bf16 version is twice the size and has no measured rate at all.
 
 ## What is staged
 
