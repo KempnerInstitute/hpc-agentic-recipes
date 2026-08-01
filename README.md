@@ -108,9 +108,13 @@ because they turned over at 256.
 | RTX PRO 6000 Blackwell | 8 | 96 GiB | `kempner_rtx` |
 | H200 | 4 | 140 GiB | `kempner_h200` |
 | H100 | 4 | 80 GiB | `kempner_h100` |
+| A100 | 4 | 40 GiB | `kempner` |
 
 All nodes of a given type are identical, so any node in a partition works. Details, including allocation
 limits and interconnect, in [docs/hardware.md](docs/hardware.md).
+
+No recipe here targets the A100 yet. It is listed because it is available and may suit a smaller
+checkpoint later.
 
 ## Layout
 
