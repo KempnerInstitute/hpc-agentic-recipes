@@ -14,9 +14,16 @@
 # seconds is engine startup rather than filesystem cost.
 # Scratch has a 90-day retention policy, so environments here are disposable and must be rebuilt
 # periodically with common/tools/rebuild_envs.sh. This is a deliberate speed tradeoff.
-# You can point ENV_ROOT anywhere: lab or project space with no retention policy makes environments
-# permanent, at the cost of slower imports. Set it in common/site.conf.
+# The default names one group's scratch space, which is the only part of this file that assumes
+# anything about who you are. If you cannot write there, set ENV_ROOT in common/site.conf to any
+# directory you can: lab or project space with no retention policy also makes environments
+# permanent, at the cost of slower imports. The check below says so rather than letting a build
+# fail later with a bare permission error.
 : "${ENV_ROOT:=/n/netscratch/kempner_dev/Lab/$USER/agentic-coding-llm-env}"
+if ! mkdir -p "$ENV_ROOT" 2>/dev/null; then
+  echo "cannot create ENV_ROOT=$ENV_ROOT" >&2
+  echo "set ENV_ROOT in common/site.conf to a directory you can write" >&2
+fi
 
 # Server logs. Node-local, because every rank writes stderr for the life of the endpoint: a log on a
 # network filesystem puts a blocking write on the critical path, and a filesystem stall then freezes

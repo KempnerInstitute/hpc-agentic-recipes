@@ -1,6 +1,6 @@
 # Kimi-K3: blocked for vLLM, measured under SGLang
 
-Status: Blocked - vLLM cannot load `KimiK3ForConditionalGeneration` in any release we run. Served and measured under SGLang in a container, outside this repo.
+Status: Blocked - no vLLM release checked here implements `KimiK3ForConditionalGeneration`. Served and measured under SGLang in a container, outside this repo.
 
 This is a documentation-only entry: there is no hardware subdirectory and no scripts, because the only
 engine that runs this checkpoint is SGLang inside a container, which does not fit the environment build
@@ -20,8 +20,7 @@ nodes at TP16 with EP16 through Marlin W4A16, using `lmsysorg/sglang:kimi-k3-cu1
 | Startup | about 20 minutes, dominated by reading 1.56 TB |
 
 DSpark is not a uniform win: 2.16x at concurrency 1 and 1.61x at 8, but 0.73x at 32, because verification
-burns compute the batch already needed. Full method, flag derivations and failure modes are recorded
-outside the repo, since this is not a recipe.
+burns compute the batch already needed.
 
 This page records what the checkpoint is, what vLLM is still missing, what hardware would be needed, and
 what to re-check when a newer vLLM lands.
@@ -64,8 +63,8 @@ that right in the client configuration, not just in the launch flags.
 
 ## The blocker
 
-`KimiK3ForConditionalGeneration` is not implemented by any engine we can install today. Checked
-directly rather than from memory:
+No engine available here implements `KimiK3ForConditionalGeneration`. Checked against the installed
+packages rather than assumed:
 
 | Engine | Result |
 | --- | --- |
@@ -73,7 +72,7 @@ directly rather than from memory:
 | vLLM `main` | absent |
 | SGLang v0.5.16 | absent |
 
-In our installed vLLM 0.25.1 the Kimi model files are `kimi_audio`, `kimi_k25`, `kimi_k25_vit`,
+In vLLM 0.25.1 the Kimi model files are `kimi_audio`, `kimi_k25`, `kimi_k25_vit`,
 `kimi_linear`, and `kimi_vl`, and the registry entries are `KimiK25ForConditionalGeneration` and
 `KimiLinearForCausalLM`. There is no `kimi_k3` module and no K3 registry entry. SGLang v0.5.16's model
 files cover `kimi_k25`, `kimi_k25_eagle3`, `kimi_linear`, `kimi_vl`, and `kimi_vl_moonvit`, again with
@@ -93,8 +92,7 @@ architecture is absent from `main` as well.
 
 ### How each claim above was checked
 
-Older notes in this repo said Kimi-K3 needed vLLM 0.26.0, which is now wrong, so it is worth being
-explicit about where each statement comes from and how to re-check it.
+Engine support moves, so each statement below names where it comes from and how to re-check it.
 
 | Claim | How it was checked |
 | --- | --- |
@@ -111,8 +109,8 @@ without anything in this repo changing.
 
 ## Hardware, if the software existed
 
-Capacity is not the blocker, and it is worth writing down which of our node types would work, because
-the answer is not the one the memory arithmetic suggests.
+Capacity is not the blocker. Which node type would work is worth stating, because the answer is not
+the one the memory arithmetic suggests.
 
 | Target | GPUs | Raw VRAM | Verdict |
 | --- | --- | --- | --- |
@@ -131,15 +129,15 @@ guide asks for at least one 8x B300 or GB300 node, or 16x B200; it never mention
 at all. On Hopper the MXFP4 experts would need a 4-bit weight-only fallback such as Marlin, at unknown
 speed and unverified numerics for a quantization-aware-trained model.
 
-Our RTX PRO 6000 nodes are Blackwell sm_120 and are the architecturally correct hardware, but two of
+The RTX PRO 6000 nodes are Blackwell sm_120 and are the architecturally correct hardware, but two of
 them give only about 1530 GiB raw, which is roughly 1377 GiB at a realistic
 `--gpu-memory-utilization 0.90` and therefore short of the 1454 GiB of weights before any KV cache at
 all. Two nodes are about one node short. Three RTX nodes fit comfortably, and that is the shape to plan
 for, with the usual multi-node caveats: tensor parallelism inside each node, pipeline parallelism
 across them, Ray as the executor, and no speculative decoding, since vLLM rejects a speculative config
 when pipeline parallelism is active. The K3 DSpark drafter that upstream reports as a roughly 3x decode
-speedup is therefore unavailable to us at three nodes, which is worth knowing before comparing our
-future numbers against published ones.
+speedup is therefore unavailable at three nodes, which is worth knowing before comparing any number
+measured that way against a published one.
 
 ## What to re-check, and when
 

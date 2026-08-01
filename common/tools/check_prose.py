@@ -16,6 +16,12 @@ import pathlib, re, subprocess, sys
 # matched, not one phrasing of it: a sentence about reserved nodes survived an earlier sweep that
 # searched only for the noun.
 JARGON = re.compile(r'pre-restructure|the restructure|this session|our campaign|reserv(?:ation|ed node)', re.I)
+# First person makes a shared repo read like one group's notebook, and a citation of notes nobody
+# else has is a dead end. Saying something lives outside the repo is fine when the text also says
+# where, so that phrasing is deliberately not matched. Prose files only: the tools use 'we' nowhere
+# but do use i and us inside code.
+VOICE = re.compile(r'\b(we|our|ours|us|my|mine)\b|(?:older|earlier|planning|working|internal) notes', re.I)
+PROSE = (".md", ".conf", ".example", ".txt", ".tsv", "")
 DATE = re.compile(r'20[0-9]{2}-[0-9]{2}-[0-9]{2}')
 # Every tracked text file, not a chosen few: the first version scanned only markdown and missed the
 # same vocabulary in .gitignore and in shell comments.
@@ -39,6 +45,8 @@ for f in TRACKED:
             continue
         if DATE.search(l):
             print("  DATE   %s:%d  %s" % (f, i, l.strip()[:100])); bad += 1
+        if pathlib.Path(f).suffix in PROSE and VOICE.search(l):
+            print("  VOICE  %s:%d  %s" % (f, i, l.strip()[:100])); bad += 1
         if JARGON.search(l):
             print("  JARGON %s:%d  %s" % (f, i, l.strip()[:100])); bad += 1
 print("  %d finding(s)" % bad)

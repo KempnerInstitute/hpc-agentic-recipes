@@ -85,7 +85,7 @@ Source: `DeepSeek-V4-Pro` model card. The card shows these collapse without reas
 LiveCodeBench and 73.6 on SWE Verified, so the headline numbers depend on spending output tokens on
 thinking.
 
-From the shared Gemma 4 card. Both of our Gemma recipes appear in one table, which makes this the one
+From the shared Gemma 4 card. Both Gemma models here appear in one table, which makes this the one
 apples-to-apples comparison in this document:
 
 | Benchmark | Gemma 4 31B | Gemma 4 26B A4B |

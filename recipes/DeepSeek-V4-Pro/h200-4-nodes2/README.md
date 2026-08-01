@@ -263,7 +263,7 @@ Every variable this recipe honors, with its default and effect.
 | Variable | Default | Effect |
 | --- | --- | --- |
 | `MODEL` | `$MODELS_DIR/DeepSeek-V4-Pro` | Serve a different copy of the checkpoint |
-| `MODELS_DIR` | shared testbed path | Where checkpoints live; must be overridden today |
+| `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
 | `API_PORT` | 8000 | Listening port |
 | `MAX_MODEL_LEN` | 131072 | Context window; the checkpoint supports 1048576 |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
