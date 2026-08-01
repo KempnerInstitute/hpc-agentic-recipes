@@ -138,8 +138,8 @@ Building both is not redundant work.
 that would otherwise be served from silently.
 
 Scratch expires after 90 days, so this environment is disposable. Rebuild it with the same command, or
-`--force` to replace an existing one. `env/requirements.lock` records the exact resolution that was
-tested, once one is recorded for this recipe.
+`--force` to replace an existing one. Record the exact resolution in `env/requirements.lock` after a build, which is what makes a
+drifted rebuild visible.
 
 ## Launch
 
