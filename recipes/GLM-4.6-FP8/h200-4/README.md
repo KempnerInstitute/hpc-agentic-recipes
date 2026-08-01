@@ -253,7 +253,8 @@ The input sequence here is short, which is the best case for decode. Measure wit
 ## Parallelism and quantization
 
 TP4 uses all four GPUs of one node, where all-reduce runs over NVLink. The FP8 weights halve memory
-against bf16 and are what let this model fit one node with a 200K context.
+against bf16 and are what let this model fit one node. The checkpoint supports 202752 tokens; the
+recipe serves 131072 by default, and raising it costs KV cache memory.
 
 Pipeline parallelism is not used and not needed here, which matters because vLLM rejects speculative
 decoding when pipeline parallelism is active. Staying single-node is what makes MTP available.
