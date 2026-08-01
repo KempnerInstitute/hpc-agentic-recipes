@@ -108,8 +108,8 @@ Ray is installed alongside vLLM. A TP1 endpoint never uses it, but it is what th
 environment contained, so keeping it means the rates below were measured in this exact environment.
 
 Scratch expires after 90 days, so this environment is disposable. Rebuild it with the same command,
-or `--force` to replace an existing one. `env/requirements.lock` records the exact resolution that was
-tested, and `env/WHEELS` records the non-PyPI artifact URLs with hashes.
+or `--force` to replace an existing one. Record the exact resolution in `env/requirements.lock` and any non-PyPI artifact URLs with their
+hashes in `env/WHEELS` after a build, which is what makes a drifted rebuild visible.
 
 ## Launch
 

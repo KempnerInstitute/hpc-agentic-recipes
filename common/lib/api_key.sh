@@ -14,6 +14,8 @@ elif [ -z "${VLLM_API_KEY:-}" ]; then
   echo "warning: no API key at $KEY_FILE and VLLM_API_KEY is unset." >&2
   echo "         The endpoint will be UNGATED. Create one with:" >&2
   echo "           mkdir -p '$REPO_ROOT/secrets'" >&2
-  echo "           printf '%s' 'sk-local-\$(openssl rand -hex 24)' > '$KEY_FILE'" >&2
+  # The suggested command must survive being copied. Single quotes around the substitution would
+  # suppress it, writing the literal text as the key, which looks random and is not.
+  echo "           printf '%s' \"sk-local-\$(openssl rand -hex 24)\" > '$KEY_FILE'" >&2
   echo "           chmod 600 '$KEY_FILE'" >&2
 fi

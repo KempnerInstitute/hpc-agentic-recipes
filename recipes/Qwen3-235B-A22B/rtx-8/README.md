@@ -114,8 +114,8 @@ measured on. Nightly wheels also rotate and are deleted, so a much later rebuild
 instead of drifting quietly.
 
 Scratch expires after 90 days, so this environment is disposable. Rebuild it with the same command,
-or `--force` to replace an existing one. `env/requirements.lock` records the exact resolution that was
-tested, which is what makes a drifted rebuild visible.
+or `--force` to replace an existing one. Record the exact resolution in `env/requirements.lock` after a build, which is what makes a drifted
+rebuild visible.
 
 ## Launch
 

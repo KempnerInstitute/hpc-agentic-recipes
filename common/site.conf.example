@@ -8,20 +8,26 @@
 # ACCOUNT=your_account
 
 # Nodes you already hold, for the direct SSH launch path. The sbatch path needs none of these,
-# because Slurm picks the node.
-# GLM46_NODE=
-# GLM52_NODE=
-# GLM52_HEAD=
-# GLM52_WORKER=
-# KIMI_NODE=
-# KIMI_HEAD=
-# KIMI_WORKER=
-# QWEN3_NODE=
-# CODER_NODE=
-# GEMMA_NODE=
-# DEEPSEEK_HEAD=
-# DEEPSEEK_WORKER=
+# because Slurm picks the node. One variable per recipe, since each hardware variant is separate.
+# DSV4_H200_HEAD=       # DeepSeek-V4-Pro/h200-4-nodes2
+# DSV4_H200_WORKER=     # DeepSeek-V4-Pro/h200-4-nodes2
+# DSV4_HEAD=            # DeepSeek-V4-Pro/rtx-8-nodes2
+# DSV4_WORKER=          # DeepSeek-V4-Pro/rtx-8-nodes2
+# GLM46_NODE=           # GLM-4.6-FP8/h200-4
+# GLM52_HEAD=           # GLM-5.2-FP8/h200-4-nodes2
+# GLM52_WORKER=         # GLM-5.2-FP8/h200-4-nodes2
+# GLM52_NVFP4_NODE=     # GLM-5.2-NVFP4/rtx-8
+# KIMI_HEAD=            # Kimi-K2.7-Code/h200-4-nodes2
+# KIMI_WORKER=          # Kimi-K2.7-Code/h200-4-nodes2
+# KIMI_RTX_NODE=        # Kimi-K2.7-Code/rtx-8
+# QWEN3_235B_NODE=      # Qwen3-235B-A22B/rtx-8
+# QWEN3_CODER_NODE=     # Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8
+# GEMMA26_H100_NODE=    # gemma-4-26B-A4B-it/h100-1
+# GEMMA26_H200_NODE=    # gemma-4-26B-A4B-it/h200-1
+# GEMMA26_RTX_NODE=     # gemma-4-26B-A4B-it/rtx-1
+# GEMMA31_H100_NODE=    # gemma-4-31B-it/h100-1
+# GEMMA31_H200_NODE=    # gemma-4-31B-it/h200-1
+# GEMMA31_RTX_NODE=     # gemma-4-31B-it/rtx-1
 
-# Override where environments are built or checkpoints are read from.
 # ENV_ROOT=/n/netscratch/<lab>/<user>/agentic-coding-llm-env
 # MODELS_DIR=/n/netscratch/<lab>/<user>/models

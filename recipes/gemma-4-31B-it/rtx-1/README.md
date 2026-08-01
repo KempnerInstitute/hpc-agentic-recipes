@@ -121,8 +121,8 @@ which breaks import entirely.
 <!-- issue:cuda13-toolkit end -->
 
 Scratch expires after 90 days, so this environment is disposable. Rebuild it with the same command,
-or `--force` to replace an existing one. `env/requirements.lock` records the exact resolution that was
-tested, and `env/WHEELS` records the non-PyPI artifact URLs with hashes. Both matter more here than on
+or `--force` to replace an existing one. Record the exact resolution in `env/requirements.lock` and any non-PyPI artifact URLs with their
+hashes in `env/WHEELS` after a build, which is what makes a drifted rebuild visible. Both matter more here than on
 a Hopper recipe: the nightly index rotates and deletes wheels, and the installed metadata reads
 `vllm 0.25.1` with no local version tag, so a naive `vllm==0.25.1` silently resolves to the PyPI
 CUDA 13 wheel, which is a different environment from the one that was tested.
