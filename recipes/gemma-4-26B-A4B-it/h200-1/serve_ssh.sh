@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # Bring up gemma-4-26B-A4B-it over SSH on a node you already hold. Secondary path: prefer serve.sbatch.
-# Reserved nodes are removed from the scheduler, which is why this exists.
 #   bash recipes/gemma-4-26B-A4B-it/h200-1/serve_ssh.sh <node>
 # This recipe uses one GPU, so set GPU=<n> to pin a device on a node whose other GPUs are busy.
 set -euo pipefail

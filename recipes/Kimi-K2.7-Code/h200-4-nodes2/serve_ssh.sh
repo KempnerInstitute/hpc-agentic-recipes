@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Bring up Kimi-K2.7-Code over SSH on two H200 nodes you already hold. Secondary path: prefer
-# serve.sbatch. Reserved nodes are removed from the scheduler, which is why this exists.
+# serve.sbatch.
 #   bash recipes/Kimi-K2.7-Code/h200-4-nodes2/serve_ssh.sh <head_node> <worker_node>
 # The endpoint runs on <head_node>. Both nodes must see the same repo checkout and the same environment
 # path, since the Ray workers import vLLM from it.

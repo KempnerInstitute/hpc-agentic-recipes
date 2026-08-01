@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Bring up Qwen3-Coder-480B-A35B-Instruct-FP8 over SSH on an RTX node you already hold. Secondary
-# path: prefer serve.sbatch. Reserved nodes are removed from the scheduler, which is why this exists.
+# path: prefer serve.sbatch.
 #   bash recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8/serve_ssh.sh <node>
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"

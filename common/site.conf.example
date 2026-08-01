@@ -7,9 +7,8 @@
 # Your Slurm account. Alternatively pass --account to sbatch at submit time.
 # ACCOUNT=your_account
 
-# Nodes you already hold, for the direct SSH launch path. The sbatch path needs none of
-# these, because Slurm picks the node. Reserved nodes are removed from the scheduler, which is the
-# main reason the SSH path exists.
+# Nodes you already hold, for the direct SSH launch path. The sbatch path needs none of these,
+# because Slurm picks the node.
 # GLM46_NODE=
 # GLM52_NODE=
 # GLM52_HEAD=

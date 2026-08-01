@@ -12,7 +12,10 @@ No file is exempt. There used to be a carve-out for two planning documents; they
 because a page full of predictions is not something a recipe reader should find.
 """
 import pathlib, re, subprocess, sys
-JARGON = re.compile(r'pre-restructure|the restructure|this session|our campaign', re.I)
+# Cluster arrangements local to one group, which mean nothing to a reader outside it. The word is
+# matched, not one phrasing of it: a sentence about reserved nodes survived an earlier sweep that
+# searched only for the noun.
+JARGON = re.compile(r'pre-restructure|the restructure|this session|our campaign|reserv(?:ation|ed node)', re.I)
 DATE = re.compile(r'20[0-9]{2}-[0-9]{2}-[0-9]{2}')
 # Every tracked text file, not a chosen few: the first version scanned only markdown and missed the
 # same vocabulary in .gitignore and in shell comments.
@@ -29,6 +32,10 @@ for f in TRACKED:
             fence = not fence
             continue
         if fence:
+            continue
+        # A guard that must name the flag it forbids marks itself, so the rule can stay a plain
+        # word match everywhere else.
+        if 'check_prose: allow' in l:
             continue
         if DATE.search(l):
             print("  DATE   %s:%d  %s" % (f, i, l.strip()[:100])); bad += 1

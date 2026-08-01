@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Bring up Qwen3-235B-A22B over SSH on an RTX node you already hold. Secondary path: prefer
-# serve.sbatch. Reserved nodes are removed from the scheduler, which is why this exists.
+# serve.sbatch.
 #   bash recipes/Qwen3-235B-A22B/rtx-8/serve_ssh.sh <node>
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"

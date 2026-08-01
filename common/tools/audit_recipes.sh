@@ -152,7 +152,7 @@ for r in "${RECIPE_LIST[@]}"; do
   f="$RECIPES/$r/serve.sbatch"
   [ -f "$f" ] || continue
   grep -q '^#SBATCH --account=' "$f" && bad "$r: serve.sbatch hardcodes an account; pass it at submit time"
-  grep -q '^#SBATCH --reservation=' "$f" && bad "$r: serve.sbatch names a reservation"
+  grep -q '^#SBATCH --reservation=' "$f" && bad "$r: serve.sbatch names a cluster-local node arrangement"  # check_prose: allow, the guard must name the flag it forbids
   grep -qE '^#SBATCH --output=logs/' "$f" && bad "$r: serve.sbatch uses a relative logs/ path, which fails unless submitted from the repo root"
 done
 
