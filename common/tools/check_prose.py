@@ -20,7 +20,10 @@ JARGON = re.compile(r'pre-restructure|the restructure|this session|our campaign|
 # else has is a dead end. Saying something lives outside the repo is fine when the text also says
 # where, so that phrasing is deliberately not matched. Prose files only: the tools use 'we' nowhere
 # but do use i and us inside code.
-VOICE = re.compile(r'\b(we|our|ours|us|my|mine)\b|(?:older|earlier|planning|working|internal) notes', re.I)
+VOICE = re.compile(r'\b(we|our|ours|us|my|mine)\b'
+                   r'|(?:older|earlier|planning|working|internal) notes'
+                   r'|earlier (?:repo|scripts?|launcher|environment|run)'
+                   r'|lib_env\.sh', re.I)
 PROSE = (".md", ".conf", ".example", ".txt", ".tsv", "")
 DATE = re.compile(r'20[0-9]{2}-[0-9]{2}-[0-9]{2}')
 # Every tracked text file, not a chosen few: the first version scanned only markdown and missed the

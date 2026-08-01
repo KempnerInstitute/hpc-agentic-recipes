@@ -32,7 +32,7 @@ mkdir -p "$TRITON_CACHE_DIR" "$TORCHINDUCTOR_CACHE_DIR" 2>/dev/null || true
 # Load-bearing for two other checkpoints on this hardware, both verified: the DeepGEMM MoE
 # path takes an illegal memory access on GLM-5.2's sparse attention, and forcing it on for
 # Qwen3-Coder-480B-FP8 on H200 reproduced the same crash independently.
-# inherited from lib_env.sh, which the two-node run of this model used, and untested for this
+# inherited: the two-node run of this model used it, and it is untested for this
 # model either way
 export VLLM_USE_DEEP_GEMM=0
 
@@ -64,7 +64,7 @@ for _d in /sys/class/infiniband/*; do
   _l="$(cat "$_d/ports/1/link_layer" 2>/dev/null || true)"
   [[ "$_s" == *ACTIVE* && "$_l" == InfiniBand* ]] && _hca+="${_hca:+,}$_n"
 done
-# inherited from lib_env.sh, where the two-node run of this model used it
+# inherited: the two-node run of this model used it
 export NCCL_IB_HCA="$_hca"
 unset _hca _d _n _s _l
 

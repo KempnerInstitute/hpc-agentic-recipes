@@ -52,7 +52,7 @@ Hopper has no such hardware path.
 
 Two things worth knowing before trying to work around it. The checkpoint ships an
 `inference/convert.py` that can emit fp8 experts, and vLLM has an `expert_dtype == "fp8"` path, so
-converting the experts is the only real Hopper option. And an earlier attempt failed differently, with
+converting the experts is the only real Hopper option. And an attempt without that flag failed differently, with
 `DeepseekV4 fp8_ds_mla layout only supports fp8 kv-cache, got auto`, because the recipe was missing
 `--kv-cache-dtype fp8_ds_mla`; that flag is now present, which is how this run got far enough to reach
 the FP4 problem.

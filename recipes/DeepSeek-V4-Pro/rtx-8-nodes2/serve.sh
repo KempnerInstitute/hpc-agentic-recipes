@@ -5,8 +5,8 @@
 #
 # TP8 is legal for this checkpoint and TP16 is not: moe_intermediate_size is 3072 and the FP8
 # quantization block is 128, so 3072/8 = 384 is a multiple of 128 while 3072/16 = 192 is not.
-# Eager is the default because nothing here has been run on hardware yet; PERF=1 attempts CUDA graph
-# capture, which is worth trying once the endpoint is known to come up.
+# Eager is the default and is what the measured rates were taken with; PERF=1 attempts CUDA graph
+# capture, which has not been tried on this configuration.
 # No speculative decoding: the checkpoint ships an MTP head, but pipeline parallelism is required to
 # span nodes and vLLM rejects a speculative config when pipeline parallelism is active.
 set -euo pipefail

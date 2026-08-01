@@ -101,8 +101,8 @@ express. What it does, and why:
 release wheel from the vLLM GitHub release with `--torch-backend=cu129`.
 <!-- issue:hopper-cu129-wheel end -->
 
-Ray is installed alongside vLLM. A TP1 endpoint never uses it, but it is what the earlier
-environment contained, so keeping it means the rate below was measured in this exact environment.
+Ray is installed alongside vLLM. A TP1 endpoint never uses it, but it is present in the environment
+the rate below was measured in, so the build keeps it.
 
 Scratch expires after 90 days, so this environment is disposable. Rebuild it with the same command,
 or `--force` to replace an existing one. `env/requirements.lock` records the exact resolution that was

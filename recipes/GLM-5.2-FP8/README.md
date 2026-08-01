@@ -35,8 +35,8 @@ with the same tool calling and reasoning parsers on a single H200 node, use GLM-
 - License: MIT
 - Architecture: `GlmMoeDsaForCausalLM`, `model_type` `glm_moe_dsa`, native to vLLM 0.25.1
 
-The repo id is the one unverified fact here. The earlier repo recorded only the local path this
-checkpoint was downloaded to, never a Hub id. The id above is inferred from the sibling checkpoints,
+The repo id is the one unverified fact here. The checkpoint was staged from a local path with no Hub
+id recorded alongside it. The id above is inferred from the sibling checkpoints,
 `zai-org/GLM-4.6-FP8` and `zai-org/GLM-5.2`, and has not been confirmed against the Hub. Confirm it
 before using it in a download command.
 

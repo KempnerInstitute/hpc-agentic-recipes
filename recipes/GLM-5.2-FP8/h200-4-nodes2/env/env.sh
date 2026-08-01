@@ -60,7 +60,7 @@ for _d in /sys/class/infiniband/*; do
   _l="$(cat "$_d/ports/1/link_layer" 2>/dev/null || true)"
   [[ "$_s" == *ACTIVE* && "$_l" == InfiniBand* ]] && _hca+="${_hca:+,}$_n"
 done
-# inherited from lib_env.sh, where the two-node runs of this model used it
+# inherited: the two-node runs of this model used it
 export NCCL_IB_HCA="$_hca"
 unset _hca _d _n _s _l
 

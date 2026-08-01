@@ -32,8 +32,8 @@ Validated. The environment was built from `env/build.sh`, the endpoint was
 launched with `serve_ssh.sh` on one RTX PRO 6000 Blackwell node, and throughput was measured with `common/tools/bench.sh`
 across concurrency 1, 8, 32, 64, 128, 256, 512, 640, 768, 896 and 1024. Ready 5 minutes 28 seconds after launch. The endpoint was still answering after the sweep finished.
 
-The rate recorded earlier, about 21 tok/s, came from a single timed generation, which
-counts prefill and fixed per-request cost as decode time. The 20.7 tok/s here is slope-measured and
+A single timed generation of this endpoint gives about 21 tok/s, because that protocol counts prefill
+and fixed per-request cost as decode time. The 20.7 tok/s here is slope-measured and
 the two agree closely, because at this rate a 1152-token generation runs long enough that fixed cost
 is a small fraction of it.
 
@@ -75,7 +75,7 @@ processor modules.
 | Maximum wall time | 2 days |
 
 All RTX PRO 6000 nodes on this cluster share one hardware specification, so any node in the partition
-works. The checkpoint is about 595 GB across 64 shards, which the earlier run reported as about
+works. The checkpoint is about 595 GB across 64 shards, which the engine reports as about
 88 GB per GPU in use, so a whole node is required and nothing smaller will fit. `serve.sbatch` requests
 96 CPUs and 500 GB, both inside the per-GPU limits for a whole node.
 

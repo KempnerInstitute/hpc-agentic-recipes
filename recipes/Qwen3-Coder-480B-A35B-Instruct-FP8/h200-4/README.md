@@ -13,7 +13,7 @@ one node, protocol slope(128,1152).
 
 ## What was tried
 
-Measured on this cluster with the earlier scripts on vLLM 0.25.1.
+Measured on this cluster on vLLM 0.25.1, outside this recipe's scripts.
 The checkpoint is 449 GiB (482.2 GB decimal), `Qwen3MoeForCausalLM`, 62 layers, 160 experts with 8
 active per token, `moe_intermediate_size` 2560, 262144 native context.
 

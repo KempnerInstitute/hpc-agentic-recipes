@@ -53,8 +53,7 @@ a million tokens.
 - Documented path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/GLM-5.2-FP8`
 
 The repo id is the one place on this page that is not sourced from a measurement or a file. The
-earlier repo recorded no Hugging Face id for this checkpoint, only the local path it was
-downloaded to. `zai-org/GLM-5.2-FP8` is the id implied by the sibling checkpoints, since the FP8 build
+checkpoint was staged from a local path with no Hugging Face id recorded alongside it. `zai-org/GLM-5.2-FP8` is the id implied by the sibling checkpoints, since the FP8 build
 of GLM-4.6 in this repo is `zai-org/GLM-4.6-FP8` and the NVFP4 build of this same base model was
 quantized from `zai-org/GLM-5.2`, but it has not been confirmed against the Hub. Verify before relying
 on it for a download.
@@ -168,7 +167,7 @@ instead.
 
 `ray_head.sh` and `ray_worker.sh` in this directory are the Ray bring-up, and both launch paths call
 them rather than duplicating the commands. They take their GPU count from `GPUS_PER_NODE`, then
-`SLURM_GPUS_ON_NODE`, then 4, instead of the hardcoded 4 the earlier scripts used.
+`SLURM_GPUS_ON_NODE`, then 4, so a node with a different GPU count is not mis-advertised to Ray.
 
 ## Verify
 

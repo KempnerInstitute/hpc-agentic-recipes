@@ -32,7 +32,7 @@ Validated. The environment was built from `env/build.sh`, the endpoint was
 launched with `serve_ssh.sh` on one RTX PRO 6000 Blackwell node, and throughput was measured with `common/tools/bench.sh`
 across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 18 minutes 1 second after launch. The endpoint was still answering after the sweep finished.
 
-This run measured 93.4 tok/s single stream, against an earlier 101.6 tok/s. Both used the
+This run measured 93.4 tok/s single stream; another run of this recipe measured 101.6. Both used the
 slope method, so the protocol is not the difference. This recipe serves with MTP speculative decoding
 at 3 draft tokens, and speculative gain depends on how predictable the generated text is, so its
 single stream rate is less reproducible run to run than a non-speculative model's. Treat roughly 93

@@ -29,8 +29,8 @@ bound. Measured at 32K context, protocol slope(128,1152) over output tokens only
 per level, concurrency 1 through 1024.
 
 Running the same weights in bf16 instead of FP8 measured 56.3, 40.7 and 23.0 tok/s single stream on the
-same three GPUs. Those figures come from earlier scripts and were not
-re-measured in the current sweep, so treat them as indicative of the roughly 1.7x FP8 advantage
+same three GPUs. Those bf16 figures were not re-measured in this
+sweep, so treat them as indicative of the roughly 1.7x FP8 advantage
 rather than as current numbers.
 
 The spread across GPU types is 2.1x and tracks HBM bandwidth, because this model is memory bandwidth

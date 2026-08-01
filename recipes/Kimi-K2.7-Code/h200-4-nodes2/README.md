@@ -170,7 +170,7 @@ script cannot locate the repo from its own path and resolves paths against the s
 
 `ray_head.sh` and `ray_worker.sh` in this directory are the Ray bring-up, and both launch paths call
 them rather than duplicating the commands. They take their GPU count from `GPUS_PER_NODE`, then
-`SLURM_GPUS_ON_NODE`, then 4, instead of the hardcoded 4 the earlier scripts used.
+`SLURM_GPUS_ON_NODE`, then 4, so a node with a different GPU count is not mis-advertised to Ray.
 
 ## Verify
 

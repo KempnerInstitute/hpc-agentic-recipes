@@ -28,8 +28,7 @@ automatically subject to the same failure, but nobody has got far enough to find
 
 ## What was attempted
 
-From earlier SGLang launch scripts in the
-earlier repo:
+The configuration that was attempted:
 
 | Setting | Value |
 | --- | --- |
@@ -119,7 +118,7 @@ the number to beat if this is ever made to work.
 ## Environment build
 
 There is no `env/build.sh` here, because no environment for this recipe has ever been built to a state
-worth recording. The earlier attempt ran from a separate virtual environment holding SGLang
+worth recording. The attempt ran from a separate virtual environment holding SGLang
 `0.5.11.dev20260420+g3063d640d`, kept apart from the vLLM one so both engines could coexist. Whoever
 picks this up will build a fresh one and, this being Hopper, will hit the same wheel constraint every
 other H200 recipe here hits:
@@ -231,8 +230,7 @@ launcher passes no `--api-key`, so anyone who can reach the port can use it. Do 
 node without adding key gating or restricting the port.
 <!-- issue:sglang-ungated end -->
 
-This matters even for a recipe that does not work, because the launch scripts it came from are still in
-the earlier repo's history and are easy to copy. Every vLLM recipe here reads
+This matters even for a recipe that does not work, because an ungated launcher is easy to copy. Every vLLM recipe here reads
 `secrets/vllm_api_key` and passes it to the engine through the environment, so a keyless request gets
 HTTP 401. The SGLang launcher passed no `--api-key` and its environment library loaded no key file, so
 had this ever started serving, the port would have been open to anyone who could reach the node. Add key
