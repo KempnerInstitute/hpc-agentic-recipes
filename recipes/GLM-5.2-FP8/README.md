@@ -1,6 +1,6 @@
 # GLM-5.2-FP8
 
-GLM-5.2 in its FP8 release build: a 744B-parameter mixture-of-experts reasoning and coding model that
+GLM-5.2 in its FP8 release build: a 753B-parameter mixture-of-experts, 40B activated per token, reasoning and coding model that
 uses DeepSeek-style sparse attention for long context. It is a thinking model with native tool calling,
 and it serves through vLLM's Anthropic-compatible API as `glm-5.2`, so Claude Code connects with no
 proxy.

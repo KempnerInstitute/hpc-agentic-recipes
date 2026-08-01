@@ -42,7 +42,7 @@ the other. See Measured performance below for the full curve and the disclosure 
 
 ## What this is
 
-GLM-5.2, FP8 quantized: a 744B-parameter mixture-of-experts reasoning and coding model that uses
+GLM-5.2, FP8 quantized: a 753B-parameter mixture-of-experts, 40B activated per token, reasoning and coding model that uses
 DeepSeek-style sparse attention for long context. It is a thinking model with native tool calling, and
 it exposes vLLM's Anthropic-compatible API, so Claude Code connects to it directly with no proxy. Its
 reason to exist in this repo is context length: this is the only endpoint here whose checkpoint reaches
@@ -136,7 +136,7 @@ tested, once one is recorded for this recipe.
 
 ## Launch
 
-Canonical path, submitted from the repo root:
+Slurm path, submitted from the repo root:
 
 ```
 sbatch --account=<your-account> recipes/GLM-5.2-FP8/h200-4-nodes2/serve.sbatch
@@ -151,7 +151,7 @@ squeue --me                       # NODELIST column, first name
 tail -f glm52-fp8-<jobid>.log
 ```
 
-Advanced path, for two nodes you already hold. Use the Slurm submission above unless you already have
+Direct path, for two nodes you already hold. Use the Slurm submission above unless you already have
 the nodes, or you are deploying an endpoint on behalf of others:
 
 ```
@@ -336,7 +336,7 @@ So divisibility is not what rules out TP8 across both nodes; the fabric is. That
 because the SGLang variant of this recipe does attempt TP8 across two nodes, and its problem is
 elsewhere entirely.
 
-FP8 with dynamic activations is what makes 744B parameters fit eight H200 GPUs at all, at
+FP8 with dynamic activations is what makes 753B parameters fit eight H200 GPUs at all, at
 `--gpu-memory-utilization 0.90`. `--disable-custom-all-reduce` is passed because vLLM's custom
 all-reduce kernel is a single-node optimization and this engine spans two.
 

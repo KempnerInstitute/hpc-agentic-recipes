@@ -14,7 +14,11 @@ because a page full of predictions is not something a recipe reader should find.
 import pathlib, re, subprocess, sys
 JARGON = re.compile(r'pre-restructure|the restructure|this session|our campaign', re.I)
 DATE = re.compile(r'20[0-9]{2}-[0-9]{2}-[0-9]{2}')
-TRACKED = subprocess.check_output(["git", "ls-files", "*.md", "*.sh", "*.py"]).decode().split()
+# Every tracked text file, not a chosen few: the first version scanned only markdown and missed the
+# same vocabulary in .gitignore and in shell comments.
+SKIP = {".safetensors", ".png", ".jpg", ".gz", ".sif", ".whl", ".lock"}
+TRACKED = [f for f in subprocess.check_output(["git", "ls-files"]).decode().split()
+           if pathlib.Path(f).suffix not in SKIP]
 bad = 0
 for f in TRACKED:
     if pathlib.Path(f).name == pathlib.Path(__file__).name:

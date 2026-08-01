@@ -141,7 +141,7 @@ tested, once one is recorded for this recipe.
 
 ## Launch
 
-Canonical path, submitted from the repo root:
+Slurm path, submitted from the repo root:
 
 ```
 sbatch --account=<your-account> recipes/Kimi-K2.7-Code/h200-4-nodes2/serve.sbatch
@@ -155,7 +155,7 @@ squeue --me                       # NODELIST column, first name
 tail -f kimi-h200-<jobid>.log
 ```
 
-Advanced path, for two nodes you already hold. Use the Slurm submission above unless you already have
+Direct path, for two nodes you already hold. Use the Slurm submission above unless you already have
 the nodes, or you are deploying an endpoint on behalf of others:
 
 ```

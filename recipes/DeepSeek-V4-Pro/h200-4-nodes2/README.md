@@ -168,7 +168,7 @@ tested, and `env/WHEELS` records the non-PyPI artifact URLs with hashes.
 
 ## Launch
 
-Canonical path, submitted from the repo root:
+Slurm path, submitted from the repo root:
 
 ```
 sbatch --account=<your-account> recipes/DeepSeek-V4-Pro/h200-4-nodes2/serve.sbatch
@@ -185,7 +185,7 @@ tail -f dsv4-h200-<jobid>.log
 Watch that log closely on the first attempt. The interesting moment is when the MoE layers are built,
 which is where an FP4 expert format on Hopper either falls back or fails.
 
-Advanced path, for two nodes you already hold. Use the Slurm submission above unless you already have
+Direct path, for two nodes you already hold. Use the Slurm submission above unless you already have
 the nodes, or you are deploying an endpoint on behalf of others:
 
 ```

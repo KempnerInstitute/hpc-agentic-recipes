@@ -31,7 +31,7 @@ common/issues by common/tools/audit_recipes.sh --fix, so add empty marker pairs 
 
 ## Launch
 
-<!-- Canonical sbatch from the repo root, then the direct SSH alternative. State the submit directory. -->
+<!-- The sbatch path from the repo root, then the direct SSH alternative. State the submit directory. -->
 
 ## Verify
 

@@ -113,7 +113,7 @@ tested, and `env/WHEELS` records the non-PyPI artifact URLs with hashes.
 
 ## Launch
 
-Canonical path, submitted from the repo root:
+Slurm path, submitted from the repo root:
 
 ```
 sbatch --account=<your-account> recipes/gemma-4-31B-it/h100-1/serve.sbatch
@@ -126,7 +126,7 @@ squeue --me                       # NODELIST column
 tail -f gemma31-h100-1-<jobid>.log
 ```
 
-Advanced path, for a node you already hold. Use the Slurm submission above unless you already have
+Direct path, for a node you already hold. Use the Slurm submission above unless you already have
 the node, or you are deploying an endpoint on behalf of others:
 
 ```

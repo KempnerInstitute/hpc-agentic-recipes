@@ -1,4 +1,4 @@
-# Built environments live outside the repo, under ENV_ROOT. These patterns catch the pre-restructure
+# Built environments live outside the repo, under ENV_ROOT. These patterns catch older
 # in-repo layout so an older checkout does not accidentally commit one.
 .venv/
 .venv-cu130/

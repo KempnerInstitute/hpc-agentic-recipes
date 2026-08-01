@@ -156,7 +156,7 @@ nightly index rotates, so a bare `vllm` requirement will not resolve to the same
 
 ## Launch
 
-Canonical path, submitted from the repo root:
+Slurm path, submitted from the repo root:
 
 ```
 sbatch --account=<your-account> recipes/DeepSeek-V4-Pro/rtx-8-nodes2/serve.sbatch
@@ -170,7 +170,7 @@ squeue --me                       # NODELIST column, first name
 tail -f dsv4-rtx-<jobid>.log
 ```
 
-Advanced path, for two nodes you already hold. Use the Slurm submission above unless you already have
+Direct path, for two nodes you already hold. Use the Slurm submission above unless you already have
 the nodes, or you are deploying an endpoint on behalf of others:
 
 ```

@@ -1,6 +1,6 @@
 # GLM-5.2-NVFP4
 
-GLM-5.2 quantized to NVFP4 by NVIDIA Model Optimizer: a 744B-parameter mixture-of-experts reasoning
+GLM-5.2 quantized to NVFP4 by NVIDIA Model Optimizer: a 753B-parameter mixture-of-experts, 40B activated per token, reasoning
 and coding model that uses DeepSeek-style sparse attention for long context, at near-FP8 quality. It
 serves through vLLM's Anthropic-compatible API as `glm-5.2`, so Claude Code connects with no proxy.
 

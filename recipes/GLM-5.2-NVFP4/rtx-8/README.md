@@ -44,7 +44,7 @@ the other. See Measured performance below for the full curve and the disclosure 
 
 ## What this is
 
-GLM-5.2 quantized to NVFP4 by NVIDIA Model Optimizer: a 744B-parameter mixture-of-experts reasoning
+GLM-5.2 quantized to NVFP4 by NVIDIA Model Optimizer: a 753B-parameter mixture-of-experts, 40B activated per token, reasoning
 and coding model that uses DeepSeek-style sparse attention for long context, at near-FP8 quality. It
 exposes vLLM's Anthropic-compatible API, so Claude Code connects to it directly with no proxy. This is
 the fastest large model in this repo; the small Gemma models are faster outright.
@@ -124,7 +124,7 @@ tested, which is what makes a drifted rebuild visible.
 
 ## Launch
 
-Canonical path, submitted from the repo root:
+Slurm path, submitted from the repo root:
 
 ```
 sbatch --account=<your-account> recipes/GLM-5.2-NVFP4/rtx-8/serve.sbatch
@@ -137,7 +137,7 @@ squeue --me                       # NODELIST column
 tail -f glm52-nvfp4-<jobid>.log
 ```
 
-Advanced path, for a node you already hold. Use the Slurm submission above unless you already have
+Direct path, for a node you already hold. Use the Slurm submission above unless you already have
 the node, or you are deploying an endpoint on behalf of others:
 
 ```
@@ -282,8 +282,9 @@ The input sequence here is short, which is the best case for decode. Measure wit
 TP8 spans all eight GPUs of one node. Every all-reduce crosses PCIe rather than NVLink, which is the
 ceiling on this configuration, so nothing that adds cross-GPU traffic is worth enabling here.
 
-NVFP4 is what makes a 744B-parameter model fit one node: 4-bit weights and 4-bit input activations at
-group size 16, with the embeddings, `lm_head` and the first layer left unquantized. The KV cache is
+NVFP4 is what makes a 753B-parameter model fit one node: 4-bit weights and 4-bit input activations at
+group size 16. The `ignore` list in `quantization_config` keeps `lm_head`, `model.embed_tokens`, the
+first two layers, and every layer's attention and shared experts at full precision. The KV cache is
 FP8 in DeepSeek's sparse-MLA layout (`--kv-cache-dtype fp8_ds_mla`), which is the format vLLM's sm_120
 sparse-MLA backend reads, and it is what leaves room for a 128K context.
 

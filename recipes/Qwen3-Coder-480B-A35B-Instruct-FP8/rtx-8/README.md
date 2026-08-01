@@ -125,7 +125,7 @@ tested, which is what makes a drifted rebuild visible.
 
 ## Launch
 
-Canonical path, submitted from the repo root:
+Slurm path, submitted from the repo root:
 
 ```
 sbatch --account=<your-account> recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8/serve.sbatch
@@ -138,7 +138,7 @@ squeue --me                       # NODELIST column
 tail -f qwen3-coder-<jobid>.log
 ```
 
-Advanced path, for a node you already hold. Use the Slurm submission above unless you already have
+Direct path, for a node you already hold. Use the Slurm submission above unless you already have
 the node, or you are deploying an endpoint on behalf of others:
 
 ```
