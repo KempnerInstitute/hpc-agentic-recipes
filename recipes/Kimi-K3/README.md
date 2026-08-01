@@ -1,12 +1,31 @@
-# Kimi-K3: blocked, no engine supports it yet
+# Kimi-K3: blocked for vLLM, measured under SGLang
 
-Status: Blocked - no released engine implements `KimiK3ForConditionalGeneration`, checked 2026-07-29
+Status: Blocked - vLLM cannot load `KimiK3ForConditionalGeneration` in any release we run, rechecked
+2026-08-01. Served and measured under SGLang in a container, outside this repo.
 
-This is a documentation-only entry. There is no hardware subdirectory and there are no scripts,
-because no engine available to us can load this checkpoint: the weights are staged on the cluster, and
-nothing can serve them. This page records what the checkpoint is, exactly what is missing, what
-hardware would be needed if the software existed, and the two things to re-check when a newer vLLM
-lands.
+This is a documentation-only entry: there is no hardware subdirectory and no scripts, because the only
+engine that runs this checkpoint is SGLang inside a container, which does not fit the environment build
+contract every recipe here follows. It also serves an OpenAI-only API, so Claude Code would need a proxy
+rather than the native `/v1/messages` endpoint the vLLM recipes provide.
+
+It does run, though, and the numbers are worth knowing before anyone plans around this model. On 4 H200
+nodes at TP16 with EP16 through Marlin W4A16, using `lmsysorg/sglang:kimi-k3-cu12`:
+
+| | |
+| --- | --- |
+| Single stream | 40.3 tok/s, and 87.1 with the DSpark draft, a 2.16x speedup |
+| Saturated | 1392 tok/s at concurrency 96, which is its measured ceiling |
+| Concurrency limit | 156 requests, set by the KDA state pool rather than by KV or compute |
+| Long context | 38.9 tok/s at a 131,072-token prompt, only 3.5 percent below its short-prompt rate |
+| Weights | 102.75 GB per GPU, 69 percent of all HBM across the 16 GPUs |
+| Startup | about 20 minutes, dominated by reading 1.56 TB |
+
+DSpark is not a uniform win: 2.16x at concurrency 1 and 1.61x at 8, but 0.73x at 32, because verification
+burns compute the batch already needed. Full method, flag derivations and failure modes are recorded
+outside the repo, since this is not a recipe.
+
+This page records what the checkpoint is, what vLLM is still missing, what hardware would be needed, and
+what to re-check when a newer vLLM lands.
 
 ## What is staged
 

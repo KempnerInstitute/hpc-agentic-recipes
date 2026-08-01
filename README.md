@@ -46,9 +46,11 @@ not the same as best at coding: the fastest model here activates only 4B paramet
 
 ## Models
 
-Every rate below was measured on 2026-07-31 with `common/tools/bench.sh`, sweeping concurrency 1, 8, 32,
-64, 128, 256, 512, 640, 768, 896 and 1024, using slope(128,1152) over output tokens only, 3 repeats per
-level, median reported.
+Every rate below was measured with `common/tools/bench.sh` using slope(128,1152) over output tokens only,
+3 repeats per level, median reported. The vLLM recipes were measured on 2026-07-31, sweeping concurrency 1,
+8, 32, 64, 128, 256, 512, 640, 768, 896 and 1024. Kimi-K3 is the exception: measured 2026-08-01 under
+SGLang, sweeping 1, 8, 32, 64, 96 and 128, because its KDA state pool admits at most 156 concurrent
+requests.
 
 | Model | Precision | Hardware | Parallelism | Single stream | Saturated | Context | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -70,7 +72,7 @@ level, median reported.
 | [DeepSeek-V4-Pro](recipes/DeepSeek-V4-Pro/h200-4-nodes2) | FP8 with FP4 experts | 2 H200 nodes | TP4 x PP2 | does not run | n/a | n/a | Blocked, serve on RTX |
 | [GLM-5.2 on SGLang](recipes/GLM-5.2-FP8/h200-4-nodes2-sglang) | FP8 | 2 H200 nodes | TP4 x PP2 | never loaded weights | n/a | n/a | Blocked |
 | [Qwen3-Coder-480B](recipes/Qwen3-Coder-480B-A35B-Instruct) | bf16 | 2 to 4 H200 nodes | TP4 x PP | not measured | n/a | 256K | Untested |
-| [Kimi-K3](recipes/Kimi-K3) | MXFP4, QAT | 4 H200 nodes, 16 GPUs | TP16 | not measured | n/a | 1M | Blocked, no vLLM support |
+| [Kimi-K3](recipes/Kimi-K3) | MXFP4, QAT | 4 H200 nodes, 16 GPUs | TP16 x EP16 | 40.3 tok/s | 1392 at c=96, peak | 1M | Blocked for vLLM, SGLang only |
 
 Three columns deserve care. **Single stream** is what one person waiting on one response experiences, and
 it is the only number that describes interactive coding. **Saturated** is total output across all streams
