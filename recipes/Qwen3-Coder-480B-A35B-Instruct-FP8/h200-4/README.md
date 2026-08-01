@@ -13,7 +13,7 @@ one node, protocol slope(128,1152).
 
 ## What was tried
 
-Measured on this cluster with the pre-restructure scripts on vLLM 0.25.1, and recorded on 2026-07-28.
+Measured on this cluster with the earlier scripts on vLLM 0.25.1.
 The checkpoint is 449 GiB (482.2 GB decimal), `Qwen3MoeForCausalLM`, 62 layers, 160 experts with 8
 active per token, `moe_intermediate_size` 2560, 262144 native context.
 
@@ -91,7 +91,7 @@ available.
 
 ## What would have to change
 
-Any of these would justify retrying, and none has happened as of 2026-07-29:
+Any of these would justify retrying, and none has happened:
 
 - A vLLM release that fixes the CUTLASS w8a8 FP8 GEMM fault on Hopper for this checkpoint. The failure
   is in the kernel path, not in this repo's configuration, so an engine upgrade is the realistic fix.

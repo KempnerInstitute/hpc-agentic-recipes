@@ -1,6 +1,6 @@
 # DeepSeek-V4-Pro on two H200 nodes
 
-Status: Blocked - 2026-07-29, vLLM 0.25.1, CUTLASS w8a8 kernel dispatch fails on Hopper
+Status: Blocked - vLLM 0.25.1, CUTLASS w8a8 kernel dispatch fails on Hopper
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -22,7 +22,7 @@ chmod 600 secrets/vllm_api_key
 ```
 
 One thing is not optional for this recipe: the checkpoint is not in the shared testbed yet. As of
-2026-07-29 the testbed directory `DeepSeek-V4-Pro` exists but is empty, and the only staged copy is on
+The testbed directory `DeepSeek-V4-Pro` exists but is empty, and the only staged copy is on
 scratch, so set `MODELS_DIR` or `MODEL` before launching:
 
 ```
@@ -41,7 +41,7 @@ Optional overrides, either exported or set in `common/site.conf`:
 
 ## Status
 
-Blocked as of 2026-07-29, measured rather than predicted. This configuration was run end to end on
+Blocked, measured rather than predicted. This configuration was run end to end on
 two H200 nodes and does not work. Use `../rtx-8-nodes2` instead.
 
 The environment built, Ray formed an 8-GPU cluster, and all 64 shards loaded in 12 minutes 24 seconds,
@@ -73,7 +73,7 @@ The specific concern is precision, not capacity. `config.json` sets `expert_dtyp
 0.25.1 resolves that to its MXFP4 fused-MoE method, since the checkpoint sets no
 `moe_quant_algo: NVFP4` override (`vllm/models/deepseek_v4/quant_config.py`). MXFP4 is a
 Blackwell-native format, and Hopper has no FP4 tensor cores, so the expert layers must either be
-emulated or routed through a 4-bit weight-only kernel such as Marlin. The pre-restructure planning notes put it
+emulated or routed through a 4-bit weight-only kernel such as Marlin. Earlier planning notes put it
 this way: two H200 nodes fit by memory, "but Hopper has no FP4 hardware. The FP4 experts would fall
 back to emulation or a Marlin path, which is a correctness and speed risk." Nobody has yet checked
 which of the three outcomes happens here: a clean fallback that is merely slow, a numerically wrong
@@ -100,10 +100,10 @@ Claude Code connects to it directly with no proxy.
 
 - Checkpoint directory: `DeepSeek-V4-Pro`
 - Hugging Face repo: `deepseek-ai/DeepSeek-V4-Pro`
-- Staged path as of 2026-07-29: `/n/netscratch/kempner_dev/Lab/mmsh/models/DeepSeek-V4-Pro`
+- Staged path: `/n/netscratch/kempner_dev/Lab/mmsh/models/DeepSeek-V4-Pro`
 - Intended path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/DeepSeek-V4-Pro`, empty today
 
-Read from the checkpoint on 2026-07-29, since these are the facts the whole recipe rests on:
+Read from the checkpoint, since these are the facts the whole recipe rests on:
 
 | Property | Value |
 | --- | --- |

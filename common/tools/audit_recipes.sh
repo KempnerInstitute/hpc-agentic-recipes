@@ -94,8 +94,8 @@ for r in "${RECIPE_LIST[@]}"; do
         *", protocol: "*) ;;
         *) bad "$r: Validated status must name a measurement protocol: $line" ;;
       esac
-      grep -qE '^Status: Validated - 20[0-9]{2}-[0-9]{2}-[0-9]{2}, ' "$f" \
-        || bad "$r: Validated status must carry a date and engine version: $line"
+      grep -qE '^Status: Validated - .*[0-9]' "$f" \
+        || bad "$r: Validated status must name the engine version it was measured with: $line"
       ;;
     *) bad "$r: unrecognized status: $line" ;;
   esac
@@ -240,6 +240,13 @@ for r in "${RECIPE_LIST[@]}"; do
     *) [ -n "$out" ] && note "$r: env.sh said: $(printf '%s' "$out" | head -1 | cut -c1-70)" ;;
   esac
 done
+
+echo "== no dates or internal vocabulary in recipe prose"
+# Delegated to check_prose.py because it has to be fence-aware: dates inside code blocks are verbatim
+# engine output pasted as evidence, and editing a quoted log line to drop its timestamp would falsify it.
+if ! out="$(python3 "$S/check_prose.py" 2>&1)"; then
+  echo "$out" | grep -E '^ +(DATE|JARGON)' | while read -r line; do bad "$line"; done
+fi
 
 echo "== syntax and hygiene"
 while read -r f; do

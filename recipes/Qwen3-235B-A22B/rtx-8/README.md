@@ -1,6 +1,6 @@
 # Qwen3-235B-A22B on one RTX PRO 6000 node
 
-Status: Validated - 2026-07-31, vLLM 0.25.1, protocol: slope(128,1152) swept at concurrency 1 through 1024
+Status: Validated - vLLM 0.25.1, protocol: slope(128,1152) swept at concurrency 1 through 1024
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -28,7 +28,7 @@ defaults, so a fresh clone runs as is. Four optional overrides, either exported 
 
 ## Status
 
-Validated on 2026-07-31. The environment was built from `env/build.sh`, the endpoint was
+Validated. The environment was built from `env/build.sh`, the endpoint was
 launched with `serve_ssh.sh` on one RTX PRO 6000 Blackwell node, and throughput was measured with `common/tools/bench.sh`
 across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 4 minutes 55 seconds after launch. The endpoint was still answering after the sweep finished.
 
@@ -251,7 +251,7 @@ instead of the hosted tool.
 | Concurrency 896 | 3641.1 tok/s | 4.1 tok/s | TTFT median 608 ms, p90 916 ms, n=3 spanning 3637.5 to 3671.7 |
 | Concurrency 1024 | 3750.3 tok/s | 3.7 tok/s | TTFT median 658 ms, p90 1012 ms, n=3 spanning 3741.6 to 3754.9 |
 
-Measured 2026-07-31 with `common/tools/bench.sh`, endpoint ready 4m 55s after launch. Full disclosure, without which a tokens
+Measured with `common/tools/bench.sh`, endpoint ready 4m 55s after launch. Full disclosure, without which a tokens
 per second figure cannot be compared against anything:
 
 | Parameter | Value |

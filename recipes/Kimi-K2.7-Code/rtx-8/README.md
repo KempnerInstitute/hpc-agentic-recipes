@@ -1,6 +1,6 @@
 # Kimi-K2.7-Code on one RTX PRO 6000 node
 
-Status: Validated - 2026-07-31, vLLM 0.25.1, protocol: slope(128,1152) swept at concurrency 1 through 1024
+Status: Validated - vLLM 0.25.1, protocol: slope(128,1152) swept at concurrency 1 through 1024
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -28,11 +28,11 @@ defaults, so a fresh clone runs as is. Four optional overrides, either exported 
 
 ## Status
 
-Validated on 2026-07-31. The environment was built from `env/build.sh`, the endpoint was
+Validated. The environment was built from `env/build.sh`, the endpoint was
 launched with `serve_ssh.sh` on one RTX PRO 6000 Blackwell node, and throughput was measured with `common/tools/bench.sh`
 across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 5 minutes 28 seconds after launch. The endpoint was still answering after the sweep finished.
 
-The rate recorded before the restructure, about 21 tok/s, came from a single timed generation, which
+The rate recorded earlier, about 21 tok/s, came from a single timed generation, which
 counts prefill and fixed per-request cost as decode time. The 20.7 tok/s here is slope-measured and
 the two agree closely, because at this rate a 1152-token generation runs long enough that fixed cost
 is a small fraction of it.
@@ -75,7 +75,7 @@ processor modules.
 | Maximum wall time | 2 days |
 
 All RTX PRO 6000 nodes on this cluster share one hardware specification, so any node in the partition
-works. The checkpoint is about 595 GB across 64 shards, which the pre-restructure run reported as about
+works. The checkpoint is about 595 GB across 64 shards, which the earlier run reported as about
 88 GB per GPU in use, so a whole node is required and nothing smaller will fit. `serve.sbatch` requests
 96 CPUs and 500 GB, both inside the per-GPU limits for a whole node.
 
@@ -262,7 +262,7 @@ instead of the hosted tool.
 | Concurrency 896 (saturated) | 1839.4 tok/s | 2.1 tok/s | TTFT median 1810 ms, p90 2593 ms, n=3 spanning 1835.6 to 1842.6 |
 | Concurrency 1024 | 1817.1 tok/s | 1.8 tok/s | TTFT median 1921 ms, p90 2874 ms, n=3 spanning 1817.0 to 1821.0 |
 
-Measured 2026-07-31 with `common/tools/bench.sh`, endpoint ready 5m 28s after launch. Full disclosure, without which a tokens
+Measured with `common/tools/bench.sh`, endpoint ready 5m 28s after launch. Full disclosure, without which a tokens
 per second figure cannot be compared against anything:
 
 | Parameter | Value |

@@ -1,6 +1,6 @@
 # GLM-5.2-NVFP4 on one RTX PRO 6000 node
 
-Status: Validated - 2026-07-31, vLLM 0.25.1, protocol: slope(128,1152) swept at concurrency 1 through 512
+Status: Validated - vLLM 0.25.1, protocol: slope(128,1152) swept at concurrency 1 through 512
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -28,11 +28,11 @@ defaults, so a fresh clone runs as is. Four optional overrides, either exported 
 
 ## Status
 
-Validated on 2026-07-31. The environment was built from `env/build.sh`, the endpoint was
+Validated. The environment was built from `env/build.sh`, the endpoint was
 launched with `serve_ssh.sh` on one RTX PRO 6000 Blackwell node, and throughput was measured with `common/tools/bench.sh`
 across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 18 minutes 1 second after launch. The endpoint was still answering after the sweep finished.
 
-This run measured 93.4 tok/s single stream, against 101.6 tok/s measured on 2026-07-29. Both used the
+This run measured 93.4 tok/s single stream, against an earlier 101.6 tok/s. Both used the
 slope method, so the protocol is not the difference. This recipe serves with MTP speculative decoding
 at 3 draft tokens, and speculative gain depends on how predictable the generated text is, so its
 single stream rate is less reproducible run to run than a non-speculative model's. Treat roughly 93
@@ -254,7 +254,7 @@ instead of the hosted tool.
 | Concurrency 256 (peak) | 1389.1 tok/s | 5.4 tok/s | TTFT median 3478 ms, p90 3533 ms, n=3 spanning 1357.6 to 1405.3 |
 | Concurrency 512 | 1239.8 tok/s | 2.4 tok/s | TTFT median 5473 ms, p90 7606 ms, n=3 spanning 1179.5 to 1240.4 |
 
-Measured 2026-07-31 with `common/tools/bench.sh`, endpoint ready 18m 1s after launch. Full disclosure, without which a tokens
+Measured with `common/tools/bench.sh`, endpoint ready 18m 1s after launch. Full disclosure, without which a tokens
 per second figure cannot be compared against anything:
 
 | Parameter | Value |

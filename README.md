@@ -47,9 +47,8 @@ not the same as best at coding: the fastest model here activates only 4B paramet
 ## Models
 
 Every rate below was measured with `common/tools/bench.sh` using slope(128,1152) over output tokens only,
-3 repeats per level, median reported. The vLLM recipes were measured on 2026-07-31, sweeping concurrency 1,
-8, 32, 64, 128, 256, 512, 640, 768, 896 and 1024. Kimi-K3 is the exception: measured 2026-08-01 under
-SGLang, sweeping 1, 8, 32, 64, 96 and 128, because its KDA state pool admits at most 156 concurrent
+3 repeats per level, median reported. The vLLM recipes were measured sweeping concurrency 1,
+8, 32, 64, 128, 256, 512, 640, 768, 896 and 1024. Kimi-K3 is the exception: measured under SGLang, sweeping 1, 8, 32, 64, 96 and 128, because its KDA state pool admits at most 156 concurrent
 requests.
 
 | Model | Precision | Hardware | Parallelism | Single stream | Saturated | Context | Status |

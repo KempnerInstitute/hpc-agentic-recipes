@@ -1,7 +1,6 @@
 # Kimi-K3: blocked for vLLM, measured under SGLang
 
-Status: Blocked - vLLM cannot load `KimiK3ForConditionalGeneration` in any release we run, rechecked
-2026-08-01. Served and measured under SGLang in a container, outside this repo.
+Status: Blocked - vLLM cannot load `KimiK3ForConditionalGeneration` in any release we run. Served and measured under SGLang in a container, outside this repo.
 
 This is a documentation-only entry: there is no hardware subdirectory and no scripts, because the only
 engine that runs this checkpoint is SGLang inside a container, which does not fit the environment build
@@ -35,7 +34,7 @@ what to re-check when a newer vLLM lands.
 - Also on scratch: `/n/netscratch/kempner_dev/Lab/mmsh/models/Kimi-K3`
 - On disk: 1453.8 GiB, 1561.0 GB decimal, about 1.5 TiB, in 96 shards
 
-Read from `config.json` and the model card on 2026-07-29:
+Read from `config.json` and the model card:
 
 | Property | Value |
 | --- | --- |
@@ -67,7 +66,7 @@ that right in the client configuration, not just in the launch flags.
 ## The blocker
 
 `KimiK3ForConditionalGeneration` is not implemented by any engine we can install today. Checked
-directly rather than from memory, on 2026-07-29:
+directly rather than from memory:
 
 | Engine | Result |
 | --- | --- |
@@ -98,7 +97,7 @@ architecture is absent from `main` as well.
 Older notes in this repo said Kimi-K3 needed vLLM 0.26.0, which is now wrong, so it is worth being
 explicit about where each statement comes from and how to re-check it.
 
-| Claim | How it was checked, 2026-07-29 |
+| Claim | How it was checked |
 | --- | --- |
 | Checkpoint properties, sizes, shard count | read from `config.json`, the model card, and the staged files |
 | Absent from vLLM 0.25.1 | grep of the installed registry and model directory in this repo's environment |

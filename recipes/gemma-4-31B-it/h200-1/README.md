@@ -1,6 +1,6 @@
 # gemma-4-31B-it on one H200 GPU
 
-Status: Validated - 2026-07-31, vLLM 0.25.1+cu129, protocol: slope(128,1152) swept at concurrency 1 through 1024
+Status: Validated - vLLM 0.25.1+cu129, protocol: slope(128,1152) swept at concurrency 1 through 1024
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -28,7 +28,7 @@ defaults, so a fresh clone runs as is. Optional overrides, either exported or se
 
 ## Status
 
-Validated on 2026-07-31. The environment was built from `env/build.sh`, the endpoint was
+Validated. The environment was built from `env/build.sh`, the endpoint was
 launched with `serve_ssh.sh` on one H200 GPU, and throughput was measured with `common/tools/bench.sh`
 across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 4 minutes after launch. The endpoint was still answering after the sweep finished.
 
@@ -44,7 +44,7 @@ the three GPU variants of this checkpoint. It exposes vLLM's Anthropic-compatibl
 connects to it directly with no proxy.
 
 - Checkpoint directory: `gemma-4-31B-it`
-- Hugging Face repo: not recorded before the restructure; the testbed copy is the system of record
+- Hugging Face repo: not recorded upstream; the testbed copy is the system of record
 - Documented path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/gemma-4-31B-it`
 - On disk: 62.6 GB, bf16, `Gemma4ForConditionalGeneration`, multimodal, 256K context
 - Optional drafter: `gemma-4-31B-it-assistant`, under 1 GB, wired through `SPEC_DRAFT` and currently
@@ -104,7 +104,7 @@ express. What it does, and why:
 release wheel from the vLLM GitHub release with `--torch-backend=cu129`.
 <!-- issue:hopper-cu129-wheel end -->
 
-Ray is installed alongside vLLM. A TP1 endpoint never uses it, but it is what the pre-restructure
+Ray is installed alongside vLLM. A TP1 endpoint never uses it, but it is what the earlier
 environment contained, so keeping it means the rates below were measured in this exact environment.
 
 Scratch expires after 90 days, so this environment is disposable. Rebuild it with the same command,
@@ -250,7 +250,7 @@ instead of the hosted tool.
 | Concurrency 896 | 3130.2 tok/s | 3.5 tok/s | TTFT median 823 ms, p90 1397 ms, n=3 spanning 3127.1 to 3132.2 |
 | Concurrency 1024 (saturated) | 3135.8 tok/s | 3.1 tok/s | TTFT median 913 ms, p90 1576 ms, n=3 spanning 3132.6 to 3136.8 |
 
-Measured 2026-07-31 with `common/tools/bench.sh`, endpoint ready 4m 0s after launch. Full disclosure, without which a tokens
+Measured with `common/tools/bench.sh`, endpoint ready 4m 0s after launch. Full disclosure, without which a tokens
 per second figure cannot be compared against anything:
 
 | Parameter | Value |

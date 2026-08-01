@@ -25,12 +25,12 @@ output across every concurrent stream, and it says nothing about how fast a sing
 All three are `saturated`, meaning throughput varies by under 4 percent across concurrency 512 to 1024,
 so these are real ceilings and adding concurrency past them buys only queueing delay. This model reaches
 its limit at lower concurrency than its 26B sibling, which is consistent with it being memory bandwidth
-bound. Measured 2026-07-31 at 32K context, protocol slope(128,1152) over output tokens only, 3 repeats
+bound. Measured at 32K context, protocol slope(128,1152) over output tokens only, 3 repeats
 per level, concurrency 1 through 1024.
 
 Running the same weights in bf16 instead of FP8 measured 56.3, 40.7 and 23.0 tok/s single stream on the
-same three GPUs. Those figures come from the pre-restructure scripts on 2026-07-27 and were not
-re-measured in the 2026-07-31 sweep, so treat them as indicative of the roughly 1.7x FP8 advantage
+same three GPUs. Those figures come from earlier scripts and were not
+re-measured in the current sweep, so treat them as indicative of the roughly 1.7x FP8 advantage
 rather than as current numbers.
 
 The spread across GPU types is 2.1x and tracks HBM bandwidth, because this model is memory bandwidth
@@ -41,7 +41,7 @@ bound, so unlike the 26B sibling it is worth queueing for the faster card.
 | | |
 | --- | --- |
 | Directory | `gemma-4-31B-it` |
-| Hugging Face repo | not recorded before the restructure; the testbed copy is the system of record |
+| Hugging Face repo | not recorded upstream; the testbed copy is the system of record |
 | Documented path | `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/gemma-4-31B-it` |
 | Size on disk | 62.6 GB, bf16, quantized to FP8 at load time rather than from a second checkpoint |
 | Architecture | `Gemma4ForConditionalGeneration`, dense, multimodal |

@@ -1,6 +1,6 @@
 # Kimi-K2.7-Code on two H200 nodes
 
-Status: Validated - 2026-07-31, vLLM 0.25.1+cu129, protocol: slope(128,1152) swept at concurrency 1 through 1024
+Status: Validated - vLLM 0.25.1+cu129, protocol: slope(128,1152) swept at concurrency 1 through 1024
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -33,7 +33,7 @@ formed, which reads as an engine problem rather than a path problem.
 
 ## Status
 
-Validated on 2026-07-31. The environment was built from `env/build.sh`, the endpoint was
+Validated. The environment was built from `env/build.sh`, the endpoint was
 launched with `serve_ssh.sh` on two H200 nodes, 8 GPUs via Ray, and throughput was measured with `common/tools/bench.sh`
 across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 17 minutes 43 seconds after launch. The endpoint was still answering after the sweep finished.
 
@@ -55,7 +55,7 @@ Anthropic-compatible API, so Claude Code connects to it directly with no proxy.
 - Hugging Face repo: `moonshotai/Kimi-K2.7-Code`
 - Documented path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/Kimi-K2.7-Code`
 
-Read from the checkpoint on 2026-07-29:
+Read from the checkpoint:
 
 | Property | Value |
 | --- | --- |
@@ -96,7 +96,7 @@ About 595 GB of weights, 554 GiB, does not fit one node's four cards at 143771 M
 Hopper and therefore pipeline parallelism. `serve.sbatch` requests 48 CPUs and 500 GB per node, both
 inside the per-GPU limits for four GPUs.
 
-The two nodes are not symmetric in what they hold. On 2026-07-19 each rank of the head stage loaded
+The two nodes are not symmetric in what they hold. Each rank of the head stage loaded
 71.06 GiB of weights and had 52.16 GiB left for KV cache, while each rank of the worker stage loaded
 70.81 GiB and had 50.07 GiB, because pipeline parallelism splits layers between stages and the stages are
 not identical in weight footprint. That is expected, not a misconfiguration.
@@ -170,7 +170,7 @@ script cannot locate the repo from its own path and resolves paths against the s
 
 `ray_head.sh` and `ray_worker.sh` in this directory are the Ray bring-up, and both launch paths call
 them rather than duplicating the commands. They take their GPU count from `GPUS_PER_NODE`, then
-`SLURM_GPUS_ON_NODE`, then 4, instead of the hardcoded 4 the pre-restructure scripts used.
+`SLURM_GPUS_ON_NODE`, then 4, instead of the hardcoded 4 the earlier scripts used.
 
 ## Verify
 
@@ -187,8 +187,8 @@ curl -s -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
   -d '{"model":"kimi-k2.7-code","messages":[{"role":"user","content":"What is 2+2? Answer briefly."}],"max_tokens":400}'
 ```
 
-A keyless request returning 401 is the expected, correct behavior, and it was confirmed on the
-2026-07-19 run.
+A keyless request returning 401 is the expected, correct behavior, and it was confirmed on that
+run.
 
 <!-- issue:thinking-model-max-tokens begin -->
 **Give thinking models room, or `content` comes back empty.** This model emits reasoning before its
@@ -297,7 +297,7 @@ instead of the hosted tool.
 | Concurrency 896 | 6577.4 tok/s | 7.3 tok/s | TTFT median 964 ms, p90 1597 ms, n=3 spanning 6576.5 to 6577.9 |
 | Concurrency 1024 (rising) | 7140.3 tok/s | 7.0 tok/s | TTFT median 1011 ms, p90 1689 ms, n=3 spanning 7136.3 to 7148.0 |
 
-Measured 2026-07-31 with `common/tools/bench.sh`, endpoint ready 17m 43s after launch. Full disclosure, without which a tokens
+Measured with `common/tools/bench.sh`, endpoint ready 17m 43s after launch. Full disclosure, without which a tokens
 per second figure cannot be compared against anything:
 
 | Parameter | Value |
@@ -465,8 +465,8 @@ resources instead of on memory.
 | Engine init: profile, KV cache, warmup | 165 s |
 | Total, vLLM banner to serving | 9 min 11 s |
 
-Measured 2026-07-19 from the server log, with the checkpoint read from VAST scratch rather than the
-Lustre testbed path. The pre-restructure notes quote about 13 minutes for the whole sequence, and the
+Measured from the server log, with the checkpoint read from VAST scratch rather than the
+Lustre testbed path. The earlier notes quote about 13 minutes for the whole sequence, and the
 difference is everything before the banner: the Python import of torch and vLLM, which happened from a
 Lustre environment then and happens from VAST scratch now, since `ENV_ROOT` points there. Expect the
 banner sooner with this recipe than with the scripts it came from, and the rest of the table unchanged.

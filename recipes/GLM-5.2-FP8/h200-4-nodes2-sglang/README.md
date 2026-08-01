@@ -28,8 +28,8 @@ automatically subject to the same failure, but nobody has got far enough to find
 
 ## What was attempted
 
-On 2026-07-18, from the pre-restructure SGLang launch scripts in the
-pre-restructure repo:
+From earlier SGLang launch scripts in the
+earlier repo:
 
 | Setting | Value |
 | --- | --- |
@@ -119,7 +119,7 @@ the number to beat if this is ever made to work.
 ## Environment build
 
 There is no `env/build.sh` here, because no environment for this recipe has ever been built to a state
-worth recording. The pre-restructure attempt ran from a separate virtual environment holding SGLang
+worth recording. The earlier attempt ran from a separate virtual environment holding SGLang
 `0.5.11.dev20260420+g3063d640d`, kept apart from the vLLM one so both engines could coexist. Whoever
 picks this up will build a fresh one and, this being Hopper, will hit the same wheel constraint every
 other H200 recipe here hits:
@@ -186,7 +186,7 @@ file handles. `env/env.sh` points `TRITON_CACHE_DIR` and `TORCHINDUCTOR_CACHE_DI
 `/tmp/$USER`, which also means the first launch on a fresh node pays the compile cost again.
 <!-- issue:jit-cache-node-local end -->
 
-The pre-restructure SGLang environment library already set both cache variables to `/tmp/$USER`, so a
+The earlier SGLang environment library already set both cache variables to `/tmp/$USER`, so a
 reimplementation should keep that.
 
 <!-- issue:lustre-watchdog begin -->
@@ -232,7 +232,7 @@ node without adding key gating or restricting the port.
 <!-- issue:sglang-ungated end -->
 
 This matters even for a recipe that does not work, because the launch scripts it came from are still in
-the pre-restructure repo's history and are easy to copy. Every vLLM recipe here reads
+the earlier repo's history and are easy to copy. Every vLLM recipe here reads
 `secrets/vllm_api_key` and passes it to the engine through the environment, so a keyless request gets
 HTTP 401. The SGLang launcher passed no `--api-key` and its environment library loaded no key file, so
 had this ever started serving, the port would have been open to anyone who could reach the node. Add key

@@ -86,7 +86,7 @@ A single timed generation includes prefill, scheduling, detokenization, and HTTP
 of it by the output token count as though it were decode. Subtracting two lengths cancels every cost that
 does not scale with output tokens.
 
-This is not a small correction. On one H100 measurement here on 2026-07-27, a 256-token generation
+This is not a small correction. On one H100 measurement here, a 256-token generation
 reported 116.2 tok/s where the sustained rate was 183.9 tok/s. Short generations can understate decode by up to 40 percent, and
 the error grows as the generation gets shorter.
 

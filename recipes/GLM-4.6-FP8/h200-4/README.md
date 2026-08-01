@@ -1,6 +1,6 @@
 # GLM-4.6-FP8 on one H200 node
 
-Status: Validated - 2026-07-31, vLLM 0.25.1+cu129, protocol: slope(128,1152) swept at concurrency 1 through 1024
+Status: Validated - vLLM 0.25.1+cu129, protocol: slope(128,1152) swept at concurrency 1 through 1024
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -28,7 +28,7 @@ defaults, so a fresh clone runs as is. Four optional overrides, either exported 
 
 ## Status
 
-Validated on 2026-07-31. The environment was built from `env/build.sh`, the endpoint was
+Validated. The environment was built from `env/build.sh`, the endpoint was
 launched with `serve_ssh.sh` on one H200 node, 4 GPUs, and throughput was measured with `common/tools/bench.sh`
 across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 4 minutes 2 seconds after launch. The endpoint was still answering after the sweep finished.
 
@@ -219,7 +219,7 @@ instead of the hosted tool.
 | Concurrency 896 | 7656.5 tok/s | 8.5 tok/s | TTFT median 824 ms, p90 1190 ms, n=3 spanning 7620.5 to 7681.5 |
 | Concurrency 1024 (rising) | 8130.2 tok/s | 7.9 tok/s | TTFT median 903 ms, p90 1350 ms, n=3 spanning 8107.6 to 8144.9 |
 
-Measured 2026-07-31 with `common/tools/bench.sh`, endpoint ready 4m 2s after launch. Full disclosure, without which a tokens
+Measured with `common/tools/bench.sh`, endpoint ready 4m 2s after launch. Full disclosure, without which a tokens
 per second figure cannot be compared against anything:
 
 | Parameter | Value |
@@ -316,7 +316,7 @@ four GPUs before you relaunch, or the next start will fail on memory.
 | Environment build, one time | about 6 min, 215 packages |
 | Launch to serving, cold page cache | 6 min 6 s |
 
-Measured 2026-07-29 with the checkpoint read from VAST scratch rather than the default testbed path;
+Measured with the checkpoint read from VAST scratch rather than the default testbed path;
 reading from Lustre is slower. First launch on a fresh node is slower than later ones, because the page
 cache is cold and any just-in-time kernel compilation happens once. A launch that looks hung during this
 window is usually still loading, so check the log before killing it.

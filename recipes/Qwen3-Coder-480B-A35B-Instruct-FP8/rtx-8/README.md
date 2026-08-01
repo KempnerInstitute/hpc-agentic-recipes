@@ -1,6 +1,6 @@
 # Qwen3-Coder-480B-A35B-Instruct-FP8 on one RTX PRO 6000 node
 
-Status: Validated - 2026-07-31, vLLM 0.25.1, protocol: slope(128,1152) swept at concurrency 1 through 1024
+Status: Validated - vLLM 0.25.1, protocol: slope(128,1152) swept at concurrency 1 through 1024
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -28,7 +28,7 @@ defaults, so a fresh clone runs as is. Four optional overrides, either exported 
 
 ## Status
 
-Validated on 2026-07-31. The environment was built from `env/build.sh`, the endpoint was
+Validated. The environment was built from `env/build.sh`, the endpoint was
 launched with `serve_ssh.sh` on one RTX PRO 6000 Blackwell node, and throughput was measured with `common/tools/bench.sh`
 across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 4 minutes after launch. The endpoint was still answering after the sweep finished.
 
@@ -255,7 +255,7 @@ instead of the hosted tool.
 | Concurrency 896 | 3117.8 tok/s | 3.5 tok/s | TTFT median 494 ms, p90 773 ms, n=3 spanning 3095.8 to 3135.5 |
 | Concurrency 1024 | 3075.5 tok/s | 3.0 tok/s | TTFT median 527 ms, p90 851 ms, n=3 spanning 3065.1 to 3093.1 |
 
-Measured 2026-07-31 with `common/tools/bench.sh`, endpoint ready 4m 0s after launch. Full disclosure, without which a tokens
+Measured with `common/tools/bench.sh`, endpoint ready 4m 0s after launch. Full disclosure, without which a tokens
 per second figure cannot be compared against anything:
 
 | Parameter | Value |

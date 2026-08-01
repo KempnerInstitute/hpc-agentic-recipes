@@ -1,6 +1,6 @@
 # DeepSeek-V4-Pro on two RTX PRO 6000 nodes
 
-Status: Validated - 2026-07-31, vLLM 0.26.0, protocol: slope(128,1152) swept at concurrency 1 through 1024
+Status: Validated - vLLM 0.26.0, protocol: slope(128,1152) swept at concurrency 1 through 1024
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -16,7 +16,7 @@ chmod 600 secrets/vllm_api_key
 ```
 
 One thing is not optional for this recipe: the checkpoint is not in the shared testbed yet. As of
-2026-07-29 the testbed directory `DeepSeek-V4-Pro` exists but is empty, and the only staged copy is on
+The testbed directory `DeepSeek-V4-Pro` exists but is empty, and the only staged copy is on
 scratch, so set `MODELS_DIR` or `MODEL` before launching:
 
 ```
@@ -35,7 +35,7 @@ Optional overrides, either exported or set in `common/site.conf`:
 
 ## Status
 
-Validated on 2026-07-31. The environment was built from `env/build.sh`, the endpoint was
+Validated. The environment was built from `env/build.sh`, the endpoint was
 launched with `serve_ssh.sh` on two RTX PRO 6000 Blackwell nodes, 16 GPUs via Ray, and throughput was measured with `common/tools/bench.sh`
 across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 20 minutes 8 seconds after launch. The endpoint was still answering after the sweep finished.
 
@@ -57,10 +57,10 @@ Claude Code connects to it directly with no proxy.
 
 - Checkpoint directory: `DeepSeek-V4-Pro`
 - Hugging Face repo: `deepseek-ai/DeepSeek-V4-Pro`
-- Staged path as of 2026-07-29: `/n/netscratch/kempner_dev/Lab/mmsh/models/DeepSeek-V4-Pro`
+- Staged path: `/n/netscratch/kempner_dev/Lab/mmsh/models/DeepSeek-V4-Pro`
 - Intended path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/DeepSeek-V4-Pro`, empty today
 
-Read from the checkpoint on 2026-07-29, since these are the facts the whole recipe rests on:
+Read from the checkpoint, since these are the facts the whole recipe rests on:
 
 | Property | Value |
 | --- | --- |
@@ -107,7 +107,7 @@ work.
 FP4 natively. In vLLM 0.25.1, `expert_dtype: fp4` resolves to the MXFP4 fused-MoE method unless the
 checkpoint also sets `moe_quant_algo: NVFP4`, which this one does not
 (`vllm/models/deepseek_v4/quant_config.py`), so on Hopper the expert layers have no native instruction
-to run on. The pre-restructure planning notes reached the same conclusion from the
+to run on. Earlier planning notes reached the same conclusion from the
 hardware side: two H200 nodes fit by memory, "but Hopper has no FP4 hardware. The FP4 experts would
 fall back to emulation or a Marlin path, which is a correctness and speed risk." Capacity here is not
 the constraint either way: 16 GPUs at 97887 MiB is about 1530 GiB, and at
@@ -138,7 +138,7 @@ express: a nightly index with `--prerelease=allow --index-strategy unsafe-best-m
 exactly one package, and a `mamba create` step. What it does, and why:
 
 **Ray is installed here and was not installed before.** Every RTX endpoint in this repo's history ran
-on a single node, so the pre-restructure RTX environment carried no Ray at all; only the Hopper
+on a single node, so the earlier RTX environment carried no Ray at all; only the Hopper
 environment did. This recipe spans two nodes and therefore needs the Ray executor, so `build.sh` adds
 `ray[default]` to the RTX install. If you reuse an older RTX environment through `VENV_DIR`, check
 that `ray` imports before submitting, or the engine fails at executor startup.
@@ -314,7 +314,7 @@ instead of the hosted tool.
 | Concurrency 896 | 3451.2 tok/s | 3.9 tok/s | TTFT median 1541 ms, p90 2506 ms, n=3 spanning 3431.7 to 3457.4 |
 | Concurrency 1024 (rising) | 3581.9 tok/s | 3.5 tok/s | TTFT median 1807 ms, p90 2822 ms, n=3 spanning 3533.3 to 3598.4 |
 
-Measured 2026-07-31 with `common/tools/bench.sh`, endpoint ready 20m 8s after launch. Full disclosure, without which a tokens
+Measured with `common/tools/bench.sh`, endpoint ready 20m 8s after launch. Full disclosure, without which a tokens
 per second figure cannot be compared against anything:
 
 | Parameter | Value |

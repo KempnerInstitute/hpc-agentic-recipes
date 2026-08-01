@@ -1,6 +1,6 @@
 # GLM-5.2-FP8 on two H200 nodes
 
-Status: Validated - 2026-07-31, vLLM 0.25.1+cu129, protocol: slope(128,1152) swept at concurrency 1 through 1024
+Status: Validated - vLLM 0.25.1+cu129, protocol: slope(128,1152) swept at concurrency 1 through 1024
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -33,7 +33,7 @@ formed, which reads as an engine problem rather than a path problem.
 
 ## Status
 
-Validated on 2026-07-31. The environment was built from `env/build.sh`, the endpoint was
+Validated. The environment was built from `env/build.sh`, the endpoint was
 launched with `serve_ssh.sh` on two H200 nodes, 8 GPUs via Ray, and throughput was measured with `common/tools/bench.sh`
 across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 16 minutes 23 seconds after launch. The endpoint was still answering after the sweep finished.
 
@@ -53,13 +53,13 @@ a million tokens.
 - Documented path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/GLM-5.2-FP8`
 
 The repo id is the one place on this page that is not sourced from a measurement or a file. The
-pre-restructure repo recorded no Hugging Face id for this checkpoint, only the local path it was
+earlier repo recorded no Hugging Face id for this checkpoint, only the local path it was
 downloaded to. `zai-org/GLM-5.2-FP8` is the id implied by the sibling checkpoints, since the FP8 build
 of GLM-4.6 in this repo is `zai-org/GLM-4.6-FP8` and the NVFP4 build of this same base model was
 quantized from `zai-org/GLM-5.2`, but it has not been confirmed against the Hub. Verify before relying
 on it for a download.
 
-Read from the checkpoint on 2026-07-29:
+Read from the checkpoint:
 
 | Property | Value |
 | --- | --- |
@@ -98,7 +98,7 @@ work. About 756 GB of weights, 704 GiB, does not fit one node's four cards at 14
 562 GiB, and that is what forces two nodes and therefore pipeline parallelism. `serve.sbatch` requests
 48 CPUs and 500 GB per node, both inside the per-GPU limits for four GPUs.
 
-The two nodes are not symmetric in what they hold. On 2026-07-19 each rank of the head stage loaded
+The two nodes are not symmetric in what they hold. Each rank of the head stage loaded
 91.31 GiB of weights and had 38.25 GiB left for KV cache, while each rank of the worker stage loaded
 84.71 GiB and had 29.99 GiB, because pipeline parallelism splits layers between stages and the stages are
 not identical in weight footprint. That is expected, not a misconfiguration.
@@ -168,7 +168,7 @@ instead.
 
 `ray_head.sh` and `ray_worker.sh` in this directory are the Ray bring-up, and both launch paths call
 them rather than duplicating the commands. They take their GPU count from `GPUS_PER_NODE`, then
-`SLURM_GPUS_ON_NODE`, then 4, instead of the hardcoded 4 the pre-restructure scripts used.
+`SLURM_GPUS_ON_NODE`, then 4, instead of the hardcoded 4 the earlier scripts used.
 
 ## Verify
 
@@ -186,7 +186,7 @@ curl -s -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
 ```
 
 A keyless request returning 401 is the expected, correct behavior, and it was confirmed on both
-2026-07-19 runs.
+runs.
 
 <!-- issue:thinking-model-max-tokens begin -->
 **Give thinking models room, or `content` comes back empty.** This model emits reasoning before its
@@ -244,7 +244,7 @@ Every variable this recipe honors, with its default and effect.
 | `LOG_DIR` | `/tmp/$USER/vllm` | Where the SSH path writes the server log |
 | `VENV_DIR` | under `ENV_ROOT` | Use an environment built elsewhere |
 
-There is deliberately no `NO_MTP` switch, unlike the single-node GLM-4.6 recipe. The pre-restructure
+There is deliberately no `NO_MTP` switch, unlike the single-node GLM-4.6 recipe. The earlier
 launcher forwarded one, but nothing consumed it, because speculative decoding is unavailable here for
 the reason in the next section but one.
 
@@ -288,7 +288,7 @@ instead of the hosted tool.
 | Concurrency 896 | 4942.5 tok/s | 5.5 tok/s | TTFT median 1222 ms, p90 1920 ms, n=3 spanning 4901.8 to 4953.4 |
 | Concurrency 1024 | 5049.3 tok/s | 4.9 tok/s | TTFT median 1325 ms, p90 2092 ms, n=3 spanning 5032.8 to 5056.3 |
 
-Measured 2026-07-31 with `common/tools/bench.sh`, endpoint ready 16m 23s after launch. Full disclosure, without which a tokens
+Measured with `common/tools/bench.sh`, endpoint ready 16m 23s after launch. Full disclosure, without which a tokens
 per second figure cannot be compared against anything:
 
 | Parameter | Value |
@@ -412,7 +412,7 @@ filesystem stall that write hangs, which freezes the server. `LOG_DIR` defaults 
 <!-- issue:node-local-logs end -->
 
 **A Ray worker can die under you, and the head log will not say why.** The longest recorded run of this
-endpoint served requests intermittently for about 21 hours on 2026-07-19 and then ended with
+endpoint served requests intermittently for about 21 hours and then ended with
 `RayWorkerProc rank=[1] died unexpectedly, shutting down executor`, followed by
 `RuntimeError: Executor failed`. Rank 1 is the second pipeline stage, on the worker node. The head's log
 records the death and no cause, because the cause was on the other node, and Ray's own worker logs under
@@ -451,7 +451,7 @@ resources instead of on memory.
 | Engine init: profile, KV cache, warmup | 109 s | 84 s |
 | Total, vLLM banner to serving | 5 min 5 s | 19 min 36 s |
 
-Both columns are measured, on 2026-07-19, on two different node pairs, with the checkpoint read from
+Both columns are measured on two different node pairs, with the checkpoint read from
 VAST scratch in both cases. The difference is page cache: the fast pair had already loaded this
 checkpoint, the freshly allocated pair had not. Reading from the Lustre testbed path instead is slower
 again.

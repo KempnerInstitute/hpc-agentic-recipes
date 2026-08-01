@@ -24,7 +24,7 @@ Single stream is one request at a time, which is what interactive coding feels l
 output across every concurrent stream at the stated concurrency, 36 to 45 times larger here, and it says
 nothing about how fast a single reply arrives. The labels differ by GPU: H200 and H100 both turned over,
 at concurrency 256 and 640, so those are measured `peak` values, while the RTX variant was still
-`rising` at 1024 and its figure is a floor. All three measured 2026-07-31, bf16, 32K context, protocol
+`rising` at 1024 and its figure is a floor. All three measured with bf16, 32K context, protocol
 slope(128,1152) over output tokens only, 3 repeats per level, concurrency 1 through 1024.
 
 Pick by what you can get. The spread across GPU types is only 1.7x, because this model is host overhead
@@ -35,7 +35,7 @@ bound rather than memory bandwidth bound, so an idle RTX GPU beats a queued H200
 | | |
 | --- | --- |
 | Directory | `gemma-4-26B-A4B-it` |
-| Hugging Face repo | not recorded before the restructure; the testbed copy is the system of record |
+| Hugging Face repo | not recorded upstream; the testbed copy is the system of record |
 | Documented path | `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/gemma-4-26B-A4B-it` |
 | Size on disk | 51.6 GB, bf16 |
 | Architecture | `Gemma4ForConditionalGeneration`, 128 experts with top-8 routing, multimodal |

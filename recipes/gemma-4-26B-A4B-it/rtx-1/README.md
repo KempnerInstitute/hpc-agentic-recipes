@@ -1,6 +1,6 @@
 # gemma-4-26B-A4B-it on one RTX PRO 6000 GPU
 
-Status: Validated - 2026-07-31, vLLM 0.26.0, protocol: slope(128,1152) swept at concurrency 1 through 1024
+Status: Validated - vLLM 0.26.0, protocol: slope(128,1152) swept at concurrency 1 through 1024
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -28,7 +28,7 @@ defaults, so a fresh clone runs as is. Optional overrides, either exported or se
 
 ## Status
 
-Validated on 2026-07-31. The environment was built from `env/build.sh`, the endpoint was
+Validated. The environment was built from `env/build.sh`, the endpoint was
 launched with `serve_ssh.sh` on one RTX PRO 6000 Blackwell GPU, and throughput was measured with `common/tools/bench.sh`
 across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 10 minutes 48 seconds after launch. The endpoint was still answering after the sweep finished.
 
@@ -44,7 +44,7 @@ rate, which makes it the best default for interactive work. It exposes vLLM's An
 API, so Claude Code connects to it directly with no proxy.
 
 - Checkpoint directory: `gemma-4-26B-A4B-it`
-- Hugging Face repo: not recorded before the restructure; the testbed copy is the system of record
+- Hugging Face repo: not recorded upstream; the testbed copy is the system of record
 - Documented path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/gemma-4-26B-A4B-it`
 - On disk: 51.6 GB, bf16, `Gemma4ForConditionalGeneration`, multimodal, 256K context
 - Optional drafter: `gemma-4-26B-A4B-it-assistant`, under 1 GB, wired through `SPEC_DRAFT` and
@@ -259,7 +259,7 @@ instead of the hosted tool.
 | Concurrency 896 | 5889.3 tok/s | 6.6 tok/s | TTFT median 724 ms, p90 1213 ms, n=3 spanning 5813.6 to 5931.9 |
 | Concurrency 1024 (rising) | 5972.0 tok/s | 5.8 tok/s | TTFT median 701 ms, p90 1185 ms, n=3 spanning 5953.9 to 6004.2 |
 
-Measured 2026-07-31 with `common/tools/bench.sh`, endpoint ready 10m 48s after launch. Full disclosure, without which a tokens
+Measured with `common/tools/bench.sh`, endpoint ready 10m 48s after launch. Full disclosure, without which a tokens
 per second figure cannot be compared against anything:
 
 | Parameter | Value |

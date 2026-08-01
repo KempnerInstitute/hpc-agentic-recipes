@@ -16,7 +16,7 @@ one RTX node. This bf16 version is twice the size and has no measured rate at al
 - Testbed path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/Qwen3-Coder-480B-A35B-Instruct`
 - On disk: 894.4 GiB, 960.3 GB decimal, 241 shards, 30321 tensors
 
-Read from `config.json` on 2026-07-29:
+Read from `config.json`:
 
 | Property | Value |
 | --- | --- |
