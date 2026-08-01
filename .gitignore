@@ -27,3 +27,7 @@ models/
 # Scratch files kept beside a recipe while working on it, never published. common/issues is for the
 # setup and usage facts a reader actually needs.
 *.local.md
+
+# A planning document that used to live here. Deleted, and ignored so it cannot return: this repo
+# records what works, not what was being considered.
+plan-new-models.md
