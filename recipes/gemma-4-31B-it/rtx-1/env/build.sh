@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Build the environment for gemma-4-31B-it on one RTX PRO 6000 Blackwell GPU.
+# Idempotent; pass --force to rebuild.
+# This is the only supported build path: the install needs uv flags a requirements file cannot express
+# (a nightly index, --index-strategy, --prerelease, and --no-deps for a single package) plus a conda
+# step for the CUDA 13.0 toolkit.
+set -euo pipefail
+S="$(cd "$(dirname "$0")" && pwd)"
+source "$S/../../../../common/defaults.sh"
+VENV="${VENV_DIR:-$ENV_ROOT/gemma-4-31B-it/rtx-1/venv}"
+CU13="${CUDA13_DIR:-$ENV_ROOT/gemma-4-31B-it/rtx-1/cuda13}"
+FLASHINFER_VERSION="${FLASHINFER_VERSION:-0.6.15}"
+
+# "Directory exists" is not "environment works": an interrupted install leaves a venv skeleton behind,
+# and skipping on mere existence would then serve from a broken environment.
+venv_healthy () {
+  # bin/python is the proof. An interrupted install leaves site-packages populated while the
+  # interpreter and activate script are missing, so a dist-info check passes on a venv that
+  # cannot be activated or run.
+  [ -x "$VENV/bin/python" ] && [ -f "$VENV/bin/activate" ] \
+    && compgen -G "$VENV"/lib/python*/site-packages/vllm-*.dist-info > /dev/null
+}
+# The venv and the toolkit are independent stages. Do not exit here: a recipe can have a
+# healthy venv and a missing toolkit, and exiting would make that unrepairable. Skip only
+# the venv work, and never delete a venv that passed the health check.
+build_venv=1
+if venv_healthy && [ "${1:-}" != "--force" ]; then
+  echo "environment already present and complete at $VENV (pass --force to rebuild)"
+  build_venv=0
+fi
+if [ "$build_venv" = 1 ]; then
+  command -v uv >/dev/null || { echo "uv is required: https://docs.astral.sh/uv/" >&2; exit 1; }
+  [ -d "$VENV" ] && { echo "removing incomplete or forced environment"; rm -rf "$VENV"; }
+  mkdir -p "$(dirname "$VENV")"
+
+  # sm_120 needs the CUDA 13 build of vLLM, which ships only on the nightly index. unsafe-best-match is
+  # what lets torch resolve from the PyTorch cu130 index while vLLM resolves from the vLLM one.
+  uv venv --python 3.12 "$VENV"
+  uv pip install --python "$VENV/bin/python" --prerelease=allow --index-strategy unsafe-best-match \
+    --extra-index-url https://wheels.vllm.ai/nightly/cu130 \
+    --extra-index-url https://download.pytorch.org/whl/cu130 \
+    vllm
+
+  # flashinfer 0.6.15, not the 0.6.13 vLLM pins: the sm_120 attention backend passes a kv_scale_format
+  # argument that 0.6.13 rejects at the first inference request. --no-deps leaves torch untouched.
+  uv pip install --python "$VENV/bin/python" --no-deps -U "flashinfer-python==$FLASHINFER_VERSION"
+fi
+
+# A complete, self-consistent CUDA 13.0 toolkit for the FlashInfer sm_120 JIT. The node's
+# /usr/local/cuda-13 is runtime only, and the pip nvcc wheels mix 13.0 and 13.2 across nvcc, cicc and
+# ptxas, which breaks the JIT.
+if [ ! -x "$CU13/bin/nvcc" ]; then
+  source /etc/profile.d/lmod.sh 2>/dev/null || true
+  module load Mambaforge/23.3.1-fasrc01 2>/dev/null || true
+  command -v mamba >/dev/null || { echo "mamba is required for the CUDA 13.0 toolkit step" >&2; exit 1; }
+  mkdir -p "$(dirname "$CU13")"
+  mamba create -y -p "$CU13" -c nvidia \
+    cuda-nvcc=13.0 cuda-cudart-dev=13.0 cuda-cccl=13.0 cuda-nvrtc-dev=13.0 cuda-libraries-dev=13.0
+fi
+
+"$VENV/bin/python" -c "import importlib.metadata as m; print('vllm', m.version('vllm'), '| torch', m.version('torch'), '| flashinfer', m.version('flashinfer-python'))"
+echo "built:   $VENV"
+echo "toolkit: $CU13"
+echo "record the exact resolution with:  uv pip freeze --python $VENV/bin/python > $S/requirements.lock"

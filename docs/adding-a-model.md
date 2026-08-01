@@ -1,0 +1,137 @@
+# Adding a model
+
+A recipe is one model on one hardware shape. Adding one means creating a directory and updating the
+indexes that point at it. Everything else lives inside the directory.
+
+## Before you write anything
+
+**1. Find the checkpoint and decide which variant you want.** Quantized variants matter more than the
+parameter count: an FP8 or NVFP4 build may fit hardware the bf16 build cannot. Record the Hugging Face
+repo id, because the recipe README must state it.
+
+**2. Confirm your engine can actually load it.** Do this first, and do it by asking the engine rather
+than trusting a model card or a blog post:
+
+```
+python3 -c "
+import json
+from vllm.model_executor.models.registry import ModelRegistry
+supported = set(ModelRegistry.get_supported_archs())
+arch = json.load(open('<checkpoint>/config.json'))['architectures']
+print(arch, [a in supported for a in arch])
+"
+```
+
+A `False` here means no amount of configuration will help, and it is worth an hour of your time to learn
+that before you spend a day of GPU time. Announcements of day-zero support routinely precede the code
+landing in a release.
+
+**3. Read the checkpoint's config for the numbers that constrain parallelism.** You need
+`num_hidden_layers`, `moe_intermediate_size`, `max_position_embeddings`, the quantization method and
+`weight_block_size` if quantized, and whether it has a vision tower. These decide the legal TP values,
+the memory budget, and whether multimodal profiling will bite you.
+
+**4. Download it if needed.** [downloading-weights.md](downloading-weights.md), from a compute node.
+
+## Scaffold
+
+```
+bash common/tools/new_recipe.sh <Checkpoint-Name> <hardware> --from <existing-recipe>
+```
+
+Hardware directory names are `<gpu-type>-<gpus-per-node>[-nodes<N>][-<engine>]`.
+
+Pick what to copy from by toolchain, not by model similarity:
+
+| If your target is | Copy from a recipe on | Because |
+| --- | --- | --- |
+| One or more RTX GPUs | any `rtx-*` recipe | torch cu130, conda CUDA 13 toolkit, FlashInfer 0.6.15, no NVLink |
+| One or more H200 or H100 GPUs | any `h200-*` recipe | cu129 release wheel, driver 575 constraint |
+| More than one node | any `*-nodes2` recipe | Ray bring-up, InfiniBand settings, PP across nodes |
+| SGLang | the `*-sglang` recipe | different launcher and flags entirely |
+
+## Pin an environment
+
+Each recipe builds its own environment and shares with nobody, so a torch bump in one recipe cannot break
+another. Write `env/build.sh` with exact versions, then record what you actually got:
+
+```
+R=recipes/<Checkpoint-Name>/<hardware>
+bash $R/env/build.sh
+uv pip freeze --python "$ENV_ROOT/<Checkpoint-Name>/<hardware>/venv/bin/python" > $R/env/requirements.lock
+```
+
+If any artifact comes from somewhere other than PyPI, put its resolved URL and sha256 in `env/WHEELS`.
+Nightly wheel indexes rotate and delete builds, so an unpinned nightly install is not reproducible and a
+version pin alone may silently resolve to a different wheel from PyPI. This is the single most common way
+an environment stops rebuilding months later.
+
+## Write the flags
+
+`env/env.sh` holds the runtime environment. Every flag needs a provenance comment, and the audit rejects
+one without it:
+
+```
+# verified: <symptom>, <engine version>
+# inherited from <source>, untested for this model
+# required: <reason>
+```
+
+This exists because the alternative is folklore. A flag copied from another recipe with a confident
+one-line justification looks measured, and the next person cannot tell the difference between a setting
+that prevents a crash and one that was inherited by accident.
+
+Candidates to consider: attention backend, `VLLM_USE_DEEP_GEMM`, `NCCL_P2P_DISABLE`,
+`NCCL_SOCKET_IFNAME` and `NCCL_IB_HCA`, `TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC`,
+`VLLM_ENGINE_READY_TIMEOUT_S`, `FLASHINFER_DISABLE_VERSION_CHECK`, JIT cache directories,
+`HF_HUB_OFFLINE`, `CUDAHOSTCXX`.
+
+## Write the serve invocation
+
+`serve.sh` holds the engine command. The decisions that actually take time:
+
+- `--served-model-name` must match `ANTHROPIC_MODEL` in `client.env`, which the audit checks, because a
+  mismatch produces a confusing model-not-found at first use. Recipes for the same model on different
+  hardware share one name on purpose, so a client does not change when the endpoint moves.
+- `--tool-call-parser` and `--reasoning-parser` must be names the engine has registered. Find them by
+  listing the registry rather than guessing from filenames, which do not match the registered names.
+- `--enable-auto-tool-choice` is required for agentic use.
+- To omit a parser entirely for a non-thinking model, the variable must use `${VAR-default}` rather than
+  `${VAR:-default}`, so that passing an empty value omits the flag instead of substituting the default.
+  A model with no reasoning parser that gets one will have its plain output silently parsed as reasoning.
+- TP must divide the model cleanly. For a block-quantized MoE, each shard of `moe_intermediate_size` must
+  be a multiple of the quantization block, or the engine refuses to start.
+- Keep TP inside a node and use PP across nodes. Note that PP disables speculative decoding.
+
+## Launch, verify, then measure
+
+Start it, confirm it answers, confirm a keyless request returns 401, and only then benchmark. Measure with
+the slope method and record the protocol label:
+
+```
+bash common/tools/bench.sh --host <node> --model <served-name>
+```
+
+## Write the README and check it
+
+Fill in all 15 required sections from `common/templates/recipe-README.md`. For failure modes, add the
+recipe to the relevant rows of `common/issues/matrix.tsv`, insert empty marker pairs in the README, and
+let the tooling write the text:
+
+```
+bash common/tools/audit_recipes.sh --fix
+bash common/tools/audit_recipes.sh
+```
+
+Do not write issue text by hand. It is duplicated across recipes on purpose, and the source copy in
+`common/issues/` is what keeps every copy identical.
+
+## Update the indexes
+
+- One row in the model table in the top-level README
+- One row in `common/issues/matrix.tsv` for each applicable issue
+- An entry in `common/issues/readme-only.txt` if the recipe is documentation-only
+- A mention in [choosing-a-model.md](choosing-a-model.md) if it is a model someone should reach for
+
+Then run the audit once more. It checks index coverage in both directions, so a recipe missing from a
+table and a table row pointing at a missing recipe both fail.

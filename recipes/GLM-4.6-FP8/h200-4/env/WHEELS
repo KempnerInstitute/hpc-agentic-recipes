@@ -1,0 +1,3 @@
+# Non-PyPI artifacts, with the exact URL used. Nightly and release wheels are not
+# guaranteed to remain downloadable, so record what was actually installed.
+https://github.com/vllm-project/vllm/releases/download/v0.25.1/vllm-0.25.1+cu129-cp38-abi3-manylinux_2_28_x86_64.whl

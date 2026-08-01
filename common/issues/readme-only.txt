@@ -1,0 +1,28 @@
+# Recipes that are documentation only, so the audit requires README.md and nothing else.
+#
+# One path per line, in the same form audit_recipes.sh enumerates, which is
+# <Checkpoint-Name>/<hardware> for a variant directory. Matched with grep -qxF, so the line must be
+# the whole path with no leading "recipes/" and no trailing slash. Lines starting with # are ignored
+# because they cannot match any recipe path.
+#
+# A recipe belongs here when it will never be launched as written: a Blocked recipe holding a negative
+# result, or a model with no hardware variant authored yet. Everything else must ship the full set of
+# scripts.
+
+# Blocked: four H200 configurations all failed at CUDA graph capture. Serve this model on RTX instead.
+Qwen3-Coder-480B-A35B-Instruct-FP8/h200-4
+
+# Blocked: every rank fails a shape assertion in SGLang's DeepSeek weight loader, so this engine has
+# never loaded the checkpoint. Kept because SGLang is the only engine that could use GLM-5.2's MTP head
+# at TP8 across two nodes; vLLM cannot, because that needs PP and PP forbids speculative decoding.
+GLM-5.2-FP8/h200-4-nodes2-sglang
+
+# The two entries below name model directories that hold a README.md and no hardware subdirectory.
+# audit_recipes.sh globs recipes/*/*/ and therefore does not enumerate them at all, so these lines
+# are documentation of intent rather than something the audit consults today. They are listed so that
+# the intent survives if the audit is later taught to walk model-level READMEs.
+#
+# Blocked: KimiK3ForConditionalGeneration is in no released engine, so nothing can load the weights.
+Kimi-K3
+# Untested: the bf16 twin of the FP8 Coder checkpoint, staged and supported but never launched.
+Qwen3-Coder-480B-A35B-Instruct

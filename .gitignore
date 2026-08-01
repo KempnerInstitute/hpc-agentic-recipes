@@ -1,17 +1,33 @@
+# Built environments live outside the repo, under ENV_ROOT. These patterns catch older
+# in-repo layout so an older checkout does not accidentally commit one.
 .venv/
 .venv-cu130/
 .venv-sglang/
 .venv-tools/
 cuda13/
+
+# Local overrides and secrets.
+common/site.conf
+secrets/
+.env
+
+# Logs. Server logs go to node-local /tmp by default; Slurm job logs land in the submit directory.
+*.log
 logs/*
 !logs/.gitkeep
-models/
-*.log
-__pycache__/
-.env
-.ray/
-secrets/
 
-# Planning and research notes. These are our working scratch, not repo content:
-# they record what we were considering, not what a user needs to serve a model.
+__pycache__/
+.ray/
+models/
+
+# Claude Code writes local settings and session state into .claude when run inside a checkout. The
+# shared skill lives in common/skills instead, so nothing here should ever be committed.
+.claude/
+
+# Scratch files kept beside a recipe while working on it, never published. common/issues is for the
+# setup and usage facts a reader actually needs.
+*.local.md
+
+# A planning document that used to live here. Deleted, and ignored so it cannot return: this repo
+# records what works, not what was being considered.
 plan-new-models.md
