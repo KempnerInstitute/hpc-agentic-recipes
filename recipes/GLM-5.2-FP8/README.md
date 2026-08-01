@@ -12,10 +12,10 @@ is the slowest configuration in this repo.
 
 ## Hardware variants
 
-| Variant | Engine | Shape | Decode rate | Protocol | Status |
+| Variant | Engine | Shape | Single stream | Aggregate | Status |
 | --- | --- | --- | --- | --- | --- |
-| [`h200-4-nodes2`](h200-4-nodes2/README.md) | vLLM | 2 H200 nodes, 4 GPUs each, TP4 x PP2 | 13.0 tok/s single stream, 5405 at c=512 | slope(128,1152) | Validated |
-| [`h200-4-nodes2-sglang`](h200-4-nodes2-sglang/README.md) | SGLang | 2 H200 nodes, TP8, no PP, EAGLE | never measured | none | Blocked |
+| [`h200-4-nodes2`](h200-4-nodes2/README.md) | vLLM | 2 H200 nodes, 4 GPUs each, TP4 x PP2 | 13.0 tok/s | 5421 at c=640, peak | Validated |
+| [`h200-4-nodes2-sglang`](h200-4-nodes2-sglang/README.md) | SGLang | 2 H200 nodes, TP8, no PP, EAGLE | never measured | n/a | Blocked |
 
 Use the vLLM variant. The SGLang variant is documentation only: it has never successfully loaded
 weights, and it is kept because it is the one configuration that could use this checkpoint's MTP

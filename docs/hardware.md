@@ -5,9 +5,9 @@ in a partition behaves like any other and recipes name partitions rather than ho
 
 | Type | GPUs per node | Memory per GPU | Interconnect | CUDA | Partition |
 | --- | --- | --- | --- | --- | --- |
-| RTX PRO 6000 Blackwell | 8 | 97887 MiB | PCIe, no NVLink | 13, sm_120 | `kempner_rtx` |
-| H200 | 4 | 143771 MiB | NVLink | 12.9, driver 575 | `kempner_h200` |
-| H100 | 4 | 80 GB | NVLink | 12.9 | `kempner_h100` |
+| RTX PRO 6000 Blackwell | 8 | 96 GiB, 97887 MiB | PCIe, no NVLink | 13, sm_120 | `kempner_rtx` |
+| H200 | 4 | 140 GiB, 143771 MiB | NVLink | 12.9, driver 575 | `kempner_h200` |
+| H100 | 4 | 80 GiB, 81559 MiB | NVLink | 12.9 | `kempner_h100` |
 
 Allocation limits per GPU: 16 CPUs on `kempner_rtx` and `kempner_h200`, 24 on `kempner_h100`. Maximum
 wall time is 2 days on all three.

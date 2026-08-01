@@ -14,10 +14,10 @@ needs torch cu130, a conda CUDA 13.0 toolkit, and FlashInfer 0.6.15, while the H
 575 and need the cu129 release wheel instead. All three are TP1 on one GPU and serve the same name, so
 they differ only in hardware, environment, and rate.
 
-| Variant | GPU | Single stream | Saturated | Status |
+| Variant | GPU | Single stream | Aggregate | Status |
 | --- | --- | --- | --- | --- |
 | [`h200-1`](h200-1/README.md) | 1 H200, 143771 MiB | 236.3 tok/s | 10727 at c=256, peak | Validated |
-| [`h100-1`](h100-1/README.md) | 1 H100, 80 GB | 203.4 tok/s | 7243 at c=640, peak | Validated |
+| [`h100-1`](h100-1/README.md) | 1 H100, 80 GB | 203.4 tok/s | 7243 at c=640, saturated | Validated |
 | [`rtx-1`](rtx-1/README.md) | 1 RTX PRO 6000 Blackwell, 97887 MiB | 140.6 tok/s | 5972 at c=1024, rising | Validated |
 
 Single stream is one request at a time, which is what interactive coding feels like. Saturated is total

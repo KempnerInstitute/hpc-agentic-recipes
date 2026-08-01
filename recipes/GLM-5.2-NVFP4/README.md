@@ -5,11 +5,11 @@ and coding model that uses DeepSeek-style sparse attention for long context, at 
 serves through vLLM's Anthropic-compatible API as `glm-5.2`, so Claude Code connects with no proxy.
 
 4-bit weights and activations are what make a model this size fit a single node, and on Blackwell they
-run natively. This is the fastest endpoint in this repo.
+run natively. This is the fastest large model in this repo; the small Gemma models are faster outright.
 
 ## Hardware variants
 
-| Variant | Shape | Single stream | Saturated |
+| Variant | Shape | Single stream | Aggregate |
 | --- | --- | --- | --- |
 | [`rtx-8`](rtx-8/README.md) | 1 RTX PRO 6000 node, 8 GPUs, TP8 | 93.4 tok/s | 1389 at c=256, peak |
 

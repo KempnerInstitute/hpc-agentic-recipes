@@ -14,10 +14,10 @@ needs torch cu130, a conda CUDA 13.0 toolkit, and FlashInfer 0.6.15, while the H
 575 and need the cu129 release wheel instead. All three are TP1 on one GPU with FP8 weights and serve
 the same name, so they differ only in hardware, environment, and rate.
 
-| Variant | GPU | Single stream, FP8 | Saturated, FP8 | Status |
+| Variant | GPU | Single stream, FP8 | Aggregate, FP8 | Status |
 | --- | --- | --- | --- | --- |
 | [`h200-1`](h200-1/README.md) | 1 H200, 143771 MiB | 85.1 tok/s | 3136 at c=1024, saturated | Validated |
-| [`h100-1`](h100-1/README.md) | 1 H100, 80 GB | 67.4 tok/s | 2680 at c=512, saturated | Validated |
+| [`h100-1`](h100-1/README.md) | 1 H100, 80 GB | 67.4 tok/s | 2680 at c=512, peak | Validated |
 | [`rtx-1`](rtx-1/README.md) | 1 RTX PRO 6000 Blackwell, 97887 MiB | 39.5 tok/s | 2139 at c=768, saturated | Validated |
 
 Single stream is one request at a time, which is what interactive coding feels like. Saturated is total

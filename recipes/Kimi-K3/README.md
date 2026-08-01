@@ -13,7 +13,7 @@ nodes at TP16 with EP16 through Marlin W4A16, using `lmsysorg/sglang:kimi-k3-cu1
 | | |
 | --- | --- |
 | Single stream | 40.3 tok/s, and 87.1 with the DSpark draft, a 2.16x speedup |
-| Saturated | 1392 tok/s at concurrency 96, which is its measured ceiling |
+| Aggregate | 1405 tok/s at concurrency 128, its highest measured |
 | Concurrency limit | 156 requests, set by the KDA state pool rather than by KV or compute |
 | Long context | 38.9 tok/s at a 131,072-token prompt, only 3.5 percent below its short-prompt rate |
 | Weights | 102.75 GB per GPU, 69 percent of all HBM across the 16 GPUs |

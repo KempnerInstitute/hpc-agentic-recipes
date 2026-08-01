@@ -47,7 +47,7 @@ the other. See Measured performance below for the full curve and the disclosure 
 GLM-5.2 quantized to NVFP4 by NVIDIA Model Optimizer: a 744B-parameter mixture-of-experts reasoning
 and coding model that uses DeepSeek-style sparse attention for long context, at near-FP8 quality. It
 exposes vLLM's Anthropic-compatible API, so Claude Code connects to it directly with no proxy. This is
-the fastest endpoint in this repo.
+the fastest large model in this repo; the small Gemma models are faster outright.
 
 - Checkpoint directory: `GLM-5.2-NVFP4`
 - Hugging Face repo: `nvidia/GLM-5.2-NVFP4`, quantized from `zai-org/GLM-5.2`

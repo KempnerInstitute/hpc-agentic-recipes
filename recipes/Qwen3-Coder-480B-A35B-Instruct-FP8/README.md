@@ -9,9 +9,9 @@ proxy. It is the largest coding model in this repo that fits a single node.
 
 ## Hardware variants
 
-| Variant | Shape | Single stream | Saturated |
+| Variant | Shape | Single stream | Aggregate |
 | --- | --- | --- | --- |
-| [`rtx-8`](rtx-8/README.md) | 1 RTX PRO 6000 node, 8 GPUs, TP4 x PP2 | 67.7 tok/s | 3040 at c=512, rising |
+| [`rtx-8`](rtx-8/README.md) | 1 RTX PRO 6000 node, 8 GPUs, TP4 x PP2 | 67.7 tok/s | 3238 at c=768, peak |
 | [`h200-4`](h200-4/README.md) | 4 H200 GPUs, TP4 | blocked, 22.2 tok/s eager only | not measurable |
 
 Serve this checkpoint on RTX. Two constraints shape both variants. TP8 is impossible: the

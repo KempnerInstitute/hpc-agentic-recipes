@@ -38,12 +38,12 @@ Every rate in this repo is now slope-measured with `common/tools/bench.sh`. Deta
 
 ## Read the status column
 
-`Validated` means the recipe in this repo was run end to end on the stated date with the stated engine
-version, and its rates were measured from those files rather than carried over. `Untested` means it has
+`Validated` means the recipe in this repo was run end to end with the stated engine version, and its
+rates were measured from those files rather than carried over. `Untested` means it has
 never been launched and every number in it is a prediction. `Blocked` means it does not currently run at
 all, and the recipe says why.
 
-Saturated rates carry one of three labels. `peak` means throughput turned over inside the sweep, so it is
+Aggregate rates carry one of three labels. `peak` means throughput turned over inside the sweep, so it is
 a measured maximum. `saturated` means it varies by under 4 percent from concurrency 512 to 1024, so it is
 a real ceiling even though no single level stands out. `rising` means it was still climbing at 1024, the
 top of the sweep, so the figure is a floor and the true peak is higher.

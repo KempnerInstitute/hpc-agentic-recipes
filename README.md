@@ -1,150 +1,40 @@
 # Local Agentic Coding
 
-Recipes for serving open-weight coding models on the Kempner AI Cluster and driving them with Claude
-Code or any OpenAI-compatible client. Each recipe is self-contained: one directory holds the
-environment build, the launch scripts, the measured performance, and every known failure mode for one
-model on one hardware shape. You should not need to read a second file to use one.
+Recipes for serving open-weight coding models on the Kempner AI Cluster and driving them with Claude Code
+or any OpenAI-compatible client. Each runnable recipe is self-contained: one directory holds the environment
+build, the launch scripts, the measured performance, and every known failure mode for one model on one GPU
+configuration. A few entries in the table below are documentation only, recording why a configuration does
+not work; those ship no scripts and say so.
 
-Both vLLM and SGLang are covered. vLLM is the default, because it exposes an Anthropic-compatible
-`/v1/messages` endpoint that Claude Code uses directly with no proxy.
+Every runnable recipe uses vLLM, which serves an Anthropic-compatible endpoint that Claude Code talks to
+directly. SGLang appears twice in the table and runs neither model here; see
+[docs/engines.md](docs/engines.md).
 
-## Already have an endpoint
+## If someone is already serving a model
 
-If a colleague is already serving a model, you need four variables and no build. About a minute.
+Set four variables:
 
 ```
 export ANTHROPIC_BASE_URL=http://<node>:8000
 export ANTHROPIC_AUTH_TOKEN=<the api key>
-export ANTHROPIC_MODEL=<served model name, for example glm-5.2>
+export ANTHROPIC_MODEL=<served model name>
 export ANTHROPIC_SMALL_FAST_MODEL=<the same name>
 claude
 ```
 
-Use `ANTHROPIC_AUTH_TOKEN`, not `ANTHROPIC_API_KEY`. The latter makes the client send an `x-api-key`
-header, which vLLM ignores, and every request returns 401. Walkthrough in
-[docs/quickstart.md](docs/quickstart.md).
-
-## Want your own endpoint
-
-Start with a single-GPU recipe. It queues fastest and needs one GPU rather than a whole node:
+Use `ANTHROPIC_AUTH_TOKEN`, not `ANTHROPIC_API_KEY`, or every request returns 401. Get the served model
+name from the endpoint:
 
 ```
-# recipes are run from the repo root, so read this one and follow its commands from here
-less recipes/gemma-4-31B-it/h200-1/README.md
+curl -s -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" http://<node>:8000/v1/models
 ```
 
-Then follow that recipe's README from the top. Every recipe has the same shape: configure once, build
-the environment, launch, verify, connect.
+Walkthrough in [docs/quickstart.md](docs/quickstart.md).
 
-Every recipe launches two ways. **Slurm submission is the default** and is what you want: any cluster
-user can submit it and the scheduler picks the node. **Direct SSH is the advanced path**, for people who
-already hold nodes through a reservation and for administrators standing up an endpoint on behalf of
-others, since reserved nodes are removed from the scheduler and cannot be reached with sbatch.
+## To serve your own
 
-Choosing between models is [docs/choosing-a-model.md](docs/choosing-a-model.md). Highest decode rate is
-not the same as best at coding: the fastest model here activates only 4B parameters.
-
-## Models
-
-Every rate below was measured with `common/tools/bench.sh` using slope(128,1152) over output tokens only,
-3 repeats per level, median reported. The vLLM recipes were measured sweeping concurrency 1,
-8, 32, 64, 128, 256, 512, 640, 768, 896 and 1024. Kimi-K3 is the exception: measured under SGLang, sweeping 1, 8, 32, 64, 96 and 128, because its KDA state pool admits at most 156 concurrent
-requests.
-
-| Model | Precision | Hardware | Parallelism | Single stream | Saturated | Context | Status |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| [GLM-5.2](recipes/GLM-5.2-NVFP4/rtx-8) | NVFP4 | 1 RTX node, 8 GPUs | TP8 | 93.4 tok/s | 1389 at c=256, peak | 128K | Validated |
-| [GLM-5.2](recipes/GLM-5.2-FP8/h200-4-nodes2) | FP8 | 2 H200 nodes | TP4 x PP2 | 13.0 tok/s | 5421 at c=640, peak | 1M | Validated |
-| [GLM-4.6](recipes/GLM-4.6-FP8/h200-4) | FP8 | 1 H200 node, 4 GPUs | TP4 | 19.2 tok/s | 8130 at c=1024, rising | 200K | Validated |
-| [Kimi-K2.7-Code](recipes/Kimi-K2.7-Code/rtx-8) | INT4 | 1 RTX node, 8 GPUs | TP8 | 20.7 tok/s | 1839 at c=896, saturated | 32K | Validated |
-| [Kimi-K2.7-Code](recipes/Kimi-K2.7-Code/h200-4-nodes2) | INT4 | 2 H200 nodes | TP4 x PP2 | 30.4 tok/s | 7140 at c=1024, rising | 32K | Validated |
-| [Qwen3-235B-A22B](recipes/Qwen3-235B-A22B/rtx-8) | bf16 | 1 RTX node, 8 GPUs | TP8 | 63.3 tok/s | 3979 at c=512, peak | 40K | Validated |
-| [Qwen3-Coder-480B](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8) | FP8 | 1 RTX node, 8 GPUs | TP4 x PP2 | 67.7 tok/s | 3238 at c=768, peak | 128K | Validated |
-| [DeepSeek-V4-Pro](recipes/DeepSeek-V4-Pro/rtx-8-nodes2) | FP8 with FP4 experts | 2 RTX nodes | TP8 x PP2 | 18.6 tok/s | 3582 at c=1024, rising | 1M | Validated |
-| [Gemma-4-26B-A4B](recipes/gemma-4-26B-A4B-it/h200-1) | bf16 | 1 H200 GPU | TP1 | 236.3 tok/s | 10727 at c=256, peak | 32K | Validated |
-| [Gemma-4-26B-A4B](recipes/gemma-4-26B-A4B-it/h100-1) | bf16 | 1 H100 GPU | TP1 | 203.4 tok/s | 7243 at c=640, peak | 32K | Validated |
-| [Gemma-4-26B-A4B](recipes/gemma-4-26B-A4B-it/rtx-1) | bf16 | 1 RTX GPU | TP1 | 140.6 tok/s | 5972 at c=1024, rising | 32K | Validated |
-| [Gemma-4-31B](recipes/gemma-4-31B-it/h200-1) | FP8 | 1 H200 GPU | TP1 | 85.1 tok/s | 3136 at c=1024, saturated | 32K | Validated |
-| [Gemma-4-31B](recipes/gemma-4-31B-it/h100-1) | FP8 | 1 H100 GPU | TP1 | 67.4 tok/s | 2680 at c=512, saturated | 32K | Validated |
-| [Gemma-4-31B](recipes/gemma-4-31B-it/rtx-1) | FP8 | 1 RTX GPU | TP1 | 39.5 tok/s | 2139 at c=768, saturated | 32K | Validated |
-| [Qwen3-Coder-480B](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/h200-4) | FP8 | 1 H200 node, 4 GPUs | TP4 | does not run | n/a | n/a | Blocked, serve on RTX |
-| [DeepSeek-V4-Pro](recipes/DeepSeek-V4-Pro/h200-4-nodes2) | FP8 with FP4 experts | 2 H200 nodes | TP4 x PP2 | does not run | n/a | n/a | Blocked, serve on RTX |
-| [GLM-5.2 on SGLang](recipes/GLM-5.2-FP8/h200-4-nodes2-sglang) | FP8 | 2 H200 nodes | TP4 x PP2 | never loaded weights | n/a | n/a | Blocked |
-| [Qwen3-Coder-480B](recipes/Qwen3-Coder-480B-A35B-Instruct) | bf16 | 2 to 4 H200 nodes | TP4 x PP | not measured | n/a | 256K | Untested |
-| [Kimi-K3](recipes/Kimi-K3) | MXFP4, QAT | 4 H200 nodes, 16 GPUs | TP16 x EP16 | 40.3 tok/s | 1392 at c=96, peak | 1M | Blocked for vLLM, SGLang only |
-
-Three columns deserve care. **Single stream** is what one person waiting on one response experiences, and
-it is the only number that describes interactive coding. **Saturated** is total output across all streams
-at the stated concurrency, which here runs from 15x the single stream rate to 423x, and says nothing
-about how fast a reply feels. Never quote one where the other belongs.
-
-The label after each saturated figure says how far the measurement got, and it is computed from the
-numbers rather than judged. Taking the spread across concurrency 512 to 1024 as `(max - min) / max`:
-
-- **peak**, 6 recipes. Throughput turned over inside the sweep, so this is a measured maximum.
-- **saturated**, 4 recipes. The spread is under 4 percent across a 2x concurrency range, so no level is
-  meaningfully better and more concurrency buys only queueing delay. Their nominal maxima land at
-  scattered levels, which is noise, not a peak.
-- **rising**, 4 recipes. Still climbing at 1024, so the figure is a floor and the true peak is higher.
-  These stopped at the top of the sweep, not at a hardware limit.
-
-That 1024 is not arbitrary: vLLM resolves `max_num_seqs` from device memory when the flag is absent, which
-is 1024 on every GPU here, so the sweep ran to the cap without ever being queue-limited by it. Going higher
-means raising the cap, which is a different serving configuration. Forcing the cap the other way does
-throttle the result: gemma-4-26B on one RTX GPU measured 5429 tok/s at concurrency 512 at the default and
-4290 with the cap at 256, so a rate quoted without its cap is not reproducible.
-
-Which resource binds first is model-dependent, so measure rather than assume. gemma-4-26B on one RTX GPU
-held KV cache usage at 99 to 100 percent from concurrency 256 upward, while Qwen3-235B across a whole node
-stayed near 24 percent. No recipe preempted at any level.
-
-## Hardware
-
-| Type | Per node | Notes |
-| --- | --- | --- |
-| RTX PRO 6000 Blackwell | 8 GPUs, 97887 MiB each | sm_120, CUDA 13, PCIe with no NVLink |
-| H200 | 4 GPUs, 143771 MiB each | NVLink, CUDA 12.9, driver 575 |
-| H100 | 4 GPUs, 80 GB each | NVLink, CUDA 12.9 |
-
-Partitions are `kempner_rtx`, `kempner_h200`, and `kempner_h100`. Per-GPU allocation limits are 16 CPUs
-on the RTX and H200 partitions and 24 on H100. Maximum wall time is 2 days. All nodes of a given type
-share one hardware specification, so any node in a partition works. More in
-[docs/hardware.md](docs/hardware.md).
-
-## Layout
-
-```
-recipes/<Checkpoint-Name>/<hardware>/     one self-contained recipe
-common/defaults.sh                        cluster paths, tracked so a fresh clone works
-common/site.conf.example                  optional overrides: your nodes, your account
-common/lib/                               repo root and API key resolution
-common/issues/                            canonical failure-mode text plus the recipe matrix
-common/tools/                             for recipe users: bench.sh, search.sh, stop.sh,
-                                          rebuild_envs.sh
-                                          for maintainers: audit_recipes.sh, new_recipe.sh
-common/skills/local-search/               skill that makes a client use search.sh
-docs/                                     cross-model guides
-```
-
-Hardware directory names are `<gpu-type>-<gpus-per-node>[-nodes<N>][-<engine>]`, so `rtx-8` is one full
-RTX node, `h200-4-nodes2` is two H200 nodes, and `h100-1` is a single H100.
-
-## Contributing a model
-
-[docs/adding-a-model.md](docs/adding-a-model.md) is the checklist. In short: scaffold from the nearest
-existing recipe, pin an environment, write the serve invocation, measure with `common/tools/bench.sh`,
-write the README, then run `common/tools/audit_recipes.sh`, which enforces recipe structure, required
-sections, propagated failure-mode text, flag provenance, and agreement between each recipe and the
-tables in this file.
-
-Recipes deliberately repeat the same warnings instead of linking to a shared page, so a reader of one
-recipe sees everything that affects it. That duplication is generated from `common/issues/` and verified
-by the audit, so it cannot silently drift.
-
-## Access
-
-Every vLLM endpoint here requires an API key, supplied through the environment so it never appears in
-`ps` output or in a tracked file:
+First create an API key. The recipes pass it through the environment so it never appears in `ps` output or
+in a tracked file:
 
 ```
 mkdir -p secrets
@@ -152,14 +42,109 @@ printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/vllm_api_key
 chmod 600 secrets/vllm_api_key
 ```
 
-Requests without the key receive HTTP 401. `secrets/` is gitignored. To rotate, replace the file and
-restart the endpoint. The one exception is the [SGLang recipe](recipes/GLM-5.2-FP8/h200-4-nodes2-sglang), which does not
-currently gate its port and says so in its README.
+With a key in place, requests without it receive HTTP 401. Without one the launcher prints a warning and
+serves the endpoint **ungated**, so create the file before launching on a shared network. `secrets/` is
+gitignored. To rotate, replace the file and restart. The SGLang recipe passes no key at all.
+
+Then start with a single-GPU recipe, which needs one GPU rather than a whole node and so queues fastest:
+[recipes/gemma-4-26B-A4B-it/h200-1](recipes/gemma-4-26B-A4B-it/h200-1/README.md). Follow it from the top.
+Runnable recipes all have the same steps: configure once, build the environment, launch, verify, connect.
+Run them from the repo root.
+
+Each launches two ways. Use the Slurm path unless you already hold nodes through a reservation, which puts
+them outside the scheduler.
+
+To choose a model, see [docs/choosing-a-model.md](docs/choosing-a-model.md). The fastest model here is not
+the best coder.
+
+## Models
+
+Rates measured with `common/tools/bench.sh`; method in [docs/benchmarking.md](docs/benchmarking.md).
+`c=256` means 256 concurrent requests. `Context` is what the recipe serves by default; raise it with
+`MAX_MODEL_LEN` up to what the checkpoint supports, which each recipe states.
+
+| Model | Precision | Hardware | Parallelism | Single stream | Aggregate | Context | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| [GLM-5.2](recipes/GLM-5.2-NVFP4/rtx-8) | NVFP4 | 1 RTX node, 8 GPUs | TP8 | 93.4 tok/s | 1389 at c=256, peak | 128K | Validated |
+| [GLM-5.2](recipes/GLM-5.2-FP8/h200-4-nodes2) | FP8 | 2 H200 nodes | TP4 x PP2 | 13.0 tok/s | 5421 at c=640, peak | 128K | Validated |
+| [GLM-4.6](recipes/GLM-4.6-FP8/h200-4) | FP8 | 1 H200 node, 4 GPUs | TP4 | 19.2 tok/s | 8130 at c=1024, rising | 128K | Validated |
+| [Kimi-K2.7-Code](recipes/Kimi-K2.7-Code/rtx-8) | INT4 | 1 RTX node, 8 GPUs | TP8 | 20.7 tok/s | 1839 at c=896, saturated | 32K | Validated |
+| [Kimi-K2.7-Code](recipes/Kimi-K2.7-Code/h200-4-nodes2) | INT4 | 2 H200 nodes | TP4 x PP2 | 30.4 tok/s | 7140 at c=1024, rising | 32K | Validated |
+| [Qwen3-235B-A22B](recipes/Qwen3-235B-A22B/rtx-8) | bf16 | 1 RTX node, 8 GPUs | TP8 | 63.3 tok/s | 3984 at c=512, peak | 40K | Validated |
+| [Qwen3-Coder-480B](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8) | FP8 | 1 RTX node, 8 GPUs | TP4 x PP2 | 67.7 tok/s | 3238 at c=768, peak | 128K | Validated |
+| [DeepSeek-V4-Pro](recipes/DeepSeek-V4-Pro/rtx-8-nodes2) | FP8 with FP4 experts | 2 RTX nodes | TP8 x PP2 | 18.6 tok/s | 3582 at c=1024, rising | 128K | Validated |
+| [Gemma-4-26B-A4B](recipes/gemma-4-26B-A4B-it/h200-1) | bf16 | 1 H200 GPU | TP1 | 236.3 tok/s | 10727 at c=256, peak | 32K | Validated |
+| [Gemma-4-26B-A4B](recipes/gemma-4-26B-A4B-it/h100-1) | bf16 | 1 H100 GPU | TP1 | 203.4 tok/s | 7243 at c=640, saturated | 32K | Validated |
+| [Gemma-4-26B-A4B](recipes/gemma-4-26B-A4B-it/rtx-1) | bf16 | 1 RTX GPU | TP1 | 140.6 tok/s | 5972 at c=1024, rising | 32K | Validated |
+| [Gemma-4-31B](recipes/gemma-4-31B-it/h200-1) | FP8 | 1 H200 GPU | TP1 | 85.1 tok/s | 3136 at c=1024, saturated | 32K | Validated |
+| [Gemma-4-31B](recipes/gemma-4-31B-it/h100-1) | FP8 | 1 H100 GPU | TP1 | 67.4 tok/s | 2680 at c=512, peak | 32K | Validated |
+| [Gemma-4-31B](recipes/gemma-4-31B-it/rtx-1) | FP8 | 1 RTX GPU | TP1 | 39.5 tok/s | 2139 at c=768, saturated | 32K | Validated |
+| [Qwen3-Coder-480B](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/h200-4) | FP8 | 1 H200 node, 4 GPUs | TP4 | 22.2 tok/s eager only | n/a | n/a | Blocked, serve on RTX |
+| [DeepSeek-V4-Pro](recipes/DeepSeek-V4-Pro/h200-4-nodes2) | FP8 with FP4 experts | 2 H200 nodes | TP4 x PP2 | does not run | n/a | n/a | Blocked, serve on RTX |
+| [GLM-5.2 on SGLang](recipes/GLM-5.2-FP8/h200-4-nodes2-sglang) | FP8 | 2 H200 nodes | TP4 x PP2 | never loaded weights | n/a | n/a | Blocked |
+| [Qwen3-Coder-480B](recipes/Qwen3-Coder-480B-A35B-Instruct) | bf16 | 2 to 4 H200 nodes | TP4 x PP | not measured | n/a | n/a | Untested |
+| [Kimi-K3](recipes/Kimi-K3) | MXFP4, QAT | 4 H200 nodes, 16 GPUs | TP16 x EP16 | 40.3 tok/s | 1405 at c=128 | n/a | Blocked for vLLM, SGLang only |
+
+**Single stream** is one request at a time, and it is the only number that describes how fast a reply feels
+to one person. **Aggregate** is total output across every concurrent stream at the stated concurrency, tens
+to hundreds of times larger.
+
+Each label is computed from the numbers in that recipe's own table, as the spread across the levels from
+concurrency 512 upward, `(max - min) / max`. Under 4 percent is `saturated`, meaning more concurrency buys
+only queueing delay. Otherwise `rising` if the highest value sits at the top of the sweep, so the figure is
+a floor, and `peak` if throughput turned over before then. `Status` is defined in
+[docs/choosing-a-model.md](docs/choosing-a-model.md).
+
+Kimi-K3 carries no label: it was measured under SGLang on a shorter sweep, capped at 156 concurrent
+requests, so a rule defined from concurrency 512 upward does not apply. Two other rows also stopped at 512
+because they turned over at 256.
+
+## Hardware
+
+| Type | GPUs per node | Memory per GPU | Partition |
+| --- | --- | --- | --- |
+| RTX PRO 6000 Blackwell | 8 | 96 GiB | `kempner_rtx` |
+| H200 | 4 | 140 GiB | `kempner_h200` |
+| H100 | 4 | 80 GiB | `kempner_h100` |
+
+All nodes of a given type are identical, so any node in a partition works. Details, including allocation
+limits and interconnect, in [docs/hardware.md](docs/hardware.md).
+
+## Layout
+
+```
+recipes/<Checkpoint-Name>/<hardware>/   one self-contained recipe
+common/                                 shared config, libraries, and tools
+docs/                                   guides, indexed below
+```
+
+Hardware directory names are `<gpu-type>-<gpus-per-node>[-nodes<N>][-<engine>]`, so `rtx-8` is one full RTX
+node, `h200-4-nodes2` is two H200 nodes, and `h100-1` is a single H100. Documentation-only entries have no
+hardware level, just the checkpoint directory.
+
+## Guides
+
+| Guide | For |
+| --- | --- |
+| [quickstart.md](docs/quickstart.md) | Connecting to an endpoint someone else runs |
+| [choosing-a-model.md](docs/choosing-a-model.md) | Which model to serve, and what the rates mean |
+| [clients.md](docs/clients.md) | Cline, Aider, Continue, or any OpenAI-compatible client |
+| [engines.md](docs/engines.md) | Why vLLM is the default and when SGLang is worth it |
+| [hardware.md](docs/hardware.md) | Node types, partitions, allocation limits |
+| [downloading-weights.md](docs/downloading-weights.md) | Fetching a new checkpoint |
+| [benchmarking.md](docs/benchmarking.md) | How the rates here were measured, and how to measure your own |
+| [web-search.md](docs/web-search.md) | Giving a local model web search, which the built-in tool cannot do |
+| [troubleshooting.md](docs/troubleshooting.md) | Symptoms across all recipes, for pattern spotting |
+| [adding-a-model.md](docs/adding-a-model.md) | Contributing a recipe |
+
+## Contributing a model
+
+[docs/adding-a-model.md](docs/adding-a-model.md) is the checklist. Run `common/tools/audit_recipes.sh`
+before opening a pull request.
 
 ## Weights
 
 Checkpoints are read from `MODELS_DIR`, which defaults to
-`/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models`. Copying a checkpoint to your own VAST
-scratch space loads faster, and the directory names are identical in both locations, so only
-`MODELS_DIR` changes. Scratch is a 90-day cache rather than the system of record.
+`/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models`. Copying one to your own scratch space loads
+faster and only `MODELS_DIR` changes.
 [docs/downloading-weights.md](docs/downloading-weights.md) covers fetching new checkpoints.

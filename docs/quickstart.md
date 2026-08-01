@@ -14,8 +14,8 @@ export ANTHROPIC_SMALL_FAST_MODEL=<the same name>
 claude
 ```
 
-Served model names are listed in the model table in the top-level README, and you can always ask the
-endpoint:
+Ask the endpoint for the served model name rather than guessing it, since it differs from the
+checkpoint directory name:
 
 ```
 curl -s -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" http://<node>:8000/v1/models

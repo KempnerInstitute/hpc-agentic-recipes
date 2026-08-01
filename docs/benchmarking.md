@@ -6,9 +6,9 @@ There are two, and they are not comparable.
 
 **Single stream** is one request at a time. It is what an interactive coding session feels, and it is
 the right number for agentic work where one person waits on one response. Every figure in this repo's
-model table is single stream.
+model table carries both a single-stream and an aggregate column.
 
-**Saturated** is total tokens per second across many simultaneous requests. Continuous batching decodes
+**Aggregate** is total tokens per second across many simultaneous requests. Continuous batching decodes
 many sequences in one forward pass, so aggregate throughput keeps climbing with concurrency until
 compute, memory bandwidth, or KV cache space runs out. It is the right number when one endpoint serves
 several people.

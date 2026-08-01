@@ -1,8 +1,8 @@
 # OpenAI-compatible clients
 
-Every vLLM recipe here also serves an OpenAI-compatible API at `/v1`, so tools that speak that
-protocol work without a proxy. This is the only way to use the SGLang recipe, which has no
-Anthropic-compatible endpoint.
+Every vLLM recipe here also serves an OpenAI-compatible API at `/v1`, so tools that speak that protocol
+work without a proxy. SGLang serves only this API, with no Anthropic-compatible endpoint, though the SGLang
+recipe here has never loaded weights and ships nothing to run.
 
 Three settings, whatever the client:
 
