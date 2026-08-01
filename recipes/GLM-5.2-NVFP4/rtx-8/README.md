@@ -24,7 +24,7 @@ defaults, so a fresh clone runs as is. Four optional overrides, either exported 
 | `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
 | `GLM52_NVFP4_NODE` | unset | A node you already hold, for the SSH path |
 | `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
-| `ENV_ROOT` | VAST scratch | Where this recipe builds its environment |
+| `ENV_ROOT` | scratch | Where this recipe builds its environment |
 
 ## Status
 
@@ -53,10 +53,10 @@ the fastest large model in this repo; the small Gemma models are faster outright
 - Hugging Face repo: `nvidia/GLM-5.2-NVFP4`, quantized from `zai-org/GLM-5.2`
 - Documented path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/GLM-5.2-NVFP4`
 
-The testbed path works out of the box. Copying the checkpoint into your own VAST scratch space loads
-faster, because VAST outperforms Lustre for this workload, and the directory names are identical in
+The testbed path works out of the box. Copying the checkpoint into your own scratch space loads
+faster, because scratch outperforms Lustre for this workload, and the directory names are identical in
 both locations so only `MODELS_DIR` changes. Scratch has a 90-day retention policy, so treat it as a
-fast cache and keep testbed as the system of record.
+fast cache and keep testbed as the permanent copy.
 
 ## Hardware
 
@@ -68,7 +68,7 @@ fast cache and keep testbed as the system of record.
 | Nodes | 1 |
 | Parallelism | TP8 |
 | Partition | `kempner_rtx` |
-| Per-GPU allocation limit | 16 CPUs, 180 GB host memory |
+| Per-GPU allocation limit | 16 CPUs, about 189 GiB host memory |
 | Maximum wall time | 2 days |
 
 All RTX PRO 6000 nodes on this cluster share one hardware specification, so any node in the partition
@@ -79,10 +79,10 @@ whole node.
 ## Environment build
 
 This recipe builds its own environment, shared with no other recipe: about 9.0 GB for the Python
-environment plus 2.9 GB for a private CUDA 13.0 toolkit. Both land under `ENV_ROOT` on VAST scratch
+environment plus 2.9 GB for a private CUDA 13.0 toolkit. Both land under `ENV_ROOT` on scratch
 rather than in the repo, because startup is dominated by page faulting the torch shared objects and
 stat-ing tens of thousands of small package files: measured on one node, importing torch and vLLM took
-about 14 minutes from Lustre and 9.2 seconds from VAST.
+about 14 minutes from Lustre and 9.2 seconds from scratch.
 
 ```
 bash recipes/GLM-5.2-NVFP4/rtx-8/env/build.sh

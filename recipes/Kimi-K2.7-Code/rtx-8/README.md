@@ -24,13 +24,13 @@ defaults, so a fresh clone runs as is. Four optional overrides, either exported 
 | `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
 | `KIMI_RTX_NODE` | unset | A node you already hold, for the SSH path |
 | `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
-| `ENV_ROOT` | VAST scratch | Where this recipe builds its environment |
+| `ENV_ROOT` | scratch | Where this recipe builds its environment |
 
 ## Status
 
 Validated. The environment was built from `env/build.sh`, the endpoint was
 launched with `serve_ssh.sh` on one RTX PRO 6000 Blackwell node, and throughput was measured with `common/tools/bench.sh`
-across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 5 minutes 28 seconds after launch. The endpoint was still answering after the sweep finished.
+across concurrency 1, 8, 32, 64, 128, 256, 512, 640, 768, 896 and 1024. Ready 5 minutes 28 seconds after launch. The endpoint was still answering after the sweep finished.
 
 The rate recorded earlier, about 21 tok/s, came from a single timed generation, which
 counts prefill and fixed per-request cost as decode time. The 20.7 tok/s here is slope-measured and
@@ -52,10 +52,10 @@ Anthropic-compatible API, so Claude Code connects to it directly with no proxy.
 - Hugging Face repo: `moonshotai/Kimi-K2.7-Code`
 - Documented path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/Kimi-K2.7-Code`
 
-The testbed path works out of the box. Copying the checkpoint into your own VAST scratch space loads
-faster, because VAST outperforms Lustre for this workload, and the directory names are identical in
+The testbed path works out of the box. Copying the checkpoint into your own scratch space loads
+faster, because scratch outperforms Lustre for this workload, and the directory names are identical in
 both locations so only `MODELS_DIR` changes. Scratch has a 90-day retention policy, so treat it as a
-fast cache and keep testbed as the system of record.
+fast cache and keep testbed as the permanent copy.
 
 vLLM 0.25.1 has native `KimiK25ForConditionalGeneration` support, so no out-of-tree model code is
 needed. `--trust-remote-code` is still passed, because the checkpoint ships its own configuration and
@@ -71,7 +71,7 @@ processor modules.
 | Nodes | 1 |
 | Parallelism | TP8 |
 | Partition | `kempner_rtx` |
-| Per-GPU allocation limit | 16 CPUs, 180 GB host memory |
+| Per-GPU allocation limit | 16 CPUs, about 189 GiB host memory |
 | Maximum wall time | 2 days |
 
 All RTX PRO 6000 nodes on this cluster share one hardware specification, so any node in the partition
@@ -82,10 +82,10 @@ works. The checkpoint is about 595 GB across 64 shards, which the earlier run re
 ## Environment build
 
 This recipe builds its own environment, shared with no other recipe: about 9.0 GB for the Python
-environment plus 2.9 GB for a private CUDA 13.0 toolkit. Both land under `ENV_ROOT` on VAST scratch
+environment plus 2.9 GB for a private CUDA 13.0 toolkit. Both land under `ENV_ROOT` on scratch
 rather than in the repo, because startup is dominated by page faulting the torch shared objects and
 stat-ing tens of thousands of small package files: measured on one node, importing torch and vLLM took
-about 14 minutes from Lustre and 9.2 seconds from VAST.
+about 14 minutes from Lustre and 9.2 seconds from scratch.
 
 ```
 bash recipes/Kimi-K2.7-Code/rtx-8/env/build.sh

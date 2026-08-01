@@ -22,17 +22,16 @@ Optional overrides, either exported or set in `common/site.conf`:
 | --- | --- | --- |
 | `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
 | `DSV4_HEAD`, `DSV4_WORKER` | unset | Two nodes you already hold, for the SSH path |
-| `MODELS_DIR` | shared testbed path | Required here, see above |
-| `ENV_ROOT` | VAST scratch | Where this recipe builds its environment |
+| `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
+| `ENV_ROOT` | scratch | Where this recipe builds its environment |
 
 ## Status
 
 Validated. The environment was built from `env/build.sh`, the endpoint was
 launched with `serve_ssh.sh` on two RTX PRO 6000 Blackwell nodes, 16 GPUs via Ray, and throughput was measured with `common/tools/bench.sh`
-across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 20 minutes 8 seconds after launch. The endpoint was still answering after the sweep finished.
+across concurrency 1, 8, 32, 64, 128, 256, 512, 640, 768, 896 and 1024. Ready 20 minutes 8 seconds after launch. The endpoint was still answering after the sweep finished.
 
-This recipe was Untested until this run, and it is the one that settles the FP4 hardware question. The
-same checkpoint fails on H200 inside the CUTLASS w8a8 kernel dispatch, documented in the
+This recipe settles the FP4 hardware question. The same checkpoint fails on H200 inside the CUTLASS w8a8 kernel dispatch, documented in the
 `h200-4-nodes2` sibling. Here it loaded, served a full sweep, and was still healthy afterward, which
 confirms the cause is Blackwell's native FP4 path rather than anything configurable.
 
@@ -76,9 +75,9 @@ Two consequences of the checkpoint's contents that are easy to get wrong:
 - **It needs no `--trust-remote-code`.** `config.json` has no `auto_map` and ships no modeling code
   for the language model, so the engine's own implementation is used.
 
-Copying the checkpoint into VAST scratch loads faster than Lustre for this workload, and the directory
+Copying the checkpoint into scratch loads faster than Lustre for this workload, and the directory
 names are identical in both locations so only `MODELS_DIR` changes. Scratch has a 90-day retention
-policy, so treat it as a fast cache and keep testbed as the system of record once it is populated.
+policy, so treat it as a fast cache and keep testbed as the permanent copy.
 
 ## Hardware
 
@@ -88,7 +87,7 @@ policy, so treat it as a fast cache and keep testbed as the system of record onc
 | Nodes | 2, so 16 GPUs and about 1530 GiB of VRAM |
 | Parallelism | TP8 inside each node, PP2 between them, Ray |
 | Partition | `kempner_rtx` |
-| Per-GPU allocation limit | 16 CPUs, 180 GB host memory |
+| Per-GPU allocation limit | 16 CPUs, about 189 GiB host memory |
 | Maximum wall time | 2 days |
 
 All RTX nodes on this cluster share one hardware specification, so any two nodes in the partition
@@ -98,26 +97,23 @@ work.
 FP4 natively. In vLLM 0.25.1, `expert_dtype: fp4` resolves to the MXFP4 fused-MoE method unless the
 checkpoint also sets `moe_quant_algo: NVFP4`, which this one does not
 (`vllm/models/deepseek_v4/quant_config.py`), so on Hopper the expert layers have no native instruction
-to run on. Earlier planning notes reached the same conclusion from the
-hardware side: two H200 nodes fit by memory, "but Hopper has no FP4 hardware. The FP4 experts would
-fall back to emulation or a Marlin path, which is a correctness and speed risk." Capacity here is not
+to run on and fall back to emulation or a Marlin path. Capacity here is not
 the constraint either way: 16 GPUs at 97887 MiB is about 1530 GiB, and at
 `--gpu-memory-utilization 0.90` about 1377 GiB is usable against 806 GiB of weights, leaving roughly
 570 GiB for KV cache and activations. This model is unusually cheap in KV for its context length,
 because the hybrid compressed attention is designed to be.
 
-An H200 sibling of this recipe exists at `recipes/DeepSeek-V4-Pro/h200-4-nodes2` and is documented as
-expected to be problematic, precisely so that the negative result has somewhere to live. This is the
-recommended variant.
+An H200 sibling exists at `recipes/DeepSeek-V4-Pro/h200-4-nodes2`, where the same checkpoint does not
+run. This is the variant to use.
 
 ## Environment build
 
 This recipe builds its own environment, shared with no other recipe: about 9.0 GB for the Python
 environment, a little more with Ray added, plus 2.9 GB for a private CUDA 13.0 toolkit. Both land under
-`ENV_ROOT` on VAST scratch rather than in the repo, because startup is dominated by page faulting the
+`ENV_ROOT` on scratch rather than in the repo, because startup is dominated by page faulting the
 torch shared objects and stat-ing tens of thousands of small package files: measured on GPU nodes,
 the interval from process start to the first vLLM log line was about 14 minutes from Lustre and 58
-seconds from VAST. A bare torch and vLLM import from VAST is 9.2 seconds, so most of that 58 seconds
+seconds from scratch. A bare torch and vLLM import from scratch is 9.2 seconds, so most of that 58 seconds
 is engine startup rather than filesystem cost.
 
 ```

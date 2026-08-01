@@ -24,7 +24,7 @@ defaults, so a fresh clone runs as is. Optional overrides, either exported or se
 | `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
 | `KIMI_HEAD`, `KIMI_WORKER` | unset | Two nodes you already hold, for the SSH path |
 | `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
-| `ENV_ROOT` | VAST scratch | Where this recipe builds its environment |
+| `ENV_ROOT` | scratch | Where this recipe builds its environment |
 
 One constraint is specific to a two-node recipe: `ENV_ROOT` and `MODELS_DIR` must both resolve to the
 same content on both nodes. The Ray worker imports vLLM from `ENV_ROOT` and reads weights from
@@ -35,7 +35,7 @@ formed, which reads as an engine problem rather than a path problem.
 
 Validated. The environment was built from `env/build.sh`, the endpoint was
 launched with `serve_ssh.sh` on two H200 nodes, 8 GPUs via Ray, and throughput was measured with `common/tools/bench.sh`
-across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 17 minutes 43 seconds after launch. The endpoint was still answering after the sweep finished.
+across concurrency 1, 8, 32, 64, 128, 256, 512, 640, 768, 896 and 1024. Ready 17 minutes 43 seconds after launch. The endpoint was still answering after the sweep finished.
 
 The multimodal profiling deadlock did not occur, confirming that `--skip-mm-profiling
 --mm-processor-cache-gb 0` is still doing its job on this checkpoint.
@@ -73,10 +73,10 @@ vLLM 0.25.1 implements this architecture, so no out-of-tree model code is needed
 `--trust-remote-code` is still passed, because the checkpoint ships its own configuration and processor
 modules, which the multimodal path loads.
 
-The testbed path works out of the box. Copying the checkpoint into your own VAST scratch space loads
-faster, because VAST outperforms Lustre for this workload, and the directory names are identical in both
+The testbed path works out of the box. Copying the checkpoint into your own scratch space loads
+faster, because scratch outperforms Lustre for this workload, and the directory names are identical in both
 locations so only `MODELS_DIR` changes. Scratch has a 90-day retention policy, so treat it as a fast
-cache and keep testbed as the system of record.
+cache and keep testbed as the permanent copy.
 
 ## Hardware
 
@@ -87,7 +87,7 @@ cache and keep testbed as the system of record.
 | Parallelism | TP4 inside each node, PP2 between them, over Ray |
 | Interconnect | NVLink within a node, InfiniBand between nodes |
 | Partition | `kempner_h200` |
-| Per-GPU allocation limit | 16 CPUs, 360 GB host memory |
+| Per-GPU allocation limit | 16 CPUs, about 378 GiB host memory |
 | Maximum wall time | 2 days |
 
 All H200 nodes on this cluster share one hardware specification, so any two nodes in the partition work.
@@ -107,9 +107,9 @@ same checkpoint on one node. This recipe is the faster of the two and the more e
 ## Environment build
 
 This recipe builds its own environment, shared with no other recipe. Roughly 13 GB, and it lands under
-`ENV_ROOT` on VAST scratch rather than in the repo, because startup is dominated by page faulting the
+`ENV_ROOT` on scratch rather than in the repo, because startup is dominated by page faulting the
 torch shared objects and stat-ing tens of thousands of small package files: measured on one node,
-importing torch and vLLM took about 14 minutes from Lustre and 9.2 seconds from VAST.
+importing torch and vLLM took about 14 minutes from Lustre and 9.2 seconds from scratch.
 
 ```
 bash recipes/Kimi-K2.7-Code/h200-4-nodes2/env/build.sh
@@ -471,11 +471,9 @@ which reads like a different problem entirely. `stop.sh` clears both.
 | Engine init: profile, KV cache, warmup | 165 s |
 | Total, vLLM banner to serving | 9 min 11 s |
 
-Measured from the server log, with the checkpoint read from VAST scratch rather than the
-Lustre testbed path. The earlier notes quote about 13 minutes for the whole sequence, and the
-difference is everything before the banner: the Python import of torch and vLLM, which happened from a
-Lustre environment then and happens from VAST scratch now, since `ENV_ROOT` points there. Expect the
-banner sooner with this recipe than with the scripts it came from, and the rest of the table unchanged.
+Measured from the server log, with the checkpoint read from scratch rather than the Lustre testbed
+path. The table starts at the vLLM banner; everything before it is the Python import of torch and
+vLLM, which is fast because `ENV_ROOT` is on scratch and slow from Lustre.
 
 A first launch that appears hung is usually still loading weights, so check the log before killing it.
 The one exception is the multimodal profiling hang above, which is genuinely permanent rather than slow,

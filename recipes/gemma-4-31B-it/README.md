@@ -41,7 +41,7 @@ bound, so unlike the 26B sibling it is worth queueing for the faster card.
 | | |
 | --- | --- |
 | Directory | `gemma-4-31B-it` |
-| Hugging Face repo | not recorded upstream; the testbed copy is the system of record |
+| Hugging Face repo | `google/gemma-4-31B-it` |
 | Documented path | `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/gemma-4-31B-it` |
 | Size on disk | 62.6 GB, bf16, quantized to FP8 at load time rather than from a second checkpoint |
 | Architecture | `Gemma4ForConditionalGeneration`, dense, multimodal |

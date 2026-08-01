@@ -24,7 +24,7 @@ defaults, so a fresh clone runs as is. Optional overrides, either exported or se
 | `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
 | `GLM52_HEAD`, `GLM52_WORKER` | unset | Two nodes you already hold, for the SSH path |
 | `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
-| `ENV_ROOT` | VAST scratch | Where this recipe builds its environment |
+| `ENV_ROOT` | scratch | Where this recipe builds its environment |
 
 One constraint is specific to a two-node recipe: `ENV_ROOT` and `MODELS_DIR` must both resolve to the
 same content on both nodes. The Ray worker imports vLLM from `ENV_ROOT` and reads weights from
@@ -35,7 +35,7 @@ formed, which reads as an engine problem rather than a path problem.
 
 Validated. The environment was built from `env/build.sh`, the endpoint was
 launched with `serve_ssh.sh` on two H200 nodes, 8 GPUs via Ray, and throughput was measured with `common/tools/bench.sh`
-across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 16 minutes 23 seconds after launch. The endpoint was still answering after the sweep finished.
+across concurrency 1, 8, 32, 64, 128, 256, 512, 640, 768, 896 and 1024. Ready 16 minutes 23 seconds after launch. The endpoint was still answering after the sweep finished.
 
 Single stream and saturated throughput are different measurements and neither substitutes for
 the other. See Measured performance below for the full curve and the disclosure block.
@@ -76,10 +76,10 @@ Read from the checkpoint:
 The MTP head cannot be used in this configuration, and the reason is structural rather than a missing
 flag. See "Parallelism and quantization".
 
-The testbed path works out of the box. Copying the checkpoint into your own VAST scratch space loads
-faster, because VAST outperforms Lustre for this workload, and the directory names are identical in both
+The testbed path works out of the box. Copying the checkpoint into your own scratch space loads
+faster, because scratch outperforms Lustre for this workload, and the directory names are identical in both
 locations so only `MODELS_DIR` changes. Scratch has a 90-day retention policy, so treat it as a fast
-cache and keep testbed as the system of record.
+cache and keep testbed as the permanent copy.
 
 ## Hardware
 
@@ -90,7 +90,7 @@ cache and keep testbed as the system of record.
 | Parallelism | TP4 inside each node, PP2 between them, over Ray |
 | Interconnect | NVLink within a node, InfiniBand between nodes |
 | Partition | `kempner_h200` |
-| Per-GPU allocation limit | 16 CPUs, 360 GB host memory |
+| Per-GPU allocation limit | 16 CPUs, about 378 GiB host memory |
 | Maximum wall time | 2 days |
 
 All H200 nodes on this cluster share one hardware specification, so any two nodes in the partition
@@ -106,9 +106,9 @@ not identical in weight footprint. That is expected, not a misconfiguration.
 ## Environment build
 
 This recipe builds its own environment, shared with no other recipe. Roughly 13 GB, and it lands under
-`ENV_ROOT` on VAST scratch rather than in the repo, because startup is dominated by page faulting the
+`ENV_ROOT` on scratch rather than in the repo, because startup is dominated by page faulting the
 torch shared objects and stat-ing tens of thousands of small package files: measured on one node,
-importing torch and vLLM took about 14 minutes from Lustre and 9.2 seconds from VAST.
+importing torch and vLLM took about 14 minutes from Lustre and 9.2 seconds from scratch.
 
 ```
 bash recipes/GLM-5.2-FP8/h200-4-nodes2/env/build.sh
@@ -458,7 +458,7 @@ which reads like a different problem entirely. `stop.sh` clears both.
 | Total, vLLM banner to serving | 5 min 5 s | 19 min 36 s |
 
 Both columns are measured on two different node pairs, with the checkpoint read from
-VAST scratch in both cases. The difference is page cache: the fast pair had already loaded this
+scratch in both cases. The difference is page cache: the fast pair had already loaded this
 checkpoint, the freshly allocated pair had not. Reading from the Lustre testbed path instead is slower
 again.
 

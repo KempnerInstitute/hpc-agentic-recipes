@@ -35,7 +35,7 @@ bound rather than memory bandwidth bound, so an idle RTX GPU beats a queued H200
 | | |
 | --- | --- |
 | Directory | `gemma-4-26B-A4B-it` |
-| Hugging Face repo | not recorded upstream; the testbed copy is the system of record |
+| Hugging Face repo | `google/gemma-4-26B-A4B-it` |
 | Documented path | `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/gemma-4-26B-A4B-it` |
 | Size on disk | 51.6 GB, bf16 |
 | Architecture | `Gemma4ForConditionalGeneration`, 128 experts with top-8 routing, multimodal |

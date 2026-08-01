@@ -91,15 +91,15 @@ checkpoint supports, which each recipe states.
 to one person. **Aggregate** is total output across every concurrent stream at the stated concurrency, tens
 to hundreds of times larger.
 
-Each label is computed from the numbers in that recipe's own table, as the spread across the levels from
-concurrency 512 upward, `(max - min) / max`. Under 4 percent is `saturated`, meaning more concurrency buys
-only queueing delay. Otherwise `rising` if the highest value sits at the top of the sweep, so the figure is
-a floor, and `peak` if throughput turned over before then. `Status` is defined in
-[docs/choosing-a-model.md](docs/choosing-a-model.md).
+Each label comes from that recipe's own table. Where the sweep has two or more levels at concurrency 512
+and above, a spread of `(max - min) / max` under 4 percent across them is `saturated`, meaning more
+concurrency buys only queueing delay. Otherwise the label is `rising` if the highest value sits at the top
+of the sweep, so the figure is a floor, and `peak` if throughput turned over before then. Two sweeps
+stopped at 512 because throughput had already turned over at 256, and both are `peak`. `Status` is defined
+in [docs/choosing-a-model.md](docs/choosing-a-model.md).
 
 Kimi-K3 carries no label: it was measured under SGLang on a shorter sweep, capped at 156 concurrent
-requests, so a rule defined from concurrency 512 upward does not apply. Two other rows also stopped at 512
-because they turned over at 256.
+requests, so a rule defined from concurrency 512 upward does not apply.
 
 ## Hardware
 
@@ -147,6 +147,11 @@ hardware level, just the checkpoint directory.
 
 [docs/adding-a-model.md](docs/adding-a-model.md) is the checklist. Run `common/tools/audit_recipes.sh`
 before opening a pull request.
+
+## License
+
+MIT, in [LICENSE](LICENSE). Model weights are not covered by it: each checkpoint carries its own license
+from whoever published it, and the recipe for that model names the Hugging Face repo where it is stated.
 
 ## Weights
 

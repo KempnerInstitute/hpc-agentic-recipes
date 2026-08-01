@@ -24,13 +24,13 @@ defaults, so a fresh clone runs as is. Optional overrides, either exported or se
 | `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
 | `GEMMA31_H200_NODE` | unset | An H200 node you already hold, for the SSH path |
 | `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
-| `ENV_ROOT` | VAST scratch | Where this recipe builds its environment |
+| `ENV_ROOT` | scratch | Where this recipe builds its environment |
 
 ## Status
 
 Validated. The environment was built from `env/build.sh`, the endpoint was
 launched with `serve_ssh.sh` on one H200 GPU, and throughput was measured with `common/tools/bench.sh`
-across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 4 minutes after launch. The endpoint was still answering after the sweep finished.
+across concurrency 1, 8, 32, 64, 128, 256, 512, 640, 768, 896 and 1024. Ready 4 minutes after launch. The endpoint was still answering after the sweep finished.
 
 Single stream and saturated throughput are different measurements and neither substitutes for
 the other. See Measured performance below for the full curve and the disclosure block.
@@ -44,7 +44,7 @@ the three GPU variants of this checkpoint. It exposes vLLM's Anthropic-compatibl
 connects to it directly with no proxy.
 
 - Checkpoint directory: `gemma-4-31B-it`
-- Hugging Face repo: not recorded upstream; the testbed copy is the system of record
+- Hugging Face repo: `google/gemma-4-31B-it`
 - Documented path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/gemma-4-31B-it`
 - On disk: 62.6 GB, bf16, `Gemma4ForConditionalGeneration`, multimodal, 256K context
 - Optional drafter: `gemma-4-31B-it-assistant`, under 1 GB, wired through `SPEC_DRAFT` and currently
@@ -53,10 +53,10 @@ connects to it directly with no proxy.
 This recipe serves the bf16 checkpoint with FP8 weight quantization applied at load time, which is why
 there is no separate FP8 checkpoint directory.
 
-The testbed path works out of the box. Copying the checkpoint into your own VAST scratch space loads
-faster, because VAST outperforms Lustre for this workload, and the directory names are identical in
+The testbed path works out of the box. Copying the checkpoint into your own scratch space loads
+faster, because scratch outperforms Lustre for this workload, and the directory names are identical in
 both locations so only `MODELS_DIR` changes. Scratch has a 90-day retention policy, so treat it as a
-fast cache and keep testbed as the system of record.
+fast cache and keep testbed as the permanent copy.
 
 ## Hardware
 
@@ -66,7 +66,7 @@ fast cache and keep testbed as the system of record.
 | Nodes | 1 |
 | Parallelism | TP1 |
 | Partition | `kempner_h200` |
-| Per-GPU allocation limit | 16 CPUs, 360 GB host memory |
+| Per-GPU allocation limit | 16 CPUs, about 378 GiB host memory |
 | Maximum wall time | 2 days |
 
 All H200 nodes on this cluster share one hardware specification, so any node in the partition works.
@@ -85,10 +85,10 @@ variants of this checkpoint are three separate recipes rather than one recipe wi
 ## Environment build
 
 This recipe builds its own environment, shared with no other recipe. Roughly 13 GB, and it lands under
-`ENV_ROOT` on VAST scratch rather than in the repo, because startup is dominated by page faulting the
+`ENV_ROOT` on scratch rather than in the repo, because startup is dominated by page faulting the
 torch shared objects and stat-ing tens of thousands of small package files: measured on GPU nodes,
 the interval from process start to the first vLLM log line was about 14 minutes from Lustre and 58
-seconds from VAST. A bare torch and vLLM import from VAST is 9.2 seconds, so most of that 58 seconds
+seconds from scratch. A bare torch and vLLM import from scratch is 9.2 seconds, so most of that 58 seconds
 is engine startup rather than filesystem cost.
 
 ```

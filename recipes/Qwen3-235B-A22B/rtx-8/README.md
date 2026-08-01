@@ -24,13 +24,13 @@ defaults, so a fresh clone runs as is. Four optional overrides, either exported 
 | `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
 | `QWEN3_235B_NODE` | unset | A node you already hold, for the SSH path |
 | `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
-| `ENV_ROOT` | VAST scratch | Where this recipe builds its environment |
+| `ENV_ROOT` | scratch | Where this recipe builds its environment |
 
 ## Status
 
 Validated. The environment was built from `env/build.sh`, the endpoint was
 launched with `serve_ssh.sh` on one RTX PRO 6000 Blackwell node, and throughput was measured with `common/tools/bench.sh`
-across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 4 minutes 55 seconds after launch. The endpoint was still answering after the sweep finished.
+across concurrency 1, 8, 32, 64, 128, 256, 512, 640, 768, 896 and 1024. Ready 4 minutes 55 seconds after launch. The endpoint was still answering after the sweep finished.
 
 Single stream and saturated throughput are different measurements and neither substitutes for
 the other. See Measured performance below for the full curve and the disclosure block.
@@ -46,10 +46,10 @@ vLLM's Anthropic-compatible API, so Claude Code connects to it directly with no 
 - Hugging Face repo: `Qwen/Qwen3-235B-A22B`
 - Documented path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/Qwen3-235B-A22B`
 
-The testbed path works out of the box. Copying the checkpoint into your own VAST scratch space loads
-faster, because VAST outperforms Lustre for this workload, and the directory names are identical in
+The testbed path works out of the box. Copying the checkpoint into your own scratch space loads
+faster, because scratch outperforms Lustre for this workload, and the directory names are identical in
 both locations so only `MODELS_DIR` changes. Scratch has a 90-day retention policy, so treat it as a
-fast cache and keep testbed as the system of record.
+fast cache and keep testbed as the permanent copy.
 
 `qwen3_moe` is native to vLLM 0.25.1, so no out-of-tree model code and no `--trust-remote-code` are
 needed here.
@@ -64,7 +64,7 @@ needed here.
 | Nodes | 1 |
 | Parallelism | TP8 |
 | Partition | `kempner_rtx` |
-| Per-GPU allocation limit | 16 CPUs, 180 GB host memory |
+| Per-GPU allocation limit | 16 CPUs, about 189 GiB host memory |
 | Maximum wall time | 2 days |
 
 All RTX PRO 6000 nodes on this cluster share one hardware specification, so any node in the partition
@@ -74,10 +74,10 @@ works. The checkpoint is bf16 and about 470 GB across 118 shards, so it needs th
 ## Environment build
 
 This recipe builds its own environment, shared with no other recipe: about 9.0 GB for the Python
-environment plus 2.9 GB for a private CUDA 13.0 toolkit. Both land under `ENV_ROOT` on VAST scratch
+environment plus 2.9 GB for a private CUDA 13.0 toolkit. Both land under `ENV_ROOT` on scratch
 rather than in the repo, because startup is dominated by page faulting the torch shared objects and
 stat-ing tens of thousands of small package files: measured on one node, importing torch and vLLM took
-about 14 minutes from Lustre and 9.2 seconds from VAST.
+about 14 minutes from Lustre and 9.2 seconds from scratch.
 
 ```
 bash recipes/Qwen3-235B-A22B/rtx-8/env/build.sh
@@ -265,7 +265,7 @@ per second figure cannot be compared against anything:
 | Hardware | one RTX PRO 6000 Blackwell node, 8 GPUs |
 
 Quote 63.3 tok/s for interactive coding, where one person waits on one
-response. Quote 3979.4 tok/s at concurrency 512 for a shared endpoint under load.
+response. Quote 3983.5 tok/s at concurrency 512 for a shared endpoint under load.
 The two measure different things and neither substitutes for the other.
 
 Throughput **peaks at concurrency 512** and falls to 3750 tok/s by concurrency 1024, so 3979.4 tok/s is a

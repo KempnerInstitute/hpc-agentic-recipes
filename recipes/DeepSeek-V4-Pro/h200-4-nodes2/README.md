@@ -5,10 +5,9 @@ Status: Blocked - vLLM 0.25.1, CUTLASS w8a8 kernel dispatch fails on Hopper
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
 > **Read this before you allocate two H200 nodes.** This checkpoint's routed experts are FP4 and
-> Hopper has no FP4 hardware, so this configuration is expected to be slow at best and to fail at
-> worst. The recommended variant of this model is `recipes/DeepSeek-V4-Pro/rtx-8-nodes2`, on Blackwell
-> RTX nodes, which execute FP4 natively. This recipe exists so that the H200 outcome gets recorded
-> rather than rediscovered: a negative result written down is worth more than a gap.
+> Hopper has no FP4 hardware. It was run here and it does not start. Use
+> `recipes/DeepSeek-V4-Pro/rtx-8-nodes2` on Blackwell RTX nodes, which execute FP4 natively. This page
+> records the H200 failure so it does not have to be rediscovered.
 
 ## Configure once
 
@@ -28,8 +27,8 @@ Optional overrides, either exported or set in `common/site.conf`:
 | --- | --- | --- |
 | `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
 | `DSV4_H200_HEAD`, `DSV4_H200_WORKER` | unset | Two nodes you already hold, for the SSH path |
-| `MODELS_DIR` | shared testbed path | Required here, see above |
-| `ENV_ROOT` | VAST scratch | Where this recipe builds its environment |
+| `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
+| `ENV_ROOT` | scratch | Where this recipe builds its environment |
 
 ## Status
 
@@ -58,21 +57,15 @@ converting the experts is the only real Hopper option. And an earlier attempt fa
 `--kv-cache-dtype fp8_ds_mla`; that flag is now present, which is how this run got far enough to reach
 the FP4 problem.
 
-Untested, and expected to be problematic. This recipe has never been launched: no job has been
-submitted, no weights have been loaded, and no decode rate has been measured.
-
-The specific concern is precision, not capacity. `config.json` sets `expert_dtype: fp4`, and vLLM
+The cause is precision, not capacity. `config.json` sets `expert_dtype: fp4`, and vLLM
 0.25.1 resolves that to its MXFP4 fused-MoE method, since the checkpoint sets no
 `moe_quant_algo: NVFP4` override (`vllm/models/deepseek_v4/quant_config.py`). MXFP4 is a
 Blackwell-native format, and Hopper has no FP4 tensor cores, so the expert layers must either be
-emulated or routed through a 4-bit weight-only kernel such as Marlin. Earlier planning notes put it
-this way: two H200 nodes fit by memory, "but Hopper has no FP4 hardware. The FP4 experts would fall
-back to emulation or a Marlin path, which is a correctness and speed risk." Nobody has yet checked
-which of the three outcomes happens here: a clean fallback that is merely slow, a numerically wrong
-fallback, or a hard startup failure.
+emulated or routed through a 4-bit weight-only kernel such as Marlin. Of the three possible outcomes,
+a clean fallback that is merely slow, a numerically wrong fallback, or a hard startup failure, the
+measured one is the third: engine initialization fails on every worker, as recorded above.
 
-If this recipe turns out to be unusable and H200 is the only hardware available, the one option that
-actually addresses the problem is requantizing the experts to FP8: the checkpoint ships an
+If H200 is the only hardware available, the one option that addresses the problem is requantizing the experts to FP8: the checkpoint ships an
 `inference/convert.py` whose `--expert-dtype` argument accepts `fp8` and `fp4`, and vLLM's DeepSeek-V4
 quantization config has an explicit `expert_dtype == "fp8"` path that falls through to the ordinary
 block-scaled FP8 MoE method, which Hopper runs natively. That has not been tried here, and it costs a
@@ -119,9 +112,9 @@ Two consequences of the checkpoint's contents that are easy to get wrong:
 - **It needs no `--trust-remote-code`.** `config.json` has no `auto_map` and ships no modeling code
   for the language model, so the engine's own implementation is used.
 
-Copying the checkpoint into VAST scratch loads faster than Lustre for this workload, and the directory
+Copying the checkpoint into scratch loads faster than Lustre for this workload, and the directory
 names are identical in both locations so only `MODELS_DIR` changes. Scratch has a 90-day retention
-policy, so treat it as a fast cache and keep testbed as the system of record once it is populated.
+policy, so treat it as a fast cache and keep testbed as the permanent copy.
 
 ## Hardware
 
@@ -131,7 +124,7 @@ policy, so treat it as a fast cache and keep testbed as the system of record onc
 | Nodes | 2, so 8 GPUs and about 1123 GiB of VRAM |
 | Parallelism | TP4 inside each node, PP2 between them, Ray |
 | Partition | `kempner_h200` |
-| Per-GPU allocation limit | 16 CPUs, 360 GB host memory |
+| Per-GPU allocation limit | 16 CPUs, about 378 GiB host memory |
 | Maximum wall time | 2 days |
 
 All H200 nodes on this cluster share one hardware specification, so any two nodes in the partition
@@ -149,10 +142,10 @@ FP4 experts natively.
 ## Environment build
 
 This recipe builds its own environment, shared with no other recipe. Roughly 13 GB, and it lands under
-`ENV_ROOT` on VAST scratch rather than in the repo, because startup is dominated by page faulting the
+`ENV_ROOT` on scratch rather than in the repo, because startup is dominated by page faulting the
 torch shared objects and stat-ing tens of thousands of small package files: measured on GPU nodes,
 the interval from process start to the first vLLM log line was about 14 minutes from Lustre and 58
-seconds from VAST. A bare torch and vLLM import from VAST is 9.2 seconds, so most of that 58 seconds
+seconds from scratch. A bare torch and vLLM import from scratch is 9.2 seconds, so most of that 58 seconds
 is engine startup rather than filesystem cost.
 
 ```
