@@ -1,6 +1,6 @@
 # gemma-4-26B-A4B-it on one H100 GPU
 
-Status: Validated - 2026-07-31, vLLM 0.25.1+cu129, protocol: slope(128,1152) swept at concurrency 1 through 512
+Status: Validated - 2026-07-31, vLLM 0.25.1+cu129, protocol: slope(128,1152) swept at concurrency 1 through 1024
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -237,7 +237,11 @@ instead of the hosted tool.
 | Concurrency 64 | 5273.5 tok/s | 82.4 tok/s | TTFT median 130 ms, p90 166 ms, n=3 spanning 5267.2 to 5345.9 |
 | Concurrency 128 | 5417.1 tok/s | 42.3 tok/s | TTFT median 197 ms, p90 293 ms, n=3 spanning 5275.6 to 5465.3 |
 | Concurrency 256 | 6614.8 tok/s | 25.8 tok/s | TTFT median 332 ms, p90 545 ms, n=3 spanning 6579.0 to 6619.5 |
-| Concurrency 512 (highest measured) | 7164.7 tok/s | 14.0 tok/s | TTFT median 566 ms, p90 974 ms, n=3 spanning 7142.7 to 7173.4 |
+| Concurrency 512 | 7164.7 tok/s | 14.0 tok/s | TTFT median 566 ms, p90 974 ms, n=3 spanning 7142.7 to 7173.4 |
+| Concurrency 640 (peak) | 7242.8 tok/s | 11.3 tok/s | TTFT median 703 ms, p90 1214 ms, n=3 spanning 7236.1 to 7251.9 |
+| Concurrency 768 | 7196.0 tok/s | 9.4 tok/s | TTFT median 835 ms, p90 1443 ms, n=3 spanning 7161.1 to 7243.5 |
+| Concurrency 896 | 7147.8 tok/s | 8.0 tok/s | TTFT median 948 ms, p90 1653 ms, n=3 spanning 7139.1 to 7218.1 |
+| Concurrency 1024 | 7082.7 tok/s | 6.9 tok/s | TTFT median 1107 ms, p90 1929 ms, n=3 spanning 7073.2 to 7137.4 |
 
 Measured 2026-07-31 with `common/tools/bench.sh`. Full disclosure, without which a tokens
 per second figure cannot be compared against anything:
@@ -247,19 +251,20 @@ per second figure cannot be compared against anything:
 | ISL, input tokens | 19 |
 | OSL, output tokens | 1152, as the slope between 128 and 1152 |
 | Counted | output tokens only, never input plus output |
-| Concurrency levels | 1,8,32,64,128,256,512 |
+| Concurrency levels | 1,8,32,64,128,256,512,640,768,896,1024 |
 | Protocol | slope(128,1152), 3 repeats per level, median reported |
+| `max_num_seqs` | engine default, 1024 on this hardware |
 | Hardware | one H100 GPU |
 
 Quote 203.4 tok/s for interactive coding, where one person waits on one
-response. Quote 7164.7 tok/s at concurrency 512 for a shared endpoint under load.
+response. Quote 7242.8 tok/s at concurrency 640 for a shared endpoint under load.
 The two measure different things and neither substitutes for the other.
 
-Throughput was still rising at concurrency 512, the top of the sweep, so 7164.7 tok/s is a
-floor and not a ceiling. The true saturation point is above what was measured, and the
-sequence cap is not what stopped it: vLLM resolves `max_num_seqs` from device memory when the flag is
-absent, which is 1024 on this hardware, so the sweep ran entirely below the cap. Per stream rate in the
-table above shows what each added stream costs one user.
+Throughput **peaks at concurrency 640** and falls to 7083 tok/s by concurrency 1024, so 7242.8 tok/s is a
+measured ceiling for this recipe rather than the edge of the sweep.
+
+Concurrency 512 was measured in both runs, at 7164.7 and 6773.9 tok/s, a -5.5 percent
+difference. That is the check that the two halves of this curve are comparable.
 
 The input sequence here is short, which is the best case for decode. Measure with
 `--prompt-tokens` at your working context before quoting a number for long-context work.

@@ -14,14 +14,15 @@ expert, the dense layers, `lm_head` and the vision tower stay bf16.
 
 | Variant | Shape | Single stream | Saturated |
 | --- | --- | --- | --- |
-| [`rtx-8`](rtx-8/README.md) | 1 RTX PRO 6000 node, 8 GPUs, TP8 | 20.7 tok/s | 1819 at c=512, rising |
-| [`h200-4-nodes2`](h200-4-nodes2/README.md) | 2 H200 nodes, 4 GPUs each, TP4 x PP2 | 30.4 tok/s | 5669 at c=512, rising |
+| [`rtx-8`](rtx-8/README.md) | 1 RTX PRO 6000 node, 8 GPUs, TP8 | 20.7 tok/s | 1839 at c=896, saturated |
+| [`h200-4-nodes2`](h200-4-nodes2/README.md) | 2 H200 nodes, 4 GPUs each, TP4 x PP2 | 30.4 tok/s | 7140 at c=1024, rising |
 
 Measured 2026-07-31, protocol slope(128,1152) over output tokens only, 3 repeats per level, concurrency
-1 through 512. Single stream is one request at a time; saturated is total output across all concurrent
-streams. `rising` means throughput had not turned over at 512, the top of the sweep, so both saturated
-figures are floors. The two H200 nodes are worth it either way: they are 1.5x the single stream rate and
-3.1x the saturated rate of one RTX node.
+1 through 1024. Single stream is one request at a time; saturated is total output across all concurrent
+streams. The two variants behave differently under load, which the labels record: the RTX node is
+`saturated`, varying under 4 percent from concurrency 512 to 1024 so more concurrency buys nothing, while
+the H200 pair is still `rising` at 1024 and its figure is a floor. So the H200 pair is 1.5x the single
+stream rate of one RTX node and at least 3.9x its saturated rate.
 
 The two-node H200 configuration is the faster of the two, because its tensor-parallel all-reduces stay
 inside a node and cross NVLink, while the RTX node has to use PCIe. The RTX variant wins on cost: one

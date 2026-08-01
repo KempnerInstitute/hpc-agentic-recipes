@@ -19,9 +19,12 @@ only to concurrency 32 would have reported 683 and understated the endpoint's ca
 stream measurement leaves the GPU nowhere near saturated, which is correct for latency and misleading
 for capacity.
 
-Sweep far enough to see throughput turn over. Of the 14 recipes measured here on 2026-07-31, only two
-peaked inside a sweep that reached concurrency 512; the other twelve were still climbing at the top, so
-their aggregate figures are floors rather than ceilings.
+Sweep far enough to see throughput turn over, and be explicit when you have not. A first sweep here
+reached concurrency 512 and left 12 of 14 recipes still climbing, so those figures were floors rather
+than ceilings. Extending to 1024 in 128 increments resolved most of them: 6 recipes turned over at a
+measured peak, 4 proved flat to within 4 percent across concurrency 512 to 1024, and 4 were still rising
+at 1024 and remain floors. Publishing the first sweep's maxima as ceilings would have understated six
+recipes and overstated nothing, which is the safer direction to be wrong in but still wrong.
 
 Report the sequence cap next to the rate. vLLM sets `max_num_seqs` from device memory when the flag is
 absent, and on every GPU here that resolves to 1024, read from four running engines rather than from

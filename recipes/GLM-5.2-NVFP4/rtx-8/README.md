@@ -264,14 +264,15 @@ per second figure cannot be compared against anything:
 | Counted | output tokens only, never input plus output |
 | Concurrency levels | 1,8,32,64,128,256,512 |
 | Protocol | slope(128,1152), 3 repeats per level, median reported |
+| `max_num_seqs` | engine default, 1024 on this hardware |
 | Hardware | one RTX PRO 6000 Blackwell node, 8 GPUs |
 
 Quote 93.4 tok/s for interactive coding, where one person waits on one
 response. Quote 1389.1 tok/s at concurrency 256 for a shared endpoint under load.
 The two measure different things and neither substitutes for the other.
 
-Throughput peaks at concurrency 256 and falls to 1239.8 tok/s by 512, so
-1389.1 tok/s is a real ceiling for this recipe rather than the edge of the sweep.
+Throughput **peaks at concurrency 256** and falls to 1240 tok/s by concurrency 512, so 1389.1 tok/s is a
+measured ceiling for this recipe rather than the edge of the sweep.
 
 The input sequence here is short, which is the best case for decode. Measure with
 `--prompt-tokens` at your working context before quoting a number for long-context work.

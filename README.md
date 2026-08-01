@@ -46,25 +46,26 @@ not the same as best at coding: the fastest model here activates only 4B paramet
 
 ## Models
 
-Every rate below was measured on 2026-07-31 with `common/tools/bench.sh` at concurrency 1, 8, 32, 64,
-128, 256 and 512, using slope(128,1152) over output tokens only, 3 repeats per level, median reported.
+Every rate below was measured on 2026-07-31 with `common/tools/bench.sh`, sweeping concurrency 1, 8, 32,
+64, 128, 256, 512, 640, 768, 896 and 1024, using slope(128,1152) over output tokens only, 3 repeats per
+level, median reported.
 
 | Model | Precision | Hardware | Parallelism | Single stream | Saturated | Context | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | [GLM-5.2](recipes/GLM-5.2-NVFP4/rtx-8) | NVFP4 | 1 RTX node, 8 GPUs | TP8 | 93.4 tok/s | 1389 at c=256, peak | 128K | Validated |
-| [GLM-5.2](recipes/GLM-5.2-FP8/h200-4-nodes2) | FP8 | 2 H200 nodes | TP4 x PP2 | 13.0 tok/s | 5405 at c=512, rising | 1M | Validated |
-| [GLM-4.6](recipes/GLM-4.6-FP8/h200-4) | FP8 | 1 H200 node, 4 GPUs | TP4 | 19.2 tok/s | 6300 at c=512, rising | 200K | Validated |
-| [Kimi-K2.7-Code](recipes/Kimi-K2.7-Code/rtx-8) | INT4 | 1 RTX node, 8 GPUs | TP8 | 20.7 tok/s | 1819 at c=512, rising | 32K | Validated |
-| [Kimi-K2.7-Code](recipes/Kimi-K2.7-Code/h200-4-nodes2) | INT4 | 2 H200 nodes | TP4 x PP2 | 30.4 tok/s | 5669 at c=512, rising | 32K | Validated |
-| [Qwen3-235B-A22B](recipes/Qwen3-235B-A22B/rtx-8) | bf16 | 1 RTX node, 8 GPUs | TP8 | 63.3 tok/s | 3984 at c=512, rising | 40K | Validated |
-| [Qwen3-Coder-480B](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8) | FP8 | 1 RTX node, 8 GPUs | TP4 x PP2 | 67.7 tok/s | 3040 at c=512, rising | 128K | Validated |
-| [DeepSeek-V4-Pro](recipes/DeepSeek-V4-Pro/rtx-8-nodes2) | FP8 with FP4 experts | 2 RTX nodes | TP8 x PP2 | 18.6 tok/s | 2959 at c=512, rising | 1M | Validated |
+| [GLM-5.2](recipes/GLM-5.2-FP8/h200-4-nodes2) | FP8 | 2 H200 nodes | TP4 x PP2 | 13.0 tok/s | 5421 at c=640, peak | 1M | Validated |
+| [GLM-4.6](recipes/GLM-4.6-FP8/h200-4) | FP8 | 1 H200 node, 4 GPUs | TP4 | 19.2 tok/s | 8130 at c=1024, rising | 200K | Validated |
+| [Kimi-K2.7-Code](recipes/Kimi-K2.7-Code/rtx-8) | INT4 | 1 RTX node, 8 GPUs | TP8 | 20.7 tok/s | 1839 at c=896, saturated | 32K | Validated |
+| [Kimi-K2.7-Code](recipes/Kimi-K2.7-Code/h200-4-nodes2) | INT4 | 2 H200 nodes | TP4 x PP2 | 30.4 tok/s | 7140 at c=1024, rising | 32K | Validated |
+| [Qwen3-235B-A22B](recipes/Qwen3-235B-A22B/rtx-8) | bf16 | 1 RTX node, 8 GPUs | TP8 | 63.3 tok/s | 3979 at c=512, peak | 40K | Validated |
+| [Qwen3-Coder-480B](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8) | FP8 | 1 RTX node, 8 GPUs | TP4 x PP2 | 67.7 tok/s | 3238 at c=768, peak | 128K | Validated |
+| [DeepSeek-V4-Pro](recipes/DeepSeek-V4-Pro/rtx-8-nodes2) | FP8 with FP4 experts | 2 RTX nodes | TP8 x PP2 | 18.6 tok/s | 3582 at c=1024, rising | 1M | Validated |
 | [Gemma-4-26B-A4B](recipes/gemma-4-26B-A4B-it/h200-1) | bf16 | 1 H200 GPU | TP1 | 236.3 tok/s | 10727 at c=256, peak | 32K | Validated |
-| [Gemma-4-26B-A4B](recipes/gemma-4-26B-A4B-it/h100-1) | bf16 | 1 H100 GPU | TP1 | 203.4 tok/s | 7165 at c=512, rising | 32K | Validated |
-| [Gemma-4-26B-A4B](recipes/gemma-4-26B-A4B-it/rtx-1) | bf16 | 1 RTX GPU | TP1 | 140.6 tok/s | 5404 at c=512, rising | 32K | Validated |
-| [Gemma-4-31B](recipes/gemma-4-31B-it/h200-1) | FP8 | 1 H200 GPU | TP1 | 85.1 tok/s | 3097 at c=512, rising | 32K | Validated |
-| [Gemma-4-31B](recipes/gemma-4-31B-it/h100-1) | FP8 | 1 H100 GPU | TP1 | 67.4 tok/s | 2680 at c=512, rising | 32K | Validated |
-| [Gemma-4-31B](recipes/gemma-4-31B-it/rtx-1) | FP8 | 1 RTX GPU | TP1 | 39.5 tok/s | 2101 at c=512, rising | 32K | Validated |
+| [Gemma-4-26B-A4B](recipes/gemma-4-26B-A4B-it/h100-1) | bf16 | 1 H100 GPU | TP1 | 203.4 tok/s | 7243 at c=640, peak | 32K | Validated |
+| [Gemma-4-26B-A4B](recipes/gemma-4-26B-A4B-it/rtx-1) | bf16 | 1 RTX GPU | TP1 | 140.6 tok/s | 5972 at c=1024, rising | 32K | Validated |
+| [Gemma-4-31B](recipes/gemma-4-31B-it/h200-1) | FP8 | 1 H200 GPU | TP1 | 85.1 tok/s | 3136 at c=1024, saturated | 32K | Validated |
+| [Gemma-4-31B](recipes/gemma-4-31B-it/h100-1) | FP8 | 1 H100 GPU | TP1 | 67.4 tok/s | 2680 at c=512, saturated | 32K | Validated |
+| [Gemma-4-31B](recipes/gemma-4-31B-it/rtx-1) | FP8 | 1 RTX GPU | TP1 | 39.5 tok/s | 2139 at c=768, saturated | 32K | Validated |
 | [Qwen3-Coder-480B](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/h200-4) | FP8 | 1 H200 node, 4 GPUs | TP4 | does not run | n/a | n/a | Blocked, serve on RTX |
 | [DeepSeek-V4-Pro](recipes/DeepSeek-V4-Pro/h200-4-nodes2) | FP8 with FP4 experts | 2 H200 nodes | TP4 x PP2 | does not run | n/a | n/a | Blocked, serve on RTX |
 | [GLM-5.2 on SGLang](recipes/GLM-5.2-FP8/h200-4-nodes2-sglang) | FP8 | 2 H200 nodes | TP4 x PP2 | never loaded weights | n/a | n/a | Blocked |
@@ -73,18 +74,28 @@ Every rate below was measured on 2026-07-31 with `common/tools/bench.sh` at conc
 
 Three columns deserve care. **Single stream** is what one person waiting on one response experiences, and
 it is the only number that describes interactive coding. **Saturated** is total output across all streams
-at the stated concurrency, which here runs from 15x the single stream rate to 416x, and says nothing
-about how fast a reply feels. Never quote one where the other belongs. The ratio is largest for the slow
-big-MoE recipes and smallest for GLM-5.2-NVFP4, whose speculative decoding already spends spare capacity
-on latency rather than leaving it for extra streams. `rising` means throughput had not yet turned over at
-concurrency 512, the top of the sweep, so that figure is a floor rather than a ceiling; only the two
-marked `peak` were measured past their maximum. These numbers were taken at vLLM's default
-`max_num_seqs`, which resolves to 1024 on every GPU here, so the sweep ran entirely below the cap and no
-level was queue-limited. Forcing the cap below the requested concurrency does throttle the result:
-gemma-4-26B on one RTX GPU measured 5429 tok/s at concurrency 512 at the default and 4290 with the cap at
-256. Which resource binds first is model-dependent, so measure rather than assume: that recipe held KV
-cache usage at 99 to 100 percent from concurrency 256 upward, while Qwen3-235B across a whole node stayed
-near 24 percent. Neither preempted at any level.
+at the stated concurrency, which here runs from 15x the single stream rate to 423x, and says nothing
+about how fast a reply feels. Never quote one where the other belongs.
+
+The label after each saturated figure says how far the measurement got, and it is computed from the
+numbers rather than judged. Taking the spread across concurrency 512 to 1024 as `(max - min) / max`:
+
+- **peak**, 6 recipes. Throughput turned over inside the sweep, so this is a measured maximum.
+- **saturated**, 4 recipes. The spread is under 4 percent across a 2x concurrency range, so no level is
+  meaningfully better and more concurrency buys only queueing delay. Their nominal maxima land at
+  scattered levels, which is noise, not a peak.
+- **rising**, 4 recipes. Still climbing at 1024, so the figure is a floor and the true peak is higher.
+  These stopped at the top of the sweep, not at a hardware limit.
+
+That 1024 is not arbitrary: vLLM resolves `max_num_seqs` from device memory when the flag is absent, which
+is 1024 on every GPU here, so the sweep ran to the cap without ever being queue-limited by it. Going higher
+means raising the cap, which is a different serving configuration. Forcing the cap the other way does
+throttle the result: gemma-4-26B on one RTX GPU measured 5429 tok/s at concurrency 512 at the default and
+4290 with the cap at 256, so a rate quoted without its cap is not reproducible.
+
+Which resource binds first is model-dependent, so measure rather than assume. gemma-4-26B on one RTX GPU
+held KV cache usage at 99 to 100 percent from concurrency 256 upward, while Qwen3-235B across a whole node
+stayed near 24 percent. No recipe preempted at any level.
 
 ## Hardware
 

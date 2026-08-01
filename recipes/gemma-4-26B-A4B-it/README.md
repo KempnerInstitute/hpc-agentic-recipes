@@ -17,15 +17,15 @@ they differ only in hardware, environment, and rate.
 | Variant | GPU | Single stream | Saturated | Status |
 | --- | --- | --- | --- | --- |
 | [`h200-1`](h200-1/README.md) | 1 H200, 143771 MiB | 236.3 tok/s | 10727 at c=256, peak | Validated |
-| [`h100-1`](h100-1/README.md) | 1 H100, 80 GB | 203.4 tok/s | 7165 at c=512, rising | Validated |
-| [`rtx-1`](rtx-1/README.md) | 1 RTX PRO 6000 Blackwell, 97887 MiB | 140.6 tok/s | 5404 at c=512, rising | Validated |
+| [`h100-1`](h100-1/README.md) | 1 H100, 80 GB | 203.4 tok/s | 7243 at c=640, peak | Validated |
+| [`rtx-1`](rtx-1/README.md) | 1 RTX PRO 6000 Blackwell, 97887 MiB | 140.6 tok/s | 5972 at c=1024, rising | Validated |
 
 Single stream is one request at a time, which is what interactive coding feels like. Saturated is total
-output across every concurrent stream at the stated concurrency, 30 to 45 times larger here, and it says
-nothing about how fast a single reply arrives. `rising` means throughput had not turned over at
-concurrency 512, the top of the sweep, so that figure is a floor and the real ceiling is higher; only
-H200 was measured past its maximum. All three measured 2026-07-31, bf16, 32K context, protocol
-slope(128,1152) over output tokens only, 3 repeats per level, concurrency 1 through 512.
+output across every concurrent stream at the stated concurrency, 36 to 45 times larger here, and it says
+nothing about how fast a single reply arrives. The labels differ by GPU: H200 and H100 both turned over,
+at concurrency 256 and 640, so those are measured `peak` values, while the RTX variant was still
+`rising` at 1024 and its figure is a floor. All three measured 2026-07-31, bf16, 32K context, protocol
+slope(128,1152) over output tokens only, 3 repeats per level, concurrency 1 through 1024.
 
 Pick by what you can get. The spread across GPU types is only 1.7x, because this model is host overhead
 bound rather than memory bandwidth bound, so an idle RTX GPU beats a queued H200.

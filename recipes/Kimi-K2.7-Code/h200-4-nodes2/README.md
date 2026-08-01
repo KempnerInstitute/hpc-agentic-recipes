@@ -1,6 +1,6 @@
 # Kimi-K2.7-Code on two H200 nodes
 
-Status: Validated - 2026-07-31, vLLM 0.25.1+cu129, protocol: slope(128,1152) swept at concurrency 1 through 512
+Status: Validated - 2026-07-31, vLLM 0.25.1+cu129, protocol: slope(128,1152) swept at concurrency 1 through 1024
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -291,7 +291,11 @@ instead of the hosted tool.
 | Concurrency 64 | 1755.1 tok/s | 27.4 tok/s | TTFT median 221 ms, p90 314 ms, n=3 spanning 1751.6 to 1759.4 |
 | Concurrency 128 | 2648.9 tok/s | 20.7 tok/s | TTFT median 302 ms, p90 406 ms, n=3 spanning 2645.7 to 2649.9 |
 | Concurrency 256 | 3641.4 tok/s | 14.2 tok/s | TTFT median 410 ms, p90 585 ms, n=3 spanning 3640.5 to 3641.6 |
-| Concurrency 512 (highest measured) | 5668.7 tok/s | 11.1 tok/s | TTFT median 630 ms, p90 988 ms, n=3 spanning 5667.3 to 5676.9 |
+| Concurrency 512 | 5668.7 tok/s | 11.1 tok/s | TTFT median 630 ms, p90 988 ms, n=3 spanning 5667.3 to 5676.9 |
+| Concurrency 640 | 6144.7 tok/s | 9.6 tok/s | TTFT median 772 ms, p90 1185 ms, n=3 spanning 6140.9 to 6157.0 |
+| Concurrency 768 | 6170.5 tok/s | 8.0 tok/s | TTFT median 856 ms, p90 1385 ms, n=3 spanning 6167.9 to 6176.9 |
+| Concurrency 896 | 6577.4 tok/s | 7.3 tok/s | TTFT median 964 ms, p90 1597 ms, n=3 spanning 6576.5 to 6577.9 |
+| Concurrency 1024 (rising) | 7140.3 tok/s | 7.0 tok/s | TTFT median 1011 ms, p90 1689 ms, n=3 spanning 7136.3 to 7148.0 |
 
 Measured 2026-07-31 with `common/tools/bench.sh`, endpoint ready 17m 43s after launch. Full disclosure, without which a tokens
 per second figure cannot be compared against anything:
@@ -301,19 +305,25 @@ per second figure cannot be compared against anything:
 | ISL, input tokens | 15 |
 | OSL, output tokens | 1152, as the slope between 128 and 1152 |
 | Counted | output tokens only, never input plus output |
-| Concurrency levels | 1,8,32,64,128,256,512 |
+| Concurrency levels | 1,8,32,64,128,256,512,640,768,896,1024 |
 | Protocol | slope(128,1152), 3 repeats per level, median reported |
+| `max_num_seqs` | engine default, 1024 on this hardware |
 | Hardware | two H200 nodes, 8 GPUs |
 
 Quote 30.4 tok/s for interactive coding, where one person waits on one
-response. Quote 5668.7 tok/s at concurrency 512 for a shared endpoint under load.
+response. Quote 7140.3 tok/s at concurrency 1024 for a shared endpoint under load.
 The two measure different things and neither substitutes for the other.
 
-Throughput was still rising at concurrency 512, the top of the sweep, so 5668.7 tok/s is a
-floor and not a ceiling. The true saturation point is above what was measured, and the
-sequence cap is not what stopped it: vLLM resolves `max_num_seqs` from device memory when the flag is
-absent, which is 1024 on this hardware, so the sweep ran entirely below the cap. Per stream rate in the
-table above shows what each added stream costs one user.
+Throughput was **still rising at concurrency 1024**, 26 percent above its own concurrency 512 at the top of the sweep,
+so 7140.3 tok/s is a floor rather than a ceiling. The sequence cap is not what stopped it:
+`max_num_seqs` resolves to 1024 on this hardware and the sweep ran to that level, so finding the
+true peak needs the cap raised, which is a different serving configuration.
+
+Concurrency 512 was measured in both runs, at 5668.7 and 5677.6 tok/s, a +0.2 percent
+difference. That is the check that the two halves of this curve are comparable.
+
+Scheduler counters over the extended levels: KV cache usage reached 73 percent, the running
+batch reached 1024 requests, and there were no preemptions at any level.
 
 The input sequence here is short, which is the best case for decode. Measure with
 `--prompt-tokens` at your working context before quoting a number for long-context work.

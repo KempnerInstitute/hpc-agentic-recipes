@@ -16,15 +16,17 @@ the same name, so they differ only in hardware, environment, and rate.
 
 | Variant | GPU | Single stream, FP8 | Saturated, FP8 | Status |
 | --- | --- | --- | --- | --- |
-| [`h200-1`](h200-1/README.md) | 1 H200, 143771 MiB | 85.1 tok/s | 3097 at c=512, rising | Validated |
-| [`h100-1`](h100-1/README.md) | 1 H100, 80 GB | 67.4 tok/s | 2680 at c=512, rising | Validated |
-| [`rtx-1`](rtx-1/README.md) | 1 RTX PRO 6000 Blackwell, 97887 MiB | 39.5 tok/s | 2101 at c=512, rising | Validated |
+| [`h200-1`](h200-1/README.md) | 1 H200, 143771 MiB | 85.1 tok/s | 3136 at c=1024, saturated | Validated |
+| [`h100-1`](h100-1/README.md) | 1 H100, 80 GB | 67.4 tok/s | 2680 at c=512, saturated | Validated |
+| [`rtx-1`](rtx-1/README.md) | 1 RTX PRO 6000 Blackwell, 97887 MiB | 39.5 tok/s | 2139 at c=768, saturated | Validated |
 
 Single stream is one request at a time, which is what interactive coding feels like. Saturated is total
 output across every concurrent stream, and it says nothing about how fast a single reply arrives.
-`rising` on all three means throughput had not turned over at concurrency 512, the top of the sweep, so
-each saturated figure is a floor rather than a ceiling. Measured 2026-07-31 at 32K context, protocol
-slope(128,1152) over output tokens only, 3 repeats per level, concurrency 1 through 512.
+All three are `saturated`, meaning throughput varies by under 4 percent across concurrency 512 to 1024,
+so these are real ceilings and adding concurrency past them buys only queueing delay. This model reaches
+its limit at lower concurrency than its 26B sibling, which is consistent with it being memory bandwidth
+bound. Measured 2026-07-31 at 32K context, protocol slope(128,1152) over output tokens only, 3 repeats
+per level, concurrency 1 through 1024.
 
 Running the same weights in bf16 instead of FP8 measured 56.3, 40.7 and 23.0 tok/s single stream on the
 same three GPUs. Those figures come from the pre-restructure scripts on 2026-07-27 and were not
