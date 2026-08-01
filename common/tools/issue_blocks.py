@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Inject and verify canonical issue text in recipe READMEs.
+"""Inject and verify the shared issue text in recipe READMEs.
 
 Recipes deliberately repeat the same issue text, so a reader of one recipe never has to open another
 file. Hand-maintained duplication drifts, so the text lives once in common/issues/<slug>.md and is
@@ -96,7 +96,7 @@ def main():
             continue
         canonical[slug] = src.read_text().strip()
 
-    # Unused canonical files are dead weight: flag them so the corpus cannot silently accumulate.
+    # Unused issue files are dead weight: flag them so the corpus cannot silently accumulate.
     for src in sorted(issues_dir.glob("*.md")):
         if src.stem not in matrix:
             print(f"FAIL  common/issues/{src.name} is not referenced by matrix.tsv")
@@ -133,7 +133,7 @@ def main():
 
         if fix and text != original:
             readme.write_text(text)
-            print(f"  injected canonical text into {recipe}/README.md")
+            print(f"  injected shared text into {recipe}/README.md")
 
     if failures == 0:
         print(f"  {len(all_recipes)} recipes, {len(matrix)} issues, all blocks match")
