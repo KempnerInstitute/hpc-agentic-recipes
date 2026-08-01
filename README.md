@@ -151,6 +151,7 @@ before opening a pull request.
 ## Weights
 
 Checkpoints are read from `MODELS_DIR`, which defaults to
-`/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models`. Copying one to your own scratch space loads
-faster and only `MODELS_DIR` changes.
-[docs/downloading-weights.md](docs/downloading-weights.md) covers fetching new checkpoints.
+`/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models`. Every model a recipe references is already
+there. That directory is read-only for most users, so download your own copies anywhere you can write and
+point `MODELS_DIR` there; scratch also loads faster.
+[docs/downloading-weights.md](docs/downloading-weights.md) covers both.
