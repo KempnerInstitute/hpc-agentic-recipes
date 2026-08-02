@@ -21,7 +21,8 @@ echo "head ${NODES[0]} at $HEAD_IB, serving kimi-k3 on ${NODES[0]}:$API_PORT"
 
 for i in 0 1 2 3; do
   ssh -o BatchMode=yes "${NODES[$i]}" "mkdir -p '$K3_LOG_DIR'; cd '$REPO_ROOT'; \
-    RANK=$i HEAD_IB='$HEAD_IB' API_PORT='$API_PORT' SPEC_MODE='${SPEC_MODE:-none}' \
+    RANK=$i HEAD_IB='$HEAD_IB' API_PORT='$API_PORT' DIST_PORT='${DIST_PORT:-}' \
+    SPEC_MODE='${SPEC_MODE:-none}' \
     MODEL='${MODEL:-}' DRAFT='${DRAFT:-}' MAX_MODEL_LEN='${MAX_MODEL_LEN:-}' \
     MEM_FRACTION='${MEM_FRACTION:-}' MAMBA_RATIO='${MAMBA_RATIO:-}' \
     MAMBA_CACHE_STRATEGY='${MAMBA_CACHE_STRATEGY:-}' WIDE='${WIDE:-0}' SIF='$SIF' \

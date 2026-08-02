@@ -6,7 +6,7 @@ Status: see the recipe below. No vLLM release checked here implements `KimiK3For
 
 | Variant | Shape | Single stream | Aggregate | Status |
 | --- | --- | --- | --- | --- |
-| [`h200-4-nodes4-sglang`](h200-4-nodes4-sglang/README.md) | 4 H200 nodes, 16 GPUs, TP16 x EP16 | 40.3 tok/s | 1405 at c=128 | Untested |
+| [`h200-4-nodes4-sglang`](h200-4-nodes4-sglang/README.md) | 4 H200 nodes, 16 GPUs, TP16 x EP16 | 40.2 tok/s | 1069 at c=64 | Validated |
 
 The engine is SGLang in a container rather than vLLM in a virtual environment, and it serves an
 OpenAI-compatible API only, so Claude Code needs a client from [clients.md](../../docs/clients.md)
@@ -17,15 +17,16 @@ nodes at TP16 with EP16 through Marlin W4A16, using `lmsysorg/sglang:kimi-k3-cu1
 
 | | |
 | --- | --- |
-| Single stream | 40.3 tok/s, and 87.1 with the DSpark draft, a 2.16x speedup, protocol `slope(128,1152)` |
-| Aggregate | 1405 tok/s at concurrency 128, its highest measured |
-| Concurrency limit | 156 requests, set by the KDA state pool rather than by KV or compute |
-| Long context | 38.9 tok/s at a 131,072-token prompt, only 3.5 percent below its short-prompt rate |
-| Weights | 102.75 GB per GPU, 69 percent of all HBM across the 16 GPUs |
-| Startup | about 20 minutes, dominated by reading 1.56 TB |
+| Single stream | 40.2 tok/s at the defaults, 94.1 with speculation and the wide pool, protocol `slope(128,1152)` |
+| Aggregate | 1442.6 tok/s at concurrency 156 under `WIDE=1`, its highest measured |
+| Concurrency limit | 67 requests at the defaults, 156 under `WIDE=1`, set by the KDA state pool |
+| Long context | 38.9 tok/s at an input of 115292 tokens, 3.2 percent below its short-prompt rate |
+| Weights | 102.75 GB per GPU |
+| Startup | 14 to 16 minutes, dominated by reading 1.5 TiB of weights |
 
-DSpark is not a uniform win: 2.16x at concurrency 1 and 1.61x at 8, but 0.73x at 32, because verification
-burns compute the batch already needed.
+Speculation is not a uniform win. It raises single stream from 40.2 to 94.1 tok/s when combined with the
+wide pool, but it takes its state slots from the same budget as the KV cache, so it lowers the concurrency
+cap, and it loses its whole advantage at long context. The recipe has the four measured configurations.
 
 This page records what the checkpoint is, what vLLM is still missing, what hardware would be needed, and
 what to re-check when a newer vLLM lands.

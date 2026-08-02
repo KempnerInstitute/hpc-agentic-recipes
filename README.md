@@ -44,7 +44,8 @@ chmod 600 secrets/vllm_api_key
 
 With a key in place, requests without it receive HTTP 401. Without one the launcher prints a warning and
 serves the endpoint **ungated**, so create the file before launching on a shared network. `secrets/` is
-gitignored. To rotate, replace the file and restart. The SGLang recipe passes no key at all.
+gitignored. To rotate, replace the file and restart. The Kimi-K3 recipe gates its port the same way;
+the blocked GLM-5.2 SGLang recipe passes no key at all.
 
 Then start with a single-GPU recipe, which needs one GPU rather than a whole node and so queues fastest:
 [recipes/gemma-4-26B-A4B-it/h200-1](recipes/gemma-4-26B-A4B-it/h200-1/README.md). Follow it from the top.

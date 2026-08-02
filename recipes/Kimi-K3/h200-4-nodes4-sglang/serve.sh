@@ -50,7 +50,13 @@ for _d in /sys/class/infiniband/*; do
 done
 
 SPEC=()
+# The draft is bind-mounted only when it is used. Singularity requires every bind source to exist, so an
+# unconditional mount would stop a default launch for anyone who copied only the checkpoint to faster
+# storage and pointed MODELS_DIR at it.
+BINDS=(-B "$MODEL:$MODEL:ro" -B "$K3_LOG_DIR:$K3_LOG_DIR")
 if [ "$SPEC_MODE" = dspark ]; then
+  [ -d "$DRAFT" ] || { echo "SPEC_MODE=dspark needs the draft checkpoint at $DRAFT" >&2; exit 1; }
+  BINDS+=(-B "$DRAFT:$DRAFT:ro")
   # gamma comes from the draft checkpoint's block_size of 7, so the verify window is 8. Letting it
   # auto-infer avoids a mismatch between the flag and the weights. DSpark requires pp_size 1, which is
   # why this is TP16 across four nodes rather than any TP8 by PP2 split.
@@ -77,7 +83,7 @@ fi
 #
 # --ep-size 16 matters for memory, not just speed. Under pure TP16 each rank gets 3072/16 = 192 of the
 # MoE intermediate dimension, and 192 is not a multiple of the 128 that Marlin needs for a contraction
-# dim, so w2 pads to 256. Weights then measured 131.62 GB per GPU against 97.5 expected, 94 percent of
+# dim, so w2 pads to 256. Weights then measured 131.62 GiB per GPU against 97.5 expected, 94 percent of
 # the card, and the KDA state cache could not be allocated at all: total_rest_memory came out negative
 # at -21.18 GB. With expert parallelism each rank holds whole experts, so w2 keeps K=3072 and no padding.
 #
@@ -94,7 +100,7 @@ fi
 
 exec >> "$LOG" 2>&1
 exec singularity exec --nv \
-  -B "$MODEL:$MODEL:ro" -B "$DRAFT:$DRAFT:ro" -B "$K3_LOG_DIR:$K3_LOG_DIR" \
+  "${BINDS[@]}" \
   --env NCCL_SOCKET_IFNAME="$NCCL_SOCKET_IFNAME" \
   --env GLOO_SOCKET_IFNAME="$GLOO_SOCKET_IFNAME" \
   --env NCCL_IB_HCA="$_hca" \

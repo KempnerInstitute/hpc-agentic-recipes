@@ -192,7 +192,7 @@ Every variable this recipe honors, with its default and effect.
 | `API_PORT` | 8000 | Listening port |
 | `DIST_PORT` | 29500 | Port the 16 ranks use to form their group |
 | `MAX_MODEL_LEN` | 262144 | Context window; the checkpoint supports 1048576 |
-| `MEM_FRACTION` | 0.88 | Static memory fraction; it feeds the KDA state pool, so lowering it cuts the concurrency cap |
+| `MEM_FRACTION` | 0.88, 0.90 under `WIDE=1` | Static memory fraction; it feeds the KDA state pool, so lowering it cuts the concurrency cap |
 | `WIDE` | 0 | Set to 1 for the configuration that lifted the concurrency cap from 67 to 156 |
 | `MAMBA_RATIO` | unset, 3.2 under `WIDE=1` | Size of the KDA state pool relative to KV |
 | `MAMBA_CACHE_STRATEGY` | unset, `extra_buffer_lazy` under `WIDE=1` | Cuts the state slots per request from 5 to 4 |
@@ -336,8 +336,8 @@ forfeit it.
 
 `--ep-size 16` matters for memory, not just speed. Under pure TP16 each rank gets 3072/16 = 192 of the
 MoE intermediate dimension, and 192 is not a multiple of the 128 that Marlin needs for a contraction
-dimension, so `w2` pads to 256. Weights then measured 131.62 GB per GPU against 97.5 expected, 94
-percent of the card, and the KDA state cache could not be allocated at all. With expert parallelism each
+dimension, so `w2` pads to 256. Weights then measured 131.62 GiB per GPU against 97.5 expected, 94
+percent of the card's 143771 MiB, and the KDA state cache could not be allocated at all. With expert parallelism each
 rank holds whole experts, so `w2` keeps K=3072 and needs no padding.
 
 MXFP4 is a Blackwell-native format and these are Hopper cards, so the experts run through Marlin W4A16
