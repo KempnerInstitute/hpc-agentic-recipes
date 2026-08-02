@@ -1,10 +1,15 @@
 # Kimi-K3: blocked for vLLM, measured under SGLang
 
-Status: Blocked - no vLLM release checked here implements `KimiK3ForConditionalGeneration`. Served and measured under SGLang in a container, outside this repo.
+Status: see the recipe below. No vLLM release checked here implements `KimiK3ForConditionalGeneration`, so this model runs under SGLang in a container.
 
-This is a documentation-only entry: there is no hardware subdirectory and no scripts, because the only
-engine that runs this checkpoint is SGLang inside a container, which does not fit the environment build
-contract every recipe here follows. It also serves an OpenAI-only API, so Claude Code would need a proxy
+## Hardware variants
+
+| Variant | Shape | Single stream | Aggregate | Status |
+| --- | --- | --- | --- | --- |
+| [`h200-4-nodes4-sglang`](h200-4-nodes4-sglang/README.md) | 4 H200 nodes, 16 GPUs, TP16 x EP16 | 40.3 tok/s | 1405 at c=128 | Untested |
+
+The engine is SGLang in a container rather than vLLM in a virtual environment, and it serves an
+OpenAI-compatible API only, so Claude Code needs a client from [clients.md](../../docs/clients.md)
 rather than the native `/v1/messages` endpoint the vLLM recipes provide.
 
 It does run, though, and the numbers are worth knowing before anyone plans around this model. On 4 H200
