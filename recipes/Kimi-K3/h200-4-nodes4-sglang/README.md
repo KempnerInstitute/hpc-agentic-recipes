@@ -191,7 +191,9 @@ Every variable this recipe honors, with its default and effect.
 | `DIST_PORT` | 29500 | Port the 16 ranks use to form their group |
 | `MAX_MODEL_LEN` | 32768 | Context window; the checkpoint supports 1048576 |
 | `MEM_FRACTION` | 0.80 | Static memory fraction; 0.85 leaves too little for Marlin workspace |
-| `MAMBA_RATIO` | unset | Raises the KDA state pool, lifting the 67-request cap; 3.2 reached 156 |
+| `WIDE` | 0 | Set to 1 for the configuration that lifted the concurrency cap from 67 to 156 |
+| `MAMBA_RATIO` | unset, 3.2 under `WIDE=1` | Size of the KDA state pool relative to KV |
+| `MAMBA_CACHE_STRATEGY` | unset, `extra_buffer_lazy` under `WIDE=1` | Cuts the state slots per request from 5 to 4 |
 | `K3_LOG_DIR` | `/tmp/$USER/k3` | Node-local logs and JIT caches |
 
 ## Web search
@@ -235,8 +237,19 @@ rather than Validated. Re-measure from `serve.sbatch` before quoting these as th
 | Long context | 38.9 tok/s | at a 131,072-token prompt, 3.5 percent below the short-prompt rate |
 
 The defaults here admit **67 concurrent requests**, set by the KDA state pool rather than by KV cache or
-compute, so the sweep stops at 32. Raising `MAMBA_RATIO` lifted the cap to 156 and reached 1405 tok/s at
-concurrency 128 in a separate run. That figure belongs to that configuration, not to the defaults.
+compute, so the sweep stops at 32. `WIDE=1` lifted the cap to 156 and reached 1405 tok/s at concurrency
+128 in a separate run. Those figures belong to that configuration, not to the defaults:
+
+| Configuration | Concurrency cap | Aggregate |
+| --- | --- | --- |
+| default | 67 | 709 tok/s at c=32 |
+| `WIDE=1` | 156 | 1391.7 at c=96, 1405 at c=128 |
+
+`WIDE=1` is one switch rather than three knobs because all three settings are needed together. The pool
+has to grow (`--mamba-full-memory-ratio 3.2`), the cheaper cache strategy has to cut the slots per
+request from 5 to 4 (`--mamba-radix-cache-strategy extra_buffer_lazy`), and the static budget has to grow
+to 0.90 to pay for both. An earlier attempt that only forced the pool larger, with
+`--max-mamba-cache-size 1280`, starved the KV pool and died after 17 minutes.
 
 | Parameter | Value |
 | --- | --- |
@@ -251,8 +264,8 @@ DSpark is not a uniform win: 2.16x at concurrency 1 and 1.61x at 8, but 0.73x at
 verification burns compute the batch already needed. Leave `SPEC_MODE=none` for a shared endpoint and
 set `dspark` for single-user interactive work.
 
-The concurrency ceiling is the KDA state pool, not KV cache or compute. `MAMBA_RATIO` lifted it from
-67 to 156, which is untested from this recipe and is why it is not the default.
+The concurrency ceiling is the KDA state pool, not KV cache or compute. `WIDE=1` lifted it from 67 to
+156, which is untested from this recipe and is why it is not the default.
 
 ## Parallelism and quantization
 

@@ -23,7 +23,8 @@ for i in 0 1 2 3; do
   ssh -o BatchMode=yes "${NODES[$i]}" "mkdir -p '$K3_LOG_DIR'; cd '$REPO_ROOT'; \
     RANK=$i HEAD_IB='$HEAD_IB' API_PORT='$API_PORT' SPEC_MODE='${SPEC_MODE:-none}' \
     MODEL='${MODEL:-}' DRAFT='${DRAFT:-}' MAX_MODEL_LEN='${MAX_MODEL_LEN:-}' \
-    MEM_FRACTION='${MEM_FRACTION:-}' MAMBA_RATIO='${MAMBA_RATIO:-}' SIF='$SIF' \
+    MEM_FRACTION='${MEM_FRACTION:-}' MAMBA_RATIO='${MAMBA_RATIO:-}' \
+    MAMBA_CACHE_STRATEGY='${MAMBA_CACHE_STRATEGY:-}' WIDE='${WIDE:-0}' SIF='$SIF' \
     nohup bash '$S/serve.sh' > /dev/null 2>&1 < /dev/null & echo '  rank $i launched on ${NODES[$i]}'"
 done
 

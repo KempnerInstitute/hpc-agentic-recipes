@@ -17,10 +17,20 @@ SPEC_MODE="${SPEC_MODE:-none}"
 API_PORT="${API_PORT:-8000}"
 DIST_PORT="${DIST_PORT:-29500}"
 MAX_MODEL_LEN="${MAX_MODEL_LEN:-32768}"
+
+# WIDE=1 selects the configuration that lifted the concurrency cap from 67 to 156. It is one switch
+# rather than three knobs because all three settings are needed together and setting only one does not
+# reach that result: the state pool has to grow, the cheaper cache strategy has to cut the per-request
+# slot count from 5 to 4, and the static budget has to grow to pay for both. Each is still individually
+# overridable. Untested from this recipe, which is why it is not the default.
+if [ "${WIDE:-0}" = 1 ]; then
+  MEM_FRACTION="${MEM_FRACTION:-0.90}"
+  MAMBA_RATIO="${MAMBA_RATIO:-3.2}"
+  MAMBA_CACHE_STRATEGY="${MAMBA_CACHE_STRATEGY:-extra_buffer_lazy}"
+fi
 MEM_FRACTION="${MEM_FRACTION:-0.80}"
-# Unset by default. The KDA state pool caps concurrency at 67 with these settings; raising this
-# lifted the cap to 156 in a separate run, which is untested from this recipe.
 MAMBA_RATIO="${MAMBA_RATIO:-}"
+MAMBA_CACHE_STRATEGY="${MAMBA_CACHE_STRATEGY:-}"
 
 mkdir -p "$K3_LOG_DIR/hf" "$K3_LOG_DIR/triton" "$K3_LOG_DIR/inductor"
 LOG="$K3_LOG_DIR/k3-rank$RANK.log"
@@ -110,4 +120,5 @@ exec singularity exec --nv \
     --weight-loader-disable-mmap \
     --moe-runner-backend marlin \
     ${MAMBA_RATIO:+--mamba-full-memory-ratio "$MAMBA_RATIO"} \
+    ${MAMBA_CACHE_STRATEGY:+--mamba-radix-cache-strategy "$MAMBA_CACHE_STRATEGY"} \
     "${SPEC[@]}"
