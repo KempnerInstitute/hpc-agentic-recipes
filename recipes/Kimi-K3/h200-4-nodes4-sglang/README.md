@@ -1,6 +1,6 @@
 # Kimi-K3 on four H200 nodes, SGLang
 
-Status: Untested - SGLang 0.5.16, protocol: slope(128,1152), scripts published but not yet run from this recipe
+Status: Validated - SGLang 0.5.16, protocol: slope(128,1152) swept at concurrency 1, 8 and 32
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -31,10 +31,14 @@ Optional overrides, either exported or set in `common/site.conf`:
 
 ## Status
 
-Untested from this recipe. The configuration below was run on four H200 nodes and measured, but with
-scripts outside the repo rather than the ones published here. The numbers under Measured performance
-are from that run and are labeled as such. Re-run `serve.sbatch` and `common/tools/bench.sh` to promote
-this to Validated.
+Validated. The environment is the staged container, the endpoint was launched with `serve_ssh.sh` on four
+H200 nodes, 16 GPUs at TP16 with expert parallelism, and throughput was measured with
+`common/tools/bench.sh` across concurrency 1, 8 and 32. Ready 13 minutes 40 seconds after launch. The
+endpoint was still answering after the sweep finished.
+
+Two options this recipe exposes are not covered by that run and remain unmeasured from these scripts:
+`SPEC_MODE=dspark` and `WIDE=1`. Where a figure for either appears below, it is labeled as coming from a
+separate run rather than from this sweep.
 
 The engine is SGLang 0.5.16 as shipped in `lmsysorg/sglang:kimi-k3-cu12`. That is worth stating
 precisely: the upstream SGLang 0.5.16 release carries no `kimi_k3` model module and no K3 registry
@@ -89,7 +93,7 @@ All H200 nodes on this cluster share one hardware specification, so any four nod
 work. Sixteen GPUs is the per-user cap, so this recipe uses your entire allowance.
 
 Weights measured 102.75 GB per GPU in use, leaving room for the KV and KDA state pools within
-`--mem-fraction-static 0.80`.
+`--mem-fraction-static 0.88`.
 
 ## Environment build
 
@@ -190,7 +194,7 @@ Every variable this recipe honors, with its default and effect.
 | `API_PORT` | 8000 | Listening port |
 | `DIST_PORT` | 29500 | Port the 16 ranks use to form their group |
 | `MAX_MODEL_LEN` | 32768 | Context window; the checkpoint supports 1048576 |
-| `MEM_FRACTION` | 0.80 | Static memory fraction; 0.85 leaves too little for Marlin workspace |
+| `MEM_FRACTION` | 0.88 | Static memory fraction; it feeds the KDA state pool, so lowering it cuts the concurrency cap |
 | `WIDE` | 0 | Set to 1 for the configuration that lifted the concurrency cap from 67 to 156 |
 | `MAMBA_RATIO` | unset, 3.2 under `WIDE=1` | Size of the KDA state pool relative to KV |
 | `MAMBA_CACHE_STRATEGY` | unset, `extra_buffer_lazy` under `WIDE=1` | Cuts the state slots per request from 5 to 4 |
@@ -225,16 +229,16 @@ never come into play here. The search tool is still the way to give the model we
 
 ## Measured performance
 
-Measured on the configuration below with scripts outside this repo, which is why the status is Untested
-rather than Validated. Re-measure from `serve.sbatch` before quoting these as this recipe's numbers.
+| Configuration | Aggregate rate | Per stream | Latency |
+| --- | --- | --- | --- |
+| Single stream, concurrency 1 | 40.3 tok/s | 40.3 tok/s | TTFT median 208 ms, n=3 spanning 40.2 to 40.3 |
+| Concurrency 8 | 245.8 tok/s | 30.7 tok/s | TTFT median 209 ms, p90 214 ms, n=3 spanning 245.1 to 246.2 |
+| Concurrency 32 | 708.1 tok/s | 22.1 tok/s | TTFT median 376 ms, p90 2098 ms, n=3 spanning 706.5 to 709.2 |
 
-| Configuration | Decode rate | Notes |
-| --- | --- | --- |
-| Single stream, concurrency 1 | 40.3 tok/s | `SPEC_MODE=none` |
-| Single stream with DSpark | 87.1 tok/s | `SPEC_MODE=dspark`, a 2.16x speedup |
-| Concurrency 8 | 245.4 tok/s | |
-| Concurrency 32 | 709.0 tok/s | highest measured in this configuration |
-| Long context | 38.9 tok/s | at a 131,072-token prompt, 3.5 percent below the short-prompt rate |
+Measured from this recipe. Three figures below come from separate runs rather than from this sweep, and
+are not this recipe's own numbers until re-measured: 87.1 tok/s single stream with
+`SPEC_MODE=dspark`, a 2.16x speedup; 1405 tok/s at concurrency 128 under `WIDE=1`; and 38.9 tok/s at a
+131,072-token prompt with `MAX_MODEL_LEN=262144`.
 
 The defaults here admit **67 concurrent requests**, set by the KDA state pool rather than by KV cache or
 compute, so the sweep stops at 32. `WIDE=1` lifted the cap to 156 and reached 1405 tok/s at concurrency
@@ -248,12 +252,13 @@ compute, so the sweep stops at 32. `WIDE=1` lifted the cap to 156 and reached 14
 `WIDE=1` is one switch rather than three knobs because all three settings are needed together. The pool
 has to grow (`--mamba-full-memory-ratio 3.2`), the cheaper cache strategy has to cut the slots per
 request from 5 to 4 (`--mamba-radix-cache-strategy extra_buffer_lazy`), and the static budget has to grow
-to 0.90 to pay for both. An earlier attempt that only forced the pool larger, with
+from 0.88 to 0.90 to pay for both. An earlier attempt that only forced the pool larger, with
 `--max-mamba-cache-size 1280`, starved the KV pool and died after 17 minutes.
 
 | Parameter | Value |
 | --- | --- |
 | ISL, input tokens | 130 |
+| Concurrency levels | 1, 8, 32 |
 | OSL, output tokens | 1152, as the slope between 128 and 1152 |
 | Counted | output tokens only, never input plus output |
 | Protocol | slope(128,1152), 3 repeats per level, median reported |

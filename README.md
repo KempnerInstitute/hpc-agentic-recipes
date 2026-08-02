@@ -73,7 +73,7 @@ checkpoint supports, which each recipe states.
 | **GLM-4.6** | FP8 | [1 H200 node, 4 GPUs](recipes/GLM-4.6-FP8/h200-4) | TP4 | 19.2 tok/s | 8130 at c=1024, rising | 128K | Validated |
 | **Kimi-K2.7-Code** | INT4 | [1 RTX node, 8 GPUs](recipes/Kimi-K2.7-Code/rtx-8) | TP8 | 20.7 tok/s | 1839 at c=896, saturated | 32K | Validated |
 | | INT4 | [2 H200 nodes](recipes/Kimi-K2.7-Code/h200-4-nodes2) | TP4 x PP2 | 30.4 tok/s | 7140 at c=1024, rising | 32K | Validated |
-| **Kimi-K3** | MXFP4, QAT | [4 H200 nodes, 16 GPUs, SGLang](recipes/Kimi-K3/h200-4-nodes4-sglang) | TP16 x EP16 | 40.3 tok/s | 709 at c=32, capped | 32K | Untested |
+| **Kimi-K3** | MXFP4, QAT | [4 H200 nodes, 16 GPUs, SGLang](recipes/Kimi-K3/h200-4-nodes4-sglang) | TP16 x EP16 | 40.3 tok/s | 708 at c=32, capped | 32K | Validated |
 | **Qwen3-235B-A22B** | bf16 | [1 RTX node, 8 GPUs](recipes/Qwen3-235B-A22B/rtx-8) | TP8 | 63.3 tok/s | 3984 at c=512, peak | 40K | Validated |
 | **Qwen3-Coder-480B** | FP8 | [1 RTX node, 8 GPUs](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8) | TP4 x PP2 | 67.7 tok/s | 3238 at c=768, peak | 128K | Validated |
 | | FP8 | [1 H200 node, 4 GPUs](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/h200-4) | TP4 | 22.2 tok/s eager only | n/a | n/a | Blocked, serve on RTX |

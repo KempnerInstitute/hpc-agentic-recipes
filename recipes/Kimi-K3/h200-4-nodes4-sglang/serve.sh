@@ -28,7 +28,7 @@ if [ "${WIDE:-0}" = 1 ]; then
   MAMBA_RATIO="${MAMBA_RATIO:-3.2}"
   MAMBA_CACHE_STRATEGY="${MAMBA_CACHE_STRATEGY:-extra_buffer_lazy}"
 fi
-MEM_FRACTION="${MEM_FRACTION:-0.80}"
+MEM_FRACTION="${MEM_FRACTION:-0.88}"
 MAMBA_RATIO="${MAMBA_RATIO:-}"
 MAMBA_CACHE_STRATEGY="${MAMBA_CACHE_STRATEGY:-}"
 
@@ -67,9 +67,9 @@ fi
 # the model then needs roughly 4x its on-disk size: it OOMed with 135 of 139.8 GiB per GPU consumed by
 # weights alone. There is an SM90 path that keeps 4 bits, FlashInfer cutlass_fused_moe with
 # use_w4_group_scaling, but the flashinfer in this image lacks the interleave_moe helpers it needs, so
-# Marlin W4A16 is the only 4-bit-preserving option here. MEM_FRACTION is 0.80 rather than 0.85 to leave
-# room for Marlin workspace: KV need is modest anyway because only 24 of 93 layers hold a growing cache,
-# the other 69 being fixed-size KDA.
+# Marlin W4A16 is the only 4-bit-preserving option here. MEM_FRACTION is 0.88: the static budget also
+# feeds the KDA state pool, and lowering it to 0.80 dropped the concurrency cap from 67 to 27 while
+# leaving decode rate unchanged.
 #
 # --ep-size 16 matters for memory, not just speed. Under pure TP16 each rank gets 3072/16 = 192 of the
 # MoE intermediate dimension, and 192 is not a multiple of the 128 that Marlin needs for a contraction
