@@ -10,7 +10,8 @@ an Anthropic-compatible `/v1/messages`. The second is why Claude Code connects w
 translation layer. Fifteen serve scripts here run vLLM.
 
 **Use SGLang when vLLM cannot load the model.** Kimi-K3 is that case: no vLLM release available here
-implements `KimiK3ForConditionalGeneration`, while SGLang serves it. Measured on 4 H200 nodes it gives
+implements `KimiK3ForConditionalGeneration`, while SGLang serves it from a container, which is what
+`recipes/Kimi-K3/h200-4-nodes4-sglang` runs. Measured on 4 H200 nodes it gives
 40.3 tok/s single stream, 87.1 with the DSpark draft, and 1405 tok/s aggregate at concurrency 128, holding
 38.9 tok/s at a 131,072-token prompt. SGLang exposes no Anthropic-compatible endpoint, so Claude Code needs
 an OpenAI-compatible client instead, covered in [clients.md](clients.md).
