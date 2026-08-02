@@ -39,5 +39,5 @@ reach it. Do not run it on a shared network.
 
 Anthropic's server-side tools (`web_search_20250305`, `web_fetch_20250910`, `code_execution_20250522`) are
 executed by Anthropic's own API rather than by the model. Their definitions carry no `input_schema`, so
-vLLM's validation rejects them with HTTP 400. Client-side tools work normally, which covers most of what
-agentic coding needs. [web-search.md](web-search.md) has a keyless replacement for search.
+both engines reject them with HTTP 400. Client-side tools work normally, which covers most of what an
+agent needs. [web-search.md](web-search.md) has a keyless replacement for search.

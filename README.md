@@ -1,10 +1,11 @@
-# Local Agentic Coding
+# HPC Agentic Recipes
 
-Recipes for serving open-weight coding models on the Kempner AI Cluster and driving them with Claude Code
-or any OpenAI-compatible client. Each runnable recipe is self-contained: one directory holds the environment
-build, the launch scripts, the measured performance, and every known failure mode for one model on one GPU
-configuration. A few entries in the table below are documentation only, recording why a configuration does
-not work; those ship no scripts and say so.
+Recipes for serving open-weight models on the Kempner AI Cluster and driving them with Claude Code or any
+OpenAI-compatible client. An endpoint here supports whatever agentic work the client does: writing code,
+searching the literature, or analyzing data. Each runnable recipe is self-contained: one directory holds the
+environment build, the launch scripts, the measured performance, and every known failure mode for one model
+on one GPU configuration. A few entries in the table below are documentation only, recording why a
+configuration does not work; those ship no scripts and say so.
 
 Both vLLM and SGLang are used here, and both serve an Anthropic-compatible endpoint that Claude Code talks
 to directly. vLLM runs most recipes. SGLang runs Kimi-K3, which no vLLM release available here can load,
