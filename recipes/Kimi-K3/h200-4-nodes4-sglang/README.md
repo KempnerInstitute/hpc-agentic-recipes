@@ -345,9 +345,19 @@ prefill doing more work. The slope method cancels prefill, so it does not enter 
 | One person, short prompts | `SPEC_MODE=dspark WIDE=1` | 94.1 tok/s, 2.3x the default |
 | Long prompts | default, or `WIDE=1` | about 39 tok/s and nearly flat to an ISL of 115292 |
 | Shared endpoint under load | `WIDE=1` | 1442.6 tok/s at concurrency 156 |
+| A few users, long context | default | the largest token pool of the four, 383,223 |
 
 `WIDE=1` costs nothing at concurrency 1, 40.3 against the default's 40.2, so it is the better base for
-anything that might serve more than one caller.
+anything that might serve more than one caller with ordinary prompt lengths.
+
+For a handful of callers at long context the request cap is not what runs out first, so the two rows
+above point in opposite directions. The token pool is shared by every resident sequence, and the four
+configurations trade pool for cap: default 383,223 tokens against 67 requests, `WIDE=1` 198,936 against
+156. Dividing the pool by the context each caller actually holds gives roughly three 128K conversations
+under the default and one under `WIDE=1`. Beyond that the scheduler still serves everyone, by evicting
+and re-prefilling, which is paid for in latency rather than in errors. So the default is the better
+choice for a small group of Claude Code sessions, and `WIDE=1` for many short requests. This is
+arithmetic on the measured pools, not a measured five-caller run.
 
 `WIDE=1` is one switch rather than three knobs because all three settings are needed together. The pool
 has to grow (`--mamba-full-memory-ratio 3.2`), the cheaper cache strategy has to cut the state slots per
