@@ -23,5 +23,6 @@ GLM-5.2-FP8/h200-4-nodes2-sglang
 # the intent survives if the audit is later taught to walk model-level READMEs.
 #
 # Blocked: KimiK3ForConditionalGeneration is in no released engine, so nothing can load the weights.
+Kimi-K3
 # Untested: the bf16 twin of the FP8 Coder checkpoint, staged and supported but never launched.
 Qwen3-Coder-480B-A35B-Instruct

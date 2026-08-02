@@ -14,25 +14,25 @@
 # thinking-model warning.
 #
 # slug	include	exclude
-node-local-logs	*/*,Kimi-K3/h200-4-nodes4-sglang	-
+node-local-logs	*/*	-
 engine-ready-timeout	*/*	*-sglang
-anthropic-hosted-tools-400	*/*,Kimi-K3/h200-4-nodes4-sglang	GLM-5.2-FP8/h200-4-nodes2-sglang
+anthropic-hosted-tools-400	*/*	*-sglang
 anthropic-auth-token	*/*	*-sglang
-lustre-watchdog	*/rtx-8*,*/h200-4*,*/h100-4*,Kimi-K3/h200-4-nodes4-sglang	-
-jit-cache-node-local	*/*-nodes2*,Kimi-K3/h200-4-nodes4-sglang	-
+lustre-watchdog	*/rtx-8*,*/h200-4*,*/h100-4*	-
+jit-cache-node-local	*/*-nodes2*	-
 cross-node-tp-hangs	*/*-nodes2*	-
 pp-forbids-spec-decode	*/*-nodes2*,Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8	-
 rtx-no-nvlink	*/rtx-8*	-
 rtx-comms-bound	*/rtx-8*	-
 flashinfer-cubin-skew	*/rtx-*	-
 cuda13-toolkit	*/rtx-*	-
-hopper-cu129-wheel	*/h200-*,*/h100-*	Kimi-K3/h200-4-nodes4-sglang
+hopper-cu129-wheel	*/h200-*,*/h100-*	-
 h200-cudagraph-crash	GLM-5.2-FP8/h200-4-nodes2,GLM-4.6-FP8/h200-4	-
-deepgemm-h200-crash	*/h200-*	Kimi-K3/h200-4-nodes4-sglang
+deepgemm-h200-crash	*/h200-*	-
 multimodal-mm-profiling	Kimi-K2.7-Code/h200-4-nodes2	-
 coder480-tp8-divisibility	Qwen3-Coder-480B-A35B-Instruct-FP8/*	-
 coder480-h200-cutlass	Qwen3-Coder-480B-A35B-Instruct-FP8/*	-
 gemma4-mtp-broken	gemma-4-26B-A4B-it/*,gemma-4-31B-it/*	-
-thinking-model-max-tokens	GLM-5.2-NVFP4/*,GLM-5.2-FP8/*,GLM-4.6-FP8/*,Kimi-K2.7-Code/*,Qwen3-235B-A22B/*,DeepSeek-V4-Pro/*,gemma-4-26B-A4B-it/*,gemma-4-31B-it/*,Kimi-K3/h200-4-nodes4-sglang	-
-sglang-ungated	*-sglang	Kimi-K3/h200-4-nodes4-sglang
-sglang-weight-load-fails	*-sglang	Kimi-K3/h200-4-nodes4-sglang
+thinking-model-max-tokens	GLM-5.2-NVFP4/*,GLM-5.2-FP8/*,GLM-4.6-FP8/*,Kimi-K2.7-Code/*,Qwen3-235B-A22B/*,DeepSeek-V4-Pro/*,gemma-4-26B-A4B-it/*,gemma-4-31B-it/*	-
+sglang-ungated	*-sglang	-
+sglang-weight-load-fails	*-sglang	-
