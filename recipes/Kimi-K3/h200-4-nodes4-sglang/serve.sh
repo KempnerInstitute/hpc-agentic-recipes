@@ -16,7 +16,10 @@ HEAD_IB="${HEAD_IB:?set HEAD_IB, the head node ib0 address}"
 SPEC_MODE="${SPEC_MODE:-none}"
 API_PORT="${API_PORT:-8000}"
 DIST_PORT="${DIST_PORT:-29500}"
-MAX_MODEL_LEN="${MAX_MODEL_LEN:-32768}"
+# 262144 is what every measurement in this recipe used. Raising the ceiling costs nothing measurable:
+# the token pool and the request cap came out identical at 32768 and at 262144, because the ceiling
+# bounds one request rather than reserving memory.
+MAX_MODEL_LEN="${MAX_MODEL_LEN:-262144}"
 
 # WIDE=1 selects the configuration that lifted the concurrency cap from 67 to 156. It is one switch
 # rather than three knobs because all three settings are needed together and setting only one does not
