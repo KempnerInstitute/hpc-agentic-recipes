@@ -68,9 +68,10 @@ fi
 # AutoTokenizer to TikTokenTokenizer in tokenization_kimi.py, and transformers' processor loader refuses
 # custom code without it. The vocabulary is the local tiktoken.model, so this needs no network.
 #
-# No --reasoning-parser: K3 always emits reasoning, and a parser moves that text into reasoning_content,
-# where a first-token measurement watching content would miss it. Unparsed, every generated token counts
-# the same way and time to first token stays meaningful.
+# Both parsers are on. --tool-call-parser is required for the Anthropic endpoint: without it the model's
+# tool calls arrive as raw text and Claude Code cannot execute them. --reasoning-parser separates the
+# thinking into reasoning_content, which is what a client needs to display or discard it, and it costs
+# nothing in measurement because common/tools/bench.py counts a reasoning_content delta as a first token.
 #
 # --moe-runner-backend marlin is mandatory on Hopper, not a tuning choice. With auto, SGLang picks
 # Mxfp4MoEMethod, whose fallback branch calls upcast_from_mxfp to dequantize every expert to bf16, and
@@ -116,6 +117,8 @@ exec singularity exec --nv \
     --model-path "$MODEL" \
     --served-model-name kimi-k3 \
     --trust-remote-code \
+    --tool-call-parser kimi_k3 \
+    --reasoning-parser kimi_k3 \
     --tp-size 16 \
     --ep-size 16 \
     --nnodes 4 \

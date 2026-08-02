@@ -1,8 +1,8 @@
 # OpenAI-compatible clients
 
-Every vLLM recipe here also serves an OpenAI-compatible API at `/v1`, so tools that speak that protocol
-work without a proxy. SGLang serves only this API and no Anthropic-compatible endpoint, so an
-SGLang-served model such as Kimi-K3 needs a client from this page rather than Claude Code.
+Every recipe here serves an OpenAI-compatible API at `/v1` alongside the Anthropic-compatible one, so
+tools that speak either protocol work without a proxy. That holds under both engines, so a client from
+this page and Claude Code both reach every endpoint here.
 
 Three settings, whatever the client:
 

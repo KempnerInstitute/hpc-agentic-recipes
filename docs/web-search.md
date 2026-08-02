@@ -2,19 +2,22 @@
 
 ## The problem
 
-Claude Code's built-in web search does not work against a vLLM endpoint. The client sends a tool
-definition of type `web_search_20250305` that carries no `input_schema`, and vLLM's request validation
-rejects it:
+Claude Code's built-in web search does not work against a local endpoint. Invoking it makes the client
+send Anthropic's hosted `web_search_20250305` tool, which carries no `input_schema` and which no local
+engine implements. vLLM rejects it with HTTP 400:
 
 ```
-API Error: 400 1 validation error: 'loc': ('body', 'tools', 0, 'input_schema'),
-'msg': 'Field required', 'type': 'web_search_20250305'
+1 validation error:
+  {'type': 'missing', 'loc': ('body', 'tools', 0, 'input_schema'), 'msg': 'Field required',
+   'input': {'type': 'web_search_20250305', 'name': 'web_search'}}
 ```
 
-The same applies to `web_fetch_20250910` and `code_execution_20250522`. These are Anthropic server-side
-tools: the hosted API executes them, and no local engine implements them. Client-side tools, which is
-everything the model actually drives (file edits, shell commands, and any tool you define), work
-normally.
+SGLang instead returns HTTP 200 and drops the tool, so the model answers without searching and nothing in
+the reply says why. `web_fetch_20250910` and `code_execution_20250522` are the same kind of tool, and both
+engines reject those with 400.
+
+Client-side tools, which is everything else the model drives (file edits, shell commands, and any tool you
+define), work normally on both engines.
 
 ## The replacement
 
@@ -35,15 +38,25 @@ literature modes need nothing but network access.
 
 ## Making the model use it
 
-Install the skill so Claude Code reaches for this tool on its own, including when it hits the 400 error:
+Install the tool and the skill. Run this from the repo root:
 
 ```
+mkdir -p ~/.local/bin ~/.claude/skills
 ln -sf "$PWD/common/tools/search.sh" ~/.local/bin/search.sh
 cp -r common/skills/local-search ~/.claude/skills/
 ```
 
-The skill tells the model what the tool does, when to use each mode, and specifically to fall back to it
-when a hosted web search fails.
+Confirm it works, from any directory:
+
+```
+search.sh wiki "tensor parallelism" 1
+```
+
+If that reports `search.sh: command not found`, add `~/.local/bin` to your `PATH` in your shell profile.
+The skill also gives the model the full path as a fallback, so it works either way.
+
+The skill tells the model what the tool does, when to use each mode, and to reach for it when a hosted
+web search fails.
 
 ## Reliability
 

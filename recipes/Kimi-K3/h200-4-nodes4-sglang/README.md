@@ -47,7 +47,7 @@ reports the same version.
 
 Kimi-K3, a 2.8T-parameter mixture of experts with 104B activated per token, quantization-aware trained
 in MXFP4 from the SFT stage onward. It is natively multimodal and always emits reasoning before its
-answer. It serves through SGLang's OpenAI-compatible API as `kimi-k3`.
+answer. SGLang serves it as `kimi-k3` on both an Anthropic-compatible and an OpenAI-compatible API.
 
 - Checkpoint directory: `Kimi-K3`
 - Hugging Face repo: `moonshotai/Kimi-K3`
@@ -194,14 +194,50 @@ export NODE=<the head node>
 source recipes/Kimi-K3/h200-4-nodes4-sglang/client.env
 ```
 
-SGLang exposes no Anthropic-compatible endpoint, so Claude Code cannot connect to this one without a
-translating proxy. Use an OpenAI-compatible client instead: base URL `http://<node>:8000/v1`, the key
-from `secrets/vllm_api_key`, and model name `kimi-k3`. See [clients.md](../../../docs/clients.md).
+SGLang serves an Anthropic-compatible `/v1/messages` alongside the OpenAI `/v1`, so Claude Code connects
+with no proxy. `client.env` sets `CLAUDE_CODE_ATTRIBUTION_HEADER=0`, which drops a system block the
+client otherwise prepends carrying its own version, so that callers running different client versions
+share one prefix cache rather than one each, and `--tool-call-parser kimi_k3` is what makes tool calls
+arrive as calls rather than as text. For an OpenAI-compatible client instead, use base URL
+`http://<node>:8000/v1`, the same key, and model name `kimi-k3`. See
+[clients.md](../../../docs/clients.md).
+
+<!-- issue:anthropic-auth-token begin -->
+**Use `ANTHROPIC_AUTH_TOKEN`, never `ANTHROPIC_API_KEY`.** Both engines accept only
+`Authorization: Bearer <key>`. Setting `ANTHROPIC_API_KEY` makes Claude Code send an `x-api-key`
+header instead, which the engine ignores, and every request returns HTTP 401. Also set
+`ANTHROPIC_SMALL_FAST_MODEL` to this same served model, or the client reaches for a hosted Haiku that
+this endpoint does not serve.
+<!-- issue:anthropic-auth-token end -->
 
 Multi-turn use requires passing the complete previous assistant message back, `reasoning_content` and
 `tool_calls` included, because the model was trained in preserved-thinking-history mode. Thinking
 effort is set with a top-level `reasoning_effort` field taking `low`, `high` or `max`, defaulting to
-`max`.
+`max`. On the Anthropic route that advice has a caveat, below.
+
+### Replayed thinking corrupts the reply on the Anthropic route
+
+Measured on this build. When a conversation on `/v1/messages` sends earlier `thinking` blocks back, as
+Claude Code does, the model sometimes opens its think channel with a malformed marker, `<|sep|` twice
+rather than once. SGLang's detector matches the marker as a literal string, so it does not match, the
+detector concludes there is no reasoning to strip, and the whole channel-marked output is delivered as
+visible text. The reply then begins `<|open|>think<|sep|<|sep|>` and the reasoning is not separated.
+
+Twelve trials per row at temperature 1.0, one tool round, half of each row streamed:
+
+| Route | History | Markers in visible text | Reasoning separated |
+| --- | --- | --- | --- |
+| `/v1/messages` | thinking replayed | 6 of 12 | 2 of 12 |
+| `/v1/messages` | thinking omitted | 0 of 12 | 9 of 12 |
+| `/v1/chat/completions` | `reasoning_content` replayed | 0 of 12 | 12 of 12 |
+
+The work still completes: tool calls are unaffected, and an end-to-end Claude Code run wrote a file and
+read it back correctly. What breaks is the prose around it, and the reasoning separation this recipe
+turns the parser on for.
+
+The OpenAI route is unaffected on every trial, so it is the better choice for multi-turn work that needs
+clean reasoning. This is a serving-layer defect rather than a model or template one, so a later SGLang
+build may fix it; the numbers above belong to the image this recipe pins.
 
 ## Tunable inputs
 
@@ -225,29 +261,41 @@ Every variable this recipe honors, with its default and effect.
 ## Web search
 
 <!-- issue:anthropic-hosted-tools-400 begin -->
-**Anthropic's hosted tools fail against this endpoint with HTTP 400.** Claude Code's built-in web
-search sends tool definitions of type `web_search_20250305` that carry no `input_schema`, and vLLM
-rejects them:
+**Anthropic's hosted tools do not work against a local endpoint.** Server-side tools such as
+`web_search_20250305`, `web_fetch_20250910` and `code_execution_20250522` are executed by Anthropic's own
+API rather than by the model, so no endpoint here can run them. What you see differs by engine, measured
+on both.
+
+vLLM rejects all three with HTTP 400, because their definitions carry no `input_schema`:
 
 ```
-API Error: 400 1 validation error: 'loc': ('body', 'tools', 0, 'input_schema'),
-'msg': 'Field required', 'type': 'web_search_20250305'
+1 validation error:
+  {'type': 'missing', 'loc': ('body', 'tools', 0, 'input_schema'), 'msg': 'Field required',
+   'input': {'type': 'web_search_20250305', 'name': 'web_search'}}
 ```
 
-Client-side tools (file edits, shell, and anything you define) work normally. For web access, install
-the repo's keyless search tool and skill:
+SGLang is harder to diagnose. It accepts `web_search_20250305` with HTTP 200 and drops the tool, logging
+that it has no native support, so the model answers without searching and nothing in the reply says why.
+It rejects `web_fetch_20250910` and `code_execution_20250522` with HTTP 400.
+
+Client-side tools (file edits, shell, and anything you define) work normally on both. For web access,
+install the repo's keyless search tool and skill, from the repo root:
 
 ```
-ln -sf "$REPO_ROOT/common/tools/search.sh" ~/.local/bin/search.sh
-cp -r "$REPO_ROOT/common/skills/local-search" ~/.claude/skills/
+mkdir -p ~/.local/bin ~/.claude/skills
+ln -sf "$PWD/common/tools/search.sh" ~/.local/bin/search.sh
+cp -r common/skills/local-search ~/.claude/skills/
 ```
 
-Then the model searches through `search.sh` (web, arxiv, crossref, pubmed, openalex, wiki, fetch)
-instead of the hosted tool.
+Check it with `search.sh wiki "tensor parallelism" 1`, and add `~/.local/bin` to your `PATH` if the
+command is not found. The model then searches through `search.sh` (web, arxiv, crossref, pubmed,
+openalex, wiki, fetch) instead of the hosted tool. Full details in
+[docs/web-search.md](../../docs/web-search.md).
 <!-- issue:anthropic-hosted-tools-400 end -->
 
-This endpoint is reached by an OpenAI-compatible client rather than by Claude Code, so the hosted tools
-never come into play here. The search tool is still the way to give the model web access.
+This applies here, and on this engine the failure is quiet: Claude Code reaches this endpoint, and a
+built-in web search returns 200 with the tool dropped rather than an error. Use the search tool above to
+give the model web access.
 
 ## Measured performance
 
@@ -342,9 +390,19 @@ prefill doing more work. The slope method cancels prefill, so it does not enter 
 | One person, short prompts | `SPEC_MODE=dspark WIDE=1` | 94.1 tok/s, 2.3x the default |
 | Long prompts | default, or `WIDE=1` | about 39 tok/s and nearly flat to an ISL of 115292 |
 | Shared endpoint under load | `WIDE=1` | 1442.6 tok/s at concurrency 156 |
+| A few users, long context | default | the largest token pool of the four, 383,223 |
 
 `WIDE=1` costs nothing at concurrency 1, 40.3 against the default's 40.2, so it is the better base for
-anything that might serve more than one caller.
+anything that might serve more than one caller with ordinary prompt lengths.
+
+For a handful of callers at long context the request cap is not what runs out first, so the two rows
+above point in opposite directions. The token pool is shared by every resident sequence, and the four
+configurations trade pool for cap: default 383,223 tokens against 67 requests, `WIDE=1` 198,936 against
+156. Dividing the pool by the context each caller actually holds gives roughly three 128K conversations
+under the default and one under `WIDE=1`. Beyond that the scheduler still serves everyone, by evicting
+and re-prefilling, which is paid for in latency rather than in errors. So the default is the better
+choice for a small group of Claude Code sessions, and `WIDE=1` for many short requests. This is
+arithmetic on the measured pools, not a measured five-caller run.
 
 `WIDE=1` is one switch rather than three knobs because all three settings are needed together. The pool
 has to grow (`--mamba-full-memory-ratio 3.2`), the cheaper cache strategy has to cut the state slots per

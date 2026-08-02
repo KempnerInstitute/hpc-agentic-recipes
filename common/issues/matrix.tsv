@@ -17,7 +17,7 @@
 node-local-logs	*/*,Kimi-K3/h200-4-nodes4-sglang	-
 engine-ready-timeout	*/*	*-sglang
 anthropic-hosted-tools-400	*/*,Kimi-K3/h200-4-nodes4-sglang	GLM-5.2-FP8/h200-4-nodes2-sglang
-anthropic-auth-token	*/*	*-sglang
+anthropic-auth-token	*/*	GLM-5.2-FP8/h200-4-nodes2-sglang
 lustre-watchdog	*/rtx-8*,*/h200-4*,*/h100-4*,Kimi-K3/h200-4-nodes4-sglang	-
 jit-cache-node-local	*/*-nodes2*,Kimi-K3/h200-4-nodes4-sglang	-
 cross-node-tp-hangs	*/*-nodes2*	-

@@ -182,9 +182,9 @@ claude
 ```
 
 <!-- issue:anthropic-auth-token begin -->
-**Use `ANTHROPIC_AUTH_TOKEN`, never `ANTHROPIC_API_KEY`.** vLLM accepts only
+**Use `ANTHROPIC_AUTH_TOKEN`, never `ANTHROPIC_API_KEY`.** Both engines accept only
 `Authorization: Bearer <key>`. Setting `ANTHROPIC_API_KEY` makes Claude Code send an `x-api-key`
-header instead, which vLLM ignores, and every request returns HTTP 401. Also set
+header instead, which the engine ignores, and every request returns HTTP 401. Also set
 `ANTHROPIC_SMALL_FAST_MODEL` to this same served model, or the client reaches for a hosted Haiku that
 this endpoint does not serve.
 <!-- issue:anthropic-auth-token end -->
@@ -215,25 +215,36 @@ Every variable this recipe honors, with its default and effect.
 ## Web search
 
 <!-- issue:anthropic-hosted-tools-400 begin -->
-**Anthropic's hosted tools fail against this endpoint with HTTP 400.** Claude Code's built-in web
-search sends tool definitions of type `web_search_20250305` that carry no `input_schema`, and vLLM
-rejects them:
+**Anthropic's hosted tools do not work against a local endpoint.** Server-side tools such as
+`web_search_20250305`, `web_fetch_20250910` and `code_execution_20250522` are executed by Anthropic's own
+API rather than by the model, so no endpoint here can run them. What you see differs by engine, measured
+on both.
+
+vLLM rejects all three with HTTP 400, because their definitions carry no `input_schema`:
 
 ```
-API Error: 400 1 validation error: 'loc': ('body', 'tools', 0, 'input_schema'),
-'msg': 'Field required', 'type': 'web_search_20250305'
+1 validation error:
+  {'type': 'missing', 'loc': ('body', 'tools', 0, 'input_schema'), 'msg': 'Field required',
+   'input': {'type': 'web_search_20250305', 'name': 'web_search'}}
 ```
 
-Client-side tools (file edits, shell, and anything you define) work normally. For web access, install
-the repo's keyless search tool and skill:
+SGLang is harder to diagnose. It accepts `web_search_20250305` with HTTP 200 and drops the tool, logging
+that it has no native support, so the model answers without searching and nothing in the reply says why.
+It rejects `web_fetch_20250910` and `code_execution_20250522` with HTTP 400.
+
+Client-side tools (file edits, shell, and anything you define) work normally on both. For web access,
+install the repo's keyless search tool and skill, from the repo root:
 
 ```
-ln -sf "$REPO_ROOT/common/tools/search.sh" ~/.local/bin/search.sh
-cp -r "$REPO_ROOT/common/skills/local-search" ~/.claude/skills/
+mkdir -p ~/.local/bin ~/.claude/skills
+ln -sf "$PWD/common/tools/search.sh" ~/.local/bin/search.sh
+cp -r common/skills/local-search ~/.claude/skills/
 ```
 
-Then the model searches through `search.sh` (web, arxiv, crossref, pubmed, openalex, wiki, fetch)
-instead of the hosted tool.
+Check it with `search.sh wiki "tensor parallelism" 1`, and add `~/.local/bin` to your `PATH` if the
+command is not found. The model then searches through `search.sh` (web, arxiv, crossref, pubmed,
+openalex, wiki, fetch) instead of the hosted tool. Full details in
+[docs/web-search.md](../../docs/web-search.md).
 <!-- issue:anthropic-hosted-tools-400 end -->
 
 ## Measured performance

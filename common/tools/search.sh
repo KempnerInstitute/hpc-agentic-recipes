@@ -5,7 +5,8 @@
 # Override the interpreter with SEARCH_PYTHON, the venv location with SEARCH_VENV, or the result
 # count with the third argument.
 set -euo pipefail
-S="$(cd "$(dirname "$0")" && pwd)"
+# The install puts a symlink on PATH, so resolve it before locating the repo.
+S="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 source "$S/../lib/repo_root.sh"
 REPO_DIR="$REPO_ROOT"
 MODE="${1:?usage: search.sh <web|arxiv|crossref|pubmed|openalex|wiki|fetch> \"<query or url>\" [count]}"

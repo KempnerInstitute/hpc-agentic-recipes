@@ -30,5 +30,5 @@ for i in 0 1 2 3; do
 done
 
 echo "watch:    ssh ${NODES[0]} tail -f $K3_LOG_DIR/k3-rank0.log"
-echo "endpoint: http://${NODES[0]}:$API_PORT/v1   (served model: kimi-k3, OpenAI API only)"
+echo "endpoint: http://${NODES[0]}:$API_PORT   (served model: kimi-k3, Anthropic and OpenAI APIs)"
 echo "startup:  14 to 16 minutes, dominated by reading 1.5 TiB of weights"
