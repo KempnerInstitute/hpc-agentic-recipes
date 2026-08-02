@@ -204,7 +204,31 @@ arrive as calls rather than as text. For an OpenAI-compatible client instead, us
 Multi-turn use requires passing the complete previous assistant message back, `reasoning_content` and
 `tool_calls` included, because the model was trained in preserved-thinking-history mode. Thinking
 effort is set with a top-level `reasoning_effort` field taking `low`, `high` or `max`, defaulting to
-`max`.
+`max`. On the Anthropic route that advice has a caveat, below.
+
+### Replayed thinking corrupts the reply on the Anthropic route
+
+Measured on this build. When a conversation on `/v1/messages` sends earlier `thinking` blocks back, as
+Claude Code does, the model sometimes opens its think channel with a malformed marker, `<|sep|` twice
+rather than once. SGLang's detector matches the marker as a literal string, so it does not match, the
+detector concludes there is no reasoning to strip, and the whole channel-marked output is delivered as
+visible text. The reply then begins `<|open|>think<|sep|<|sep|>` and the reasoning is not separated.
+
+Twelve trials per row at temperature 1.0, one tool round, half of each row streamed:
+
+| Route | History | Markers in visible text | Reasoning separated |
+| --- | --- | --- | --- |
+| `/v1/messages` | thinking replayed | 6 of 12 | 2 of 12 |
+| `/v1/messages` | thinking omitted | 0 of 12 | 9 of 12 |
+| `/v1/chat/completions` | `reasoning_content` replayed | 0 of 12 | 12 of 12 |
+
+The work still completes: tool calls are unaffected, and an end-to-end Claude Code run wrote a file and
+read it back correctly. What breaks is the prose around it, and the reasoning separation this recipe
+turns the parser on for.
+
+The OpenAI route is unaffected on every trial, so it is the better choice for multi-turn work that needs
+clean reasoning. This is a serving-layer defect rather than a model or template one, so a later SGLang
+build may fix it; the numbers above belong to the image this recipe pins.
 
 ## Tunable inputs
 
