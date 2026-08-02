@@ -270,15 +270,18 @@ that it has no native support, so the model answers without searching and nothin
 It rejects `web_fetch_20250910` and `code_execution_20250522` with HTTP 400.
 
 Client-side tools (file edits, shell, and anything you define) work normally on both. For web access,
-install the repo's keyless search tool and skill:
+install the repo's keyless search tool and skill, from the repo root:
 
 ```
-ln -sf "$REPO_ROOT/common/tools/search.sh" ~/.local/bin/search.sh
-cp -r "$REPO_ROOT/common/skills/local-search" ~/.claude/skills/
+mkdir -p ~/.local/bin ~/.claude/skills
+ln -sf "$PWD/common/tools/search.sh" ~/.local/bin/search.sh
+cp -r common/skills/local-search ~/.claude/skills/
 ```
 
-Then the model searches through `search.sh` (web, arxiv, crossref, pubmed, openalex, wiki, fetch)
-instead of the hosted tool.
+Check it with `search.sh wiki "tensor parallelism" 1`, and add `~/.local/bin` to your `PATH` if the
+command is not found. The model then searches through `search.sh` (web, arxiv, crossref, pubmed,
+openalex, wiki, fetch) instead of the hosted tool. Full details in
+[docs/web-search.md](../../docs/web-search.md).
 <!-- issue:anthropic-hosted-tools-400 end -->
 
 ## Measured performance
