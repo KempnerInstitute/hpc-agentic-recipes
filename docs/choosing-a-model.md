@@ -130,9 +130,10 @@ Rates measured with different protocols are not comparable:
 - `single-generation` times one request and divides tokens by wall time, counting prefill and fixed cost
   as decode, so it understates sustained decode. The shorter the generation, the larger the error.
 
-Every rate in this repo is slope-measured. The vLLM recipes use `common/tools/bench.sh`; Kimi-K3 was
-measured by a separate harness applying the same `slope(128,1152)` protocol, because it runs in a container
-outside this repo. Details in [benchmarking.md](benchmarking.md).
+Every rate in this repo is slope-measured. The vLLM recipes use `common/tools/bench.sh`; the Kimi-K3
+figures came from a separate harness applying the same `slope(128,1152)` protocol, which is why that
+recipe is Untested until it is re-measured from its own scripts. Details in
+[benchmarking.md](benchmarking.md).
 
 ## Read the status column
 
