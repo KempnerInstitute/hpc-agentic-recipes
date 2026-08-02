@@ -38,6 +38,8 @@ reach it. Do not run it on a shared network.
 ## Hosted tools work on neither engine
 
 Anthropic's server-side tools (`web_search_20250305`, `web_fetch_20250910`, `code_execution_20250522`) are
-executed by Anthropic's own API rather than by the model. Their definitions carry no `input_schema`, so
-both engines reject them with HTTP 400. Client-side tools work normally, which covers most of what an
-agent needs. [web-search.md](web-search.md) has a keyless replacement for search.
+executed by Anthropic's own API rather than by the model, so neither engine can run them. Their
+definitions carry no `input_schema`, and vLLM rejects all three with HTTP 400 on that basis. SGLang
+instead accepts `web_search_20250305` with HTTP 200 and drops the tool, which is harder to diagnose
+because the model simply answers without searching, and rejects the other two with 400. Client-side tools
+work normally on both, which covers most of what an agent needs. [web-search.md](web-search.md) has a keyless replacement for search.

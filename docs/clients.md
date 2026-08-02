@@ -1,8 +1,8 @@
 # OpenAI-compatible clients
 
-Every recipe here also serves an OpenAI-compatible API at `/v1`, so tools that speak that protocol
-work without a proxy. SGLang serves this API too, alongside an Anthropic-compatible one, so a client
-from this page and Claude Code both reach every endpoint here.
+Every recipe here serves an OpenAI-compatible API at `/v1` alongside the Anthropic-compatible one, so
+tools that speak either protocol work without a proxy. That holds under both engines, so a client from
+this page and Claude Code both reach every endpoint here.
 
 Three settings, whatever the client:
 
