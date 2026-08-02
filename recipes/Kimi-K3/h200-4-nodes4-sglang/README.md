@@ -127,6 +127,30 @@ the nodes, or you are deploying an endpoint on behalf of others:
 bash recipes/Kimi-K3/h200-4-nodes4-sglang/serve_ssh.sh <node0> <node1> <node2> <node3>
 ```
 
+Both commands above launch the default configuration. To select one of the others, set the variables in
+the environment of the launch. The four configurations, and the two paths for each:
+
+```
+# default
+sbatch --account=<acct> recipes/Kimi-K3/h200-4-nodes4-sglang/serve.sbatch
+bash recipes/Kimi-K3/h200-4-nodes4-sglang/serve_ssh.sh <node0> <node1> <node2> <node3>
+
+# speculative decoding, fastest for one caller
+SPEC_MODE=dspark sbatch --account=<acct> recipes/Kimi-K3/h200-4-nodes4-sglang/serve.sbatch
+SPEC_MODE=dspark bash recipes/Kimi-K3/h200-4-nodes4-sglang/serve_ssh.sh <node0> <node1> <node2> <node3>
+
+# wide pool, highest total throughput
+WIDE=1 sbatch --account=<acct> recipes/Kimi-K3/h200-4-nodes4-sglang/serve.sbatch
+WIDE=1 bash recipes/Kimi-K3/h200-4-nodes4-sglang/serve_ssh.sh <node0> <node1> <node2> <node3>
+
+# both, fastest single stream
+SPEC_MODE=dspark WIDE=1 sbatch --account=<acct> recipes/Kimi-K3/h200-4-nodes4-sglang/serve.sbatch
+SPEC_MODE=dspark WIDE=1 bash recipes/Kimi-K3/h200-4-nodes4-sglang/serve_ssh.sh <node0> <node1> <node2> <node3>
+```
+
+Which one to pick is under Measured performance below. `sbatch` passes the submitting environment to the
+job by default, so a variable set on that line reaches every rank.
+
 Submit from the repo root either way. Slurm stages the batch script into its own spool directory, so
 the script cannot locate the repo from its own path and resolves paths against the submit directory
 instead.
