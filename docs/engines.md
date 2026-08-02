@@ -5,16 +5,18 @@ the choice follows the model rather than a preference.
 
 ## Pick by what the model needs
 
-**Use vLLM when it supports the checkpoint.** vLLM serves two APIs at once, an OpenAI-compatible `/v1` and
-an Anthropic-compatible `/v1/messages`. The second is why Claude Code connects with no proxy and no
-translation layer. Fifteen serve scripts here run vLLM.
+**Use vLLM when it supports the checkpoint.** It is the better-trodden path here: fifteen of the sixteen
+serve scripts run it, so its failure modes are the ones this repo documents. Both engines serve an
+OpenAI-compatible `/v1` and an Anthropic-compatible `/v1/messages`, so the client story is the same
+either way.
 
 **Use SGLang when vLLM cannot load the model.** Kimi-K3 is that case: no vLLM release available here
 implements `KimiK3ForConditionalGeneration`, while SGLang serves it from a container, which is what
 `recipes/Kimi-K3/h200-4-nodes4-sglang` runs. Measured on 4 H200 nodes it gives
 40.3 tok/s single stream, 87.1 with the DSpark draft, and 1405 tok/s aggregate at concurrency 128, holding
-38.9 tok/s at a 131,072-token prompt. SGLang exposes no Anthropic-compatible endpoint, so Claude Code needs
-an OpenAI-compatible client instead, covered in [clients.md](clients.md).
+38.9 tok/s at an input of 115,292 tokens. SGLang serves an Anthropic-compatible `/v1/messages` as well as
+the OpenAI `/v1`, so Claude Code reaches it directly, provided the launcher passes a tool call parser.
+Without one, tool calls arrive as raw text the client cannot execute.
 
 SGLang is also the only way to combine speculative decoding with a model that must span nodes. vLLM rejects
 a speculative config whenever pipeline parallelism is in use, so a checkpoint needing PP to fit loses its MTP

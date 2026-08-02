@@ -20,9 +20,8 @@ directory name:
 curl -s -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" http://<node>:8000/v1/models
 ```
 
-Ask which engine it is too. The variables above work against vLLM, which serves an Anthropic-compatible API.
-An SGLang endpoint serves only the OpenAI-compatible API, so Claude Code cannot reach it directly; use an
-OpenAI-compatible client instead, covered in [clients.md](clients.md).
+The variables above work against either engine here: vLLM and SGLang both serve an Anthropic-compatible
+API. For an OpenAI-compatible client instead, see [clients.md](clients.md).
 
 ## Three common mistakes
 

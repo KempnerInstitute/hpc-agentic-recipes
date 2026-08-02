@@ -47,7 +47,7 @@ reports the same version.
 
 Kimi-K3, a 2.8T-parameter mixture of experts with 104B activated per token, quantization-aware trained
 in MXFP4 from the SFT stage onward. It is natively multimodal and always emits reasoning before its
-answer. It serves through SGLang's OpenAI-compatible API as `kimi-k3`.
+answer. SGLang serves it as `kimi-k3` on both an Anthropic-compatible and an OpenAI-compatible API.
 
 - Checkpoint directory: `Kimi-K3`
 - Hugging Face repo: `moonshotai/Kimi-K3`
@@ -194,9 +194,12 @@ export NODE=<the head node>
 source recipes/Kimi-K3/h200-4-nodes4-sglang/client.env
 ```
 
-SGLang exposes no Anthropic-compatible endpoint, so Claude Code cannot connect to this one without a
-translating proxy. Use an OpenAI-compatible client instead: base URL `http://<node>:8000/v1`, the key
-from `secrets/vllm_api_key`, and model name `kimi-k3`. See [clients.md](../../../docs/clients.md).
+SGLang serves an Anthropic-compatible `/v1/messages` alongside the OpenAI `/v1`, so Claude Code connects
+with no proxy. `client.env` sets `CLAUDE_CODE_ATTRIBUTION_HEADER=0`, without which every turn of a
+conversation re-prefills the whole history, and `--tool-call-parser kimi_k3` is what makes tool calls
+arrive as calls rather than as text. For an OpenAI-compatible client instead, use base URL
+`http://<node>:8000/v1`, the same key, and model name `kimi-k3`. See
+[clients.md](../../../docs/clients.md).
 
 Multi-turn use requires passing the complete previous assistant message back, `reasoning_content` and
 `tool_calls` included, because the model was trained in preserved-thinking-history mode. Thinking
@@ -246,8 +249,8 @@ Then the model searches through `search.sh` (web, arxiv, crossref, pubmed, opena
 instead of the hosted tool.
 <!-- issue:anthropic-hosted-tools-400 end -->
 
-This endpoint is reached by an OpenAI-compatible client rather than by Claude Code, so the hosted tools
-never come into play here. The search tool is still the way to give the model web access.
+This applies here: Claude Code does reach this endpoint, and its built-in web search is one of the
+hosted tools the engine rejects. Use the search tool above to give the model web access.
 
 ## Measured performance
 

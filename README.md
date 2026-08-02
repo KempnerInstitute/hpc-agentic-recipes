@@ -6,9 +6,9 @@ build, the launch scripts, the measured performance, and every known failure mod
 configuration. A few entries in the table below are documentation only, recording why a configuration does
 not work; those ship no scripts and say so.
 
-Both vLLM and SGLang are used here. vLLM serves an Anthropic-compatible endpoint that Claude Code talks to
-directly, and runs most recipes here. SGLang serves Kimi-K3, which no vLLM release available here can
-load, from a container over an OpenAI-compatible API. See [docs/engines.md](docs/engines.md).
+Both vLLM and SGLang are used here, and both serve an Anthropic-compatible endpoint that Claude Code talks
+to directly. vLLM runs most recipes. SGLang runs Kimi-K3, which no vLLM release available here can load,
+from a container. See [docs/engines.md](docs/engines.md).
 
 ## If someone is already serving a model
 
