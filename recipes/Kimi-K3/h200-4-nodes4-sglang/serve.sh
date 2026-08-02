@@ -16,11 +16,25 @@ HEAD_IB="${HEAD_IB:?set HEAD_IB, the head node ib0 address}"
 SPEC_MODE="${SPEC_MODE:-none}"
 API_PORT="${API_PORT:-8000}"
 DIST_PORT="${DIST_PORT:-29500}"
-MAX_MODEL_LEN="${MAX_MODEL_LEN:-32768}"
-MEM_FRACTION="${MEM_FRACTION:-0.80}"
-# Unset by default. The KDA state pool caps concurrency at 67 with these settings; raising this
-# lifted the cap to 156 in a separate run, which is untested from this recipe.
+# 262144 is what every measurement in this recipe used. Raising the ceiling costs nothing measurable:
+# the token pool and the request cap came out identical at 32768 and at 262144, because the ceiling
+# bounds one request rather than reserving memory.
+MAX_MODEL_LEN="${MAX_MODEL_LEN:-262144}"
+
+# WIDE=1 selects the configuration that lifted the concurrency cap from 67 to 156. It is one switch
+# rather than three knobs because all three settings are needed together and setting only one does not
+# reach that result: the state pool has to grow, the cheaper cache strategy has to cut the per-request
+# slot count from 5 to 4, and the static budget has to grow to pay for both. Each is still individually
+# overridable. It is not the default because it trades concurrency for reach in a way that suits a shared
+# endpoint and not a single caller: it multiplies the request cap by 2.3 and halves the token pool.
+if [ "${WIDE:-0}" = 1 ]; then
+  MEM_FRACTION="${MEM_FRACTION:-0.90}"
+  MAMBA_RATIO="${MAMBA_RATIO:-3.2}"
+  MAMBA_CACHE_STRATEGY="${MAMBA_CACHE_STRATEGY:-extra_buffer_lazy}"
+fi
+MEM_FRACTION="${MEM_FRACTION:-0.88}"
 MAMBA_RATIO="${MAMBA_RATIO:-}"
+MAMBA_CACHE_STRATEGY="${MAMBA_CACHE_STRATEGY:-}"
 
 mkdir -p "$K3_LOG_DIR/hf" "$K3_LOG_DIR/triton" "$K3_LOG_DIR/inductor"
 LOG="$K3_LOG_DIR/k3-rank$RANK.log"
@@ -36,7 +50,13 @@ for _d in /sys/class/infiniband/*; do
 done
 
 SPEC=()
+# The draft is bind-mounted only when it is used. Singularity requires every bind source to exist, so an
+# unconditional mount would stop a default launch for anyone who copied only the checkpoint to faster
+# storage and pointed MODELS_DIR at it.
+BINDS=(-B "$MODEL:$MODEL:ro" -B "$K3_LOG_DIR:$K3_LOG_DIR")
 if [ "$SPEC_MODE" = dspark ]; then
+  [ -d "$DRAFT" ] || { echo "SPEC_MODE=dspark needs the draft checkpoint at $DRAFT" >&2; exit 1; }
+  BINDS+=(-B "$DRAFT:$DRAFT:ro")
   # gamma comes from the draft checkpoint's block_size of 7, so the verify window is 8. Letting it
   # auto-infer avoids a mismatch between the flag and the weights. DSpark requires pp_size 1, which is
   # why this is TP16 across four nodes rather than any TP8 by PP2 split.
@@ -57,13 +77,13 @@ fi
 # the model then needs roughly 4x its on-disk size: it OOMed with 135 of 139.8 GiB per GPU consumed by
 # weights alone. There is an SM90 path that keeps 4 bits, FlashInfer cutlass_fused_moe with
 # use_w4_group_scaling, but the flashinfer in this image lacks the interleave_moe helpers it needs, so
-# Marlin W4A16 is the only 4-bit-preserving option here. MEM_FRACTION is 0.80 rather than 0.85 to leave
-# room for Marlin workspace: KV need is modest anyway because only 24 of 93 layers hold a growing cache,
-# the other 69 being fixed-size KDA.
+# Marlin W4A16 is the only 4-bit-preserving option here. MEM_FRACTION is 0.88: the static budget also
+# feeds the KDA state pool, and lowering it to 0.80 dropped the concurrency cap from 67 to 27 while
+# leaving decode rate unchanged.
 #
 # --ep-size 16 matters for memory, not just speed. Under pure TP16 each rank gets 3072/16 = 192 of the
 # MoE intermediate dimension, and 192 is not a multiple of the 128 that Marlin needs for a contraction
-# dim, so w2 pads to 256. Weights then measured 131.62 GB per GPU against 97.5 expected, 94 percent of
+# dim, so w2 pads to 256. Weights then measured 131.62 GiB per GPU against 97.5 expected, 94 percent of
 # the card, and the KDA state cache could not be allocated at all: total_rest_memory came out negative
 # at -21.18 GB. With expert parallelism each rank holds whole experts, so w2 keeps K=3072 and no padding.
 #
@@ -80,7 +100,7 @@ fi
 
 exec >> "$LOG" 2>&1
 exec singularity exec --nv \
-  -B "$MODEL:$MODEL:ro" -B "$DRAFT:$DRAFT:ro" -B "$K3_LOG_DIR:$K3_LOG_DIR" \
+  "${BINDS[@]}" \
   --env NCCL_SOCKET_IFNAME="$NCCL_SOCKET_IFNAME" \
   --env GLOO_SOCKET_IFNAME="$GLOO_SOCKET_IFNAME" \
   --env NCCL_IB_HCA="$_hca" \
@@ -110,4 +130,5 @@ exec singularity exec --nv \
     --weight-loader-disable-mmap \
     --moe-runner-backend marlin \
     ${MAMBA_RATIO:+--mamba-full-memory-ratio "$MAMBA_RATIO"} \
+    ${MAMBA_CACHE_STRATEGY:+--mamba-radix-cache-strategy "$MAMBA_CACHE_STRATEGY"} \
     "${SPEC[@]}"

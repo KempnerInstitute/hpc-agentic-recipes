@@ -44,7 +44,8 @@ chmod 600 secrets/vllm_api_key
 
 With a key in place, requests without it receive HTTP 401. Without one the launcher prints a warning and
 serves the endpoint **ungated**, so create the file before launching on a shared network. `secrets/` is
-gitignored. To rotate, replace the file and restart. The SGLang recipe passes no key at all.
+gitignored. To rotate, replace the file and restart. The Kimi-K3 recipe gates its port the same way;
+the blocked GLM-5.2 SGLang recipe passes no key at all.
 
 Then start with a single-GPU recipe, which needs one GPU rather than a whole node and so queues fastest:
 [recipes/gemma-4-26B-A4B-it/h200-1](recipes/gemma-4-26B-A4B-it/h200-1/README.md). Follow it from the top.
@@ -73,7 +74,7 @@ checkpoint supports, which each recipe states.
 | **GLM-4.6** | FP8 | [1 H200 node, 4 GPUs](recipes/GLM-4.6-FP8/h200-4) | TP4 | 19.2 tok/s | 8130 at c=1024, rising | 128K | Validated |
 | **Kimi-K2.7-Code** | INT4 | [1 RTX node, 8 GPUs](recipes/Kimi-K2.7-Code/rtx-8) | TP8 | 20.7 tok/s | 1839 at c=896, saturated | 32K | Validated |
 | | INT4 | [2 H200 nodes](recipes/Kimi-K2.7-Code/h200-4-nodes2) | TP4 x PP2 | 30.4 tok/s | 7140 at c=1024, rising | 32K | Validated |
-| **Kimi-K3** | MXFP4, QAT | [4 H200 nodes, 16 GPUs, SGLang](recipes/Kimi-K3/h200-4-nodes4-sglang) | TP16 x EP16 | 40.3 tok/s | 709 at c=32, capped | 32K | Untested |
+| **Kimi-K3** | MXFP4, QAT | [4 H200 nodes, 16 GPUs, SGLang](recipes/Kimi-K3/h200-4-nodes4-sglang) | TP16 x EP16 | 40.2 tok/s | 1069 at c=64, capped | 256K | Validated |
 | **Qwen3-235B-A22B** | bf16 | [1 RTX node, 8 GPUs](recipes/Qwen3-235B-A22B/rtx-8) | TP8 | 63.3 tok/s | 3984 at c=512, peak | 40K | Validated |
 | **Qwen3-Coder-480B** | FP8 | [1 RTX node, 8 GPUs](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8) | TP4 x PP2 | 67.7 tok/s | 3238 at c=768, peak | 128K | Validated |
 | | FP8 | [1 H200 node, 4 GPUs](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/h200-4) | TP4 | 22.2 tok/s eager only | n/a | n/a | Blocked, serve on RTX |
@@ -99,9 +100,10 @@ stopped at 512 because throughput had already turned over at 256, and both are `
 in [docs/choosing-a-model.md](docs/choosing-a-model.md).
 
 Kimi-K3 is labeled `capped` rather than by the rule above: its defaults admit only 67 concurrent
-requests, set by the KDA state pool, so the sweep stops at 32 and a rule defined from concurrency 512
-upward cannot apply. Its `Context` cell is the 32K the measured run served, not a ceiling; the
-checkpoint supports 1M.
+requests, set by the KDA state pool, so the sweep stops at 64 and a rule defined from concurrency 512
+upward cannot apply. Its row is the default configuration; the recipe also measures a speculative setting
+reaching 94.1 tok/s single stream and a wide setting reaching 1442.6 tok/s at concurrency 156. Its
+`Context` cell is the 256K the measured runs served; the checkpoint supports 1M.
 
 ## Hardware
 

@@ -1,6 +1,6 @@
 # Kimi-K3 on four H200 nodes, SGLang
 
-Status: Untested - SGLang 0.5.16, protocol: slope(128,1152), scripts published but not yet run from this recipe
+Status: Validated - SGLang 0.5.16, protocol: slope(128,1152) swept to each configuration's concurrency cap
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
 
@@ -31,10 +31,12 @@ Optional overrides, either exported or set in `common/site.conf`:
 
 ## Status
 
-Untested from this recipe. The configuration below was run on four H200 nodes and measured, but with
-scripts outside the repo rather than the ones published here. The numbers under Measured performance
-are from that run and are labeled as such. Re-run `serve.sbatch` and `common/tools/bench.sh` to promote
-this to Validated.
+Validated. The environment is the staged container, and all four configurations this recipe exposes were
+launched with `serve_ssh.sh` on four H200 nodes, 16 GPUs at TP16 with expert parallelism, then measured
+with `common/tools/bench.sh`. Each was swept only up to the concurrency its own engine admits, and each
+was also measured at three prompt lengths. Every endpoint was still answering after its sweep finished.
+
+Time to serving was 13 to 15 minutes in each of the four launches.
 
 The engine is SGLang 0.5.16 as shipped in `lmsysorg/sglang:kimi-k3-cu12`. That is worth stating
 precisely: the upstream SGLang 0.5.16 release carries no `kimi_k3` model module and no K3 registry
@@ -88,8 +90,8 @@ cache and keep testbed as the permanent copy.
 All H200 nodes on this cluster share one hardware specification, so any four nodes in the partition
 work. Sixteen GPUs is the per-user cap, so this recipe uses your entire allowance.
 
-Weights measured 102.75 GB per GPU in use, leaving room for the KV and KDA state pools within
-`--mem-fraction-static 0.80`.
+Weights measured 102.75 GB per GPU in use. What is left funds the KV and KDA state pools, and how it is
+split between them is what the configurations below trade off.
 
 ## Environment build
 
@@ -124,6 +126,30 @@ the nodes, or you are deploying an endpoint on behalf of others:
 ```
 bash recipes/Kimi-K3/h200-4-nodes4-sglang/serve_ssh.sh <node0> <node1> <node2> <node3>
 ```
+
+Both commands above launch the default configuration. To select one of the others, set the variables in
+the environment of the launch. The four configurations, and the two paths for each:
+
+```
+# default
+sbatch --account=<acct> recipes/Kimi-K3/h200-4-nodes4-sglang/serve.sbatch
+bash recipes/Kimi-K3/h200-4-nodes4-sglang/serve_ssh.sh <node0> <node1> <node2> <node3>
+
+# speculative decoding, fastest for one caller
+SPEC_MODE=dspark sbatch --account=<acct> recipes/Kimi-K3/h200-4-nodes4-sglang/serve.sbatch
+SPEC_MODE=dspark bash recipes/Kimi-K3/h200-4-nodes4-sglang/serve_ssh.sh <node0> <node1> <node2> <node3>
+
+# wide pool, highest total throughput
+WIDE=1 sbatch --account=<acct> recipes/Kimi-K3/h200-4-nodes4-sglang/serve.sbatch
+WIDE=1 bash recipes/Kimi-K3/h200-4-nodes4-sglang/serve_ssh.sh <node0> <node1> <node2> <node3>
+
+# both, fastest single stream
+SPEC_MODE=dspark WIDE=1 sbatch --account=<acct> recipes/Kimi-K3/h200-4-nodes4-sglang/serve.sbatch
+SPEC_MODE=dspark WIDE=1 bash recipes/Kimi-K3/h200-4-nodes4-sglang/serve_ssh.sh <node0> <node1> <node2> <node3>
+```
+
+Which one to pick is under Measured performance below. `sbatch` passes the submitting environment to the
+job by default, so a variable set on that line reaches every rank.
 
 Submit from the repo root either way. Slurm stages the batch script into its own spool directory, so
 the script cannot locate the repo from its own path and resolves paths against the submit directory
@@ -189,9 +215,11 @@ Every variable this recipe honors, with its default and effect.
 | `SPEC_MODE` | `none` | Set to `dspark` for speculative decoding |
 | `API_PORT` | 8000 | Listening port |
 | `DIST_PORT` | 29500 | Port the 16 ranks use to form their group |
-| `MAX_MODEL_LEN` | 32768 | Context window; the checkpoint supports 1048576 |
-| `MEM_FRACTION` | 0.80 | Static memory fraction; 0.85 leaves too little for Marlin workspace |
-| `MAMBA_RATIO` | unset | Raises the KDA state pool, lifting the 67-request cap; 3.2 reached 156 |
+| `MAX_MODEL_LEN` | 262144 | Context window; the checkpoint supports 1048576 |
+| `MEM_FRACTION` | 0.88, 0.90 under `WIDE=1` | Static memory fraction; it feeds the KDA state pool, so lowering it cuts the concurrency cap |
+| `WIDE` | 0 | Set to 1 for the configuration that lifted the concurrency cap from 67 to 156 |
+| `MAMBA_RATIO` | unset, 3.2 under `WIDE=1` | Size of the KDA state pool relative to KV |
+| `MAMBA_CACHE_STRATEGY` | unset, `extra_buffer_lazy` under `WIDE=1` | Cuts the state slots per request from 5 to 4 |
 | `K3_LOG_DIR` | `/tmp/$USER/k3` | Node-local logs and JIT caches |
 
 ## Web search
@@ -223,20 +251,57 @@ never come into play here. The search tool is still the way to give the model we
 
 ## Measured performance
 
-Measured on the configuration below with scripts outside this repo, which is why the status is Untested
-rather than Validated. Re-measure from `serve.sbatch` before quoting these as this recipe's numbers.
+Four configurations, each swept only up to the concurrency its own engine admits. A rate measured above
+that cap includes queueing rather than throughput, so every table below states the cap first.
 
-| Configuration | Decode rate | Notes |
-| --- | --- | --- |
-| Single stream, concurrency 1 | 40.3 tok/s | `SPEC_MODE=none` |
-| Single stream with DSpark | 87.1 tok/s | `SPEC_MODE=dspark`, a 2.16x speedup |
-| Concurrency 8 | 245.4 tok/s | |
-| Concurrency 32 | 709.0 tok/s | highest measured in this configuration |
-| Long context | 38.9 tok/s | at a 131,072-token prompt, 3.5 percent below the short-prompt rate |
+**Default.** Cap 67 requests, token pool 383,223.
 
-The defaults here admit **67 concurrent requests**, set by the KDA state pool rather than by KV cache or
-compute, so the sweep stops at 32. Raising `MAMBA_RATIO` lifted the cap to 156 and reached 1405 tok/s at
-concurrency 128 in a separate run. That figure belongs to that configuration, not to the defaults.
+| Concurrency | Aggregate | Per stream | Latency |
+| --- | --- | --- | --- |
+| 1 | 40.2 tok/s | 40.2 tok/s | TTFT median 213 ms, n=3 spanning 40.2 to 40.3 |
+| 8 | 245.7 tok/s | 30.7 tok/s | TTFT median 210 ms, p90 214 ms, n=3 spanning 244.1 to 246.0 |
+| 16 | 423.2 tok/s | 26.5 tok/s | TTFT median 212 ms, p90 221 ms, n=3 spanning 422.2 to 423.7 |
+| 32 | 710.1 tok/s | 22.2 tok/s | TTFT median 383 ms, p90 1905 ms, n=3 spanning 708.6 to 711.1 |
+| 48 | 957.8 tok/s | 20.0 tok/s | TTFT median 531 ms, p90 2071 ms, n=3 spanning 951.4 to 963.2 |
+| 64 | 1069.2 tok/s | 16.7 tok/s | TTFT median 2300 ms, p90 2372 ms, n=3 spanning 1068.5 to 1074.6 |
+
+**`SPEC_MODE=dspark`.** Cap 23 requests, token pool 302,711. The draft model needs its own state slots
+from the same pool, so speculation costs concurrency.
+
+| Concurrency | Aggregate | Per stream | Latency |
+| --- | --- | --- | --- |
+| 1 | 84.8 tok/s | 84.8 tok/s | TTFT median 380 ms, n=3 spanning 84.8 to 84.9 |
+| 4 | 262.6 tok/s | 65.6 tok/s | TTFT median 281 ms, p90 421 ms, n=3 spanning 256.0 to 264.9 |
+| 8 | 378.9 tok/s | 47.4 tok/s | TTFT median 245 ms, p90 394 ms, n=3 spanning 374.8 to 382.3 |
+| 16 | 511.5 tok/s | 32.0 tok/s | TTFT median 321 ms, p90 1875 ms, n=3 spanning 505.0 to 515.9 |
+| 20 | 538.7 tok/s | 26.9 tok/s | TTFT median 1359 ms, p90 1774 ms, n=3 spanning 531.0 to 551.5 |
+
+**`WIDE=1`.** Cap 156 requests, token pool 198,936. This is the highest aggregate throughput available.
+
+| Concurrency | Aggregate | Per stream | Latency |
+| --- | --- | --- | --- |
+| 1 | 40.3 tok/s | 40.3 tok/s | TTFT median 206 ms, n=3 spanning 40.3 to 40.4 |
+| 8 | 245.4 tok/s | 30.7 tok/s | TTFT median 216 ms, p90 312 ms, n=3 spanning 245.0 to 245.6 |
+| 32 | 707.6 tok/s | 22.1 tok/s | TTFT median 377 ms, p90 386 ms, n=3 spanning 706.9 to 709.4 |
+| 64 | 1064.2 tok/s | 16.6 tok/s | TTFT median 388 ms, p90 1959 ms, n=3 spanning 1054.6 to 1069.6 |
+| 96 | 1389.1 tok/s | 14.5 tok/s | TTFT median 402 ms, p90 2349 ms, n=3 spanning 1388.4 to 1392.6 |
+| 128 | 1398.6 tok/s | 10.9 tok/s | TTFT median 612 ms, p90 2512 ms, n=3 spanning 1397.6 to 1403.9 |
+| 156 | 1442.6 tok/s | 9.2 tok/s | TTFT median 1971 ms, p90 2407 ms, n=3 spanning 1442.4 to 1444.2 |
+
+**`SPEC_MODE=dspark WIDE=1`.** Cap 48 requests, token pool 159,445. This is the highest single stream
+rate available.
+
+| Concurrency | Aggregate | Per stream | Latency |
+| --- | --- | --- | --- |
+| 1 | 94.1 tok/s | 94.1 tok/s | TTFT median 222 ms, n=3 spanning 94.1 to 94.2 |
+| 8 | 378.7 tok/s | 47.3 tok/s | TTFT median 320 ms, p90 394 ms, n=3 spanning 374.8 to 381.4 |
+| 16 | 506.5 tok/s | 31.7 tok/s | TTFT median 323 ms, p90 455 ms, n=3 spanning 496.2 to 517.0 |
+| 32 | 715.9 tok/s | 22.4 tok/s | TTFT median 404 ms, p90 2292 ms, n=3 spanning 715.2 to 730.8 |
+| 48 | 928.4 tok/s | 19.3 tok/s | TTFT median 1770 ms, p90 2554 ms, n=3 spanning 732.4 to 936.6 |
+
+The c=48 spread, 732.4 to 936.6 across three repeats, is far wider than any non-speculative level. Draft
+acceptance varies with the text being generated, and at the cap that variance is not absorbed by spare
+capacity.
 
 | Parameter | Value |
 | --- | --- |
@@ -244,15 +309,48 @@ concurrency 128 in a separate run. That figure belongs to that configuration, no
 | OSL, output tokens | 1152, as the slope between 128 and 1152 |
 | Counted | output tokens only, never input plus output |
 | Protocol | slope(128,1152), 3 repeats per level, median reported |
-| Concurrency limit | 67 requests at the defaults, set by the KDA state pool |
+| Context served | 262144, the recipe default, in all four arms |
 | Hardware | four H200 nodes, 16 GPUs |
 
-DSpark is not a uniform win: 2.16x at concurrency 1 and 1.61x at 8, but 0.73x at 32, because
-verification burns compute the batch already needed. Leave `SPEC_MODE=none` for a shared endpoint and
-set `dspark` for single-user interactive work.
+### Prompt length
 
-The concurrency ceiling is the KDA state pool, not KV cache or compute. `MAMBA_RATIO` lifted it from
-67 to 156, which is untested from this recipe and is why it is not the default.
+Decode rate at concurrency 1 against the prompt length the server counted. Raising the context ceiling
+changes neither the token pool nor the request cap, so all four arms ran at 262144 and these figures come
+from the same launches as the sweeps above.
+
+| Configuration | ISL 1012 | ISL 28247 | ISL 115292 | Fall |
+| --- | --- | --- | --- | --- |
+| default | 40.2 tok/s | 39.9 tok/s | 38.9 tok/s | 3.2 percent |
+| `WIDE=1` | 40.4 tok/s | 39.9 tok/s | 39.0 tok/s | 3.5 percent |
+| `SPEC_MODE=dspark` | 86.1 tok/s | 67.4 tok/s | 36.1 tok/s | 58.1 percent |
+| `SPEC_MODE=dspark WIDE=1` | 82.4 tok/s | 64.4 tok/s | 37.3 tok/s | 54.7 percent |
+
+**Speculation does not survive long context.** The two non-speculative configurations are almost flat,
+because 69 of the 93 layers use Kimi Delta Attention and hold a fixed-size recurrent state whatever the
+prompt length, while only 24 hold a growing KV cache. The draft model has no such shortcut, so its
+verification cost grows with context: by an ISL of 115292 both speculative arms are slower than the
+default. Their repeat spans are also wide at every length, 67.1 to 96.3 at ISL 1012 for instance, against
+40.2 to 40.3 for the default.
+
+Time to first token grows with prompt length in every arm, from about 200 ms to about 260 ms, which is
+prefill doing more work. The slope method cancels prefill, so it does not enter the decode figures.
+
+### Which configuration to use
+
+| Situation | Configuration | What you get |
+| --- | --- | --- |
+| One person, short prompts | `SPEC_MODE=dspark WIDE=1` | 94.1 tok/s, 2.3x the default |
+| Long prompts | default, or `WIDE=1` | about 39 tok/s and nearly flat to an ISL of 115292 |
+| Shared endpoint under load | `WIDE=1` | 1442.6 tok/s at concurrency 156 |
+
+`WIDE=1` costs nothing at concurrency 1, 40.3 against the default's 40.2, so it is the better base for
+anything that might serve more than one caller.
+
+`WIDE=1` is one switch rather than three knobs because all three settings are needed together. The pool
+has to grow (`--mamba-full-memory-ratio 3.2`), the cheaper cache strategy has to cut the state slots per
+request from 5 to 4 (`--mamba-radix-cache-strategy extra_buffer_lazy`), and the static budget has to grow
+from 0.88 to 0.90 to pay for both. An attempt that only forced the pool larger, with
+`--max-mamba-cache-size 1280`, starved the KV pool and died after 17 minutes.
 
 ## Parallelism and quantization
 
@@ -262,8 +360,8 @@ forfeit it.
 
 `--ep-size 16` matters for memory, not just speed. Under pure TP16 each rank gets 3072/16 = 192 of the
 MoE intermediate dimension, and 192 is not a multiple of the 128 that Marlin needs for a contraction
-dimension, so `w2` pads to 256. Weights then measured 131.62 GB per GPU against 97.5 expected, 94
-percent of the card, and the KDA state cache could not be allocated at all. With expert parallelism each
+dimension, so `w2` pads to 256. Weights then measured 131.62 GiB per GPU against 97.5 expected, 94
+percent of the card's 143771 MiB, and the KDA state cache could not be allocated at all. With expert parallelism each
 rank holds whole experts, so `w2` keeps K=3072 and needs no padding.
 
 MXFP4 is a Blackwell-native format and these are Hopper cards, so the experts run through Marlin W4A16
@@ -300,7 +398,7 @@ the flag. The vocabulary is the local `tiktoken.model`, so this needs no network
 **mmap loading is pathologically slow for this checkpoint.** The first attempt ran at about 80 seconds
 per shard, a two hour load, with the node 90 percent idle, 7.7 percent in iowait and loader threads in
 D state. That is mmap paging 1.56 TB in small random reads over a network filesystem.
-`--weight-loader-disable-mmap` brought it to about 9 minutes.
+`--weight-loader-disable-mmap` brought it to about 12 minutes.
 
 <!-- issue:node-local-logs begin -->
 **Logs are written to node-local `/tmp`, not to the repo.** Every rank writes stderr for the life of
@@ -329,8 +427,9 @@ bash common/tools/stop.sh <node0> <node1> <node2> <node3>
 | Stage | Measured |
 | --- | --- |
 | Container staging, one time | none, the image is staged in the testbed |
-| Weight load, 96 shards across 16 ranks | about 9 min |
-| Total, launch to serving | about 20 min |
+| Weight load, 96 shards across 16 ranks | about 12 min |
+| Total, launch to serving | 13 min 54 s to 15 min 35 s |
 
-Startup is dominated by reading 1.5 TiB of weights. A launch that appears hung is almost always still
-loading; check the rank 0 log before killing it.
+The range is the four launches this recipe was measured from, in order: 13 min 54 s, 14 min 35 s,
+14 min 20 s and 15 min 35 s. Startup is dominated by reading 1.5 TiB of weights, so a launch that appears
+hung is almost always still loading; check the rank 0 log before killing it.
