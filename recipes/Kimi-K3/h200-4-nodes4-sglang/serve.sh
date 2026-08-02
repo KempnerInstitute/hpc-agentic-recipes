@@ -25,7 +25,8 @@ MAX_MODEL_LEN="${MAX_MODEL_LEN:-262144}"
 # rather than three knobs because all three settings are needed together and setting only one does not
 # reach that result: the state pool has to grow, the cheaper cache strategy has to cut the per-request
 # slot count from 5 to 4, and the static budget has to grow to pay for both. Each is still individually
-# overridable. Untested from this recipe, which is why it is not the default.
+# overridable. It is not the default because it trades concurrency for reach in a way that suits a shared
+# endpoint and not a single caller: it multiplies the request cap by 2.3 and halves the token pool.
 if [ "${WIDE:-0}" = 1 ]; then
   MEM_FRACTION="${MEM_FRACTION:-0.90}"
   MAMBA_RATIO="${MAMBA_RATIO:-3.2}"

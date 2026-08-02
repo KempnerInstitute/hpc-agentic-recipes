@@ -374,7 +374,7 @@ the flag. The vocabulary is the local `tiktoken.model`, so this needs no network
 **mmap loading is pathologically slow for this checkpoint.** The first attempt ran at about 80 seconds
 per shard, a two hour load, with the node 90 percent idle, 7.7 percent in iowait and loader threads in
 D state. That is mmap paging 1.56 TB in small random reads over a network filesystem.
-`--weight-loader-disable-mmap` brought it to about 9 minutes.
+`--weight-loader-disable-mmap` brought it to about 12 minutes.
 
 <!-- issue:node-local-logs begin -->
 **Logs are written to node-local `/tmp`, not to the repo.** Every rank writes stderr for the life of
@@ -403,8 +403,9 @@ bash common/tools/stop.sh <node0> <node1> <node2> <node3>
 | Stage | Measured |
 | --- | --- |
 | Container staging, one time | none, the image is staged in the testbed |
-| Weight load, 96 shards across 16 ranks | about 9 min |
-| Total, launch to serving | about 20 min |
+| Weight load, 96 shards across 16 ranks | about 12 min |
+| Total, launch to serving | 13 min 54 s to 15 min 35 s |
 
-Startup is dominated by reading 1.5 TiB of weights. A launch that appears hung is almost always still
-loading; check the rank 0 log before killing it.
+The range is the four launches this recipe was measured from, in order: 13 min 54 s, 14 min 35 s,
+14 min 20 s and 15 min 35 s. Startup is dominated by reading 1.5 TiB of weights, so a launch that appears
+hung is almost always still loading; check the rank 0 log before killing it.
