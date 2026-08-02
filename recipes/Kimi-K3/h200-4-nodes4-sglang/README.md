@@ -195,8 +195,9 @@ source recipes/Kimi-K3/h200-4-nodes4-sglang/client.env
 ```
 
 SGLang serves an Anthropic-compatible `/v1/messages` alongside the OpenAI `/v1`, so Claude Code connects
-with no proxy. `client.env` sets `CLAUDE_CODE_ATTRIBUTION_HEADER=0`, without which every turn of a
-conversation re-prefills the whole history, and `--tool-call-parser kimi_k3` is what makes tool calls
+with no proxy. `client.env` sets `CLAUDE_CODE_ATTRIBUTION_HEADER=0`, which drops a system block the
+client otherwise prepends carrying its own version, so that callers running different client versions
+share one prefix cache rather than one each, and `--tool-call-parser kimi_k3` is what makes tool calls
 arrive as calls rather than as text. For an OpenAI-compatible client instead, use base URL
 `http://<node>:8000/v1`, the same key, and model name `kimi-k3`. See
 [clients.md](../../../docs/clients.md).
