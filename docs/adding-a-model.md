@@ -48,7 +48,7 @@ Pick what to copy from by toolchain, not by model similarity:
 | One or more RTX GPUs | any `rtx-*` recipe | torch cu130, conda CUDA 13 toolkit, FlashInfer 0.6.15, no NVLink |
 | One or more H200 or H100 GPUs | any `h200-*` recipe | cu129 release wheel, driver 575 constraint |
 | More than one node | any `*-nodes2` recipe | Ray bring-up, InfiniBand settings, PP across nodes |
-| SGLang | the `*-sglang` recipe | different launcher and flags entirely |
+| SGLang | `Kimi-K3/h200-4-nodes4-sglang` | different launcher and flags entirely; the other SGLang recipe ships no scripts |
 
 ## Pin an environment
 
@@ -95,7 +95,7 @@ Candidates to consider: attention backend, `VLLM_USE_DEEP_GEMM`, `NCCL_P2P_DISAB
   hardware share one name on purpose, so a client does not change when the endpoint moves.
 - `--tool-call-parser` and `--reasoning-parser` must be names the engine has registered. Find them by
   listing the registry rather than guessing from filenames, which do not match the registered names.
-- `--enable-auto-tool-choice` is required for agentic use.
+- `--enable-auto-tool-choice` is required for agentic use under vLLM. SGLang has no such flag.
 - To omit a parser entirely for a non-thinking model, the variable must use `${VAR-default}` rather than
   `${VAR:-default}`, so that passing an empty value omits the flag instead of substituting the default.
   A model with no reasoning parser that gets one will have its plain output silently parsed as reasoning.
