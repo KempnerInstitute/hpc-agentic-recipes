@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Offline tests for bench.py. No GPU, no endpoint, no network.
 
-Run: python3 common/tools/test_bench.py
+Run: python3 repo-checks/test_bench.py
 
 Covers the two pieces that decide whether a published number is right: the slope arithmetic, and whether
 a streaming delta counts as the first token. Both have been wrong before. The first-token check missed
@@ -11,7 +11,9 @@ import importlib.util
 import pathlib
 import sys
 
-spec = importlib.util.spec_from_file_location("bench", pathlib.Path(__file__).with_name("bench.py"))
+TOOLS = pathlib.Path(__file__).resolve().parents[1] / "common" / "tools"
+
+spec = importlib.util.spec_from_file_location("bench", TOOLS / "bench.py")
 bench = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(bench)
 

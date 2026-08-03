@@ -34,5 +34,6 @@ drifted.
 | Speculative decoding rejected at startup | vLLM does not allow it with pipeline parallelism | any vLLM recipe using PP, including Qwen3-Coder-480B-FP8 on one RTX node |
 | `assert param.size() == loaded_weight.size()` during weight loading | Shape assertion in the DeepSeek weight loader; this recipe has never loaded weights | GLM-5.2-FP8 on SGLang |
 | An endpoint serves requests that carry no API key | Nothing gates the port, and SGLang takes a key only as an argument | any SGLang endpoint whose launcher does not supply one |
+| A recipe's environment is gone and `serve.sh` cannot find its interpreter | `ENV_ROOT` defaults to scratch, which has a 90-day retention policy | any recipe, rebuild with `common/tools/rebuild_envs.sh` or the recipe's own `env/build.sh` |
 | Relaunch fails with out of memory right after stopping a server | The old process had not released the KV cache yet | any recipe, use `common/tools/stop.sh` which waits |
 | A sourced setup script exits silently with no output | A sourced file returning non-zero aborts a caller running under `set -e` | fixed in `common/defaults.sh`, checked by the audit |

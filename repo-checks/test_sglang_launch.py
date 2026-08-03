@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Offline tests for sglang_launch.py. No GPU, no container, no endpoint.
 
-Run: python3 common/tools/test_sglang_launch.py
+Run: python3 repo-checks/test_sglang_launch.py
 
 The point of the launcher is that a key reaches the engine without reaching /proc/<pid>/cmdline. These
 cover the argument rewriting; the cmdline property itself is checked by the last test, which starts a real
@@ -14,8 +14,10 @@ import subprocess
 import sys
 import time
 
+TOOLS = pathlib.Path(__file__).resolve().parents[1] / "common" / "tools"
+
 spec = importlib.util.spec_from_file_location(
-    "sglang_launch", pathlib.Path(__file__).with_name("sglang_launch.py")
+    "sglang_launch", TOOLS / "sglang_launch.py"
 )
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)

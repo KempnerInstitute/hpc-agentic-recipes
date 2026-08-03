@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Offline tests for common/lib/api_key.sh. No GPU, no endpoint, no network.
 
-Run: python3 common/tools/test_api_key.py
+Run: python3 repo-checks/test_api_key.py
 
 This resolves which secret an endpoint is gated with, so a mistake here does not merely misconfigure
 something, it can leave an endpoint open. Each case builds a throwaway repo root, sources the library the
@@ -14,7 +14,7 @@ import subprocess
 import sys
 import tempfile
 
-LIB = pathlib.Path(__file__).resolve().parents[1] / "lib"
+LIB = pathlib.Path(__file__).resolve().parents[1] / "common" / "lib"
 
 FAILURES = []
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Offline tests for verify_checkpoint.py. No GPU, no network, no real weights.
 
-Run: python3 common/tools/test_verify_checkpoint.py
+Run: python3 repo-checks/test_verify_checkpoint.py
 
 Builds small but genuine safetensors files, then breaks them one way at a time. The case that matters most
 is the truncated shard: counting files reports it as present, which is why this checks the length each file
@@ -15,8 +15,10 @@ import struct
 import sys
 import tempfile
 
+TOOLS = pathlib.Path(__file__).resolve().parents[1] / "common" / "tools"
+
 spec = importlib.util.spec_from_file_location(
-    "verify_checkpoint", pathlib.Path(__file__).with_name("verify_checkpoint.py")
+    "verify_checkpoint", TOOLS / "verify_checkpoint.py"
 )
 mod = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(mod)
