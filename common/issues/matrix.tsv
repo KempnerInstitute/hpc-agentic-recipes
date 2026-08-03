@@ -4,9 +4,9 @@
 # <Checkpoint-Name>/<hardware>, expanded against the recipes that actually exist. Comma separates
 # multiple patterns. A dash means none.
 #
-# audit_recipes.sh uses this in both directions: every included recipe must carry the issue block,
-# and a recipe carrying a block it is not listed for is a failure, which is how stale copies are
-# caught when a recipe stops being affected.
+# Maintainers use this in both directions: every included recipe must carry the issue block, and a
+# recipe carrying a block it is not listed for is a failure, which is how stale copies are caught
+# when a recipe stops being affected.
 #
 # The exclude column matters as much as the include column. A mandatory paste that is wrong in a
 # recipe is worse than a cross-reference: the single-GPU recipes have no NCCL process group, so the

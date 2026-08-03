@@ -15,8 +15,9 @@ printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/Kimi-K2.7-Code-h200-4-n
 chmod 600 secrets/Kimi-K2.7-Code-h200-4-nodes2.key
 ```
 
-That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup
-made before per-model keys keeps working.
+That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup made
+before per-recipe keys keeps working. When neither exists but `secrets/` holds exactly one key, that one is
+used, which is how `bench.sh` authenticates without being told which recipe you mean.
 
 Nothing else is required. Cluster paths come from `common/defaults.sh`, which is tracked with working
 defaults, so a fresh clone runs as is. Optional overrides, either exported or set in
@@ -26,7 +27,7 @@ defaults, so a fresh clone runs as is. Optional overrides, either exported or se
 | --- | --- | --- |
 | `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
 | `KIMI_HEAD`, `KIMI_WORKER` | unset | Two nodes you already hold, for the SSH path |
-| `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
+| `MODELS_DIR` | shared repository path | Point at your own faster copy of the checkpoint |
 | `ENV_ROOT` | scratch | Where this recipe builds its environment |
 
 One constraint is specific to a two-node recipe: `ENV_ROOT` and `MODELS_DIR` must both resolve to the
@@ -76,10 +77,10 @@ vLLM 0.25.1 implements this architecture, so no out-of-tree model code is needed
 `--trust-remote-code` is still passed, because the checkpoint ships its own configuration and processor
 modules, which the multimodal path loads.
 
-The testbed path works out of the box. Copying the checkpoint into your own scratch space loads
+The shared repository path works out of the box. Copying the checkpoint into your own scratch space loads
 faster, because scratch outperforms Lustre for this workload, and the directory names are identical in both
 locations so only `MODELS_DIR` changes. Scratch has a 90-day retention policy, so treat it as a fast
-cache and keep testbed as the permanent copy.
+cache and keep the shared repository as the permanent copy.
 
 ## Hardware
 
@@ -218,6 +219,11 @@ source recipes/Kimi-K2.7-Code/h200-4-nodes2/client.env
 claude
 ```
 
+`client.env` caps the client's output request with `CLAUDE_CODE_MAX_OUTPUT_TOKENS=4096`. Claude Code asks
+for 32000 output tokens by default, which leaves 768 tokens of this endpoint's 32768-token context for the
+prompt, so every request would fail before the model saw it. Raise the cap only if you also raise
+`MAX_MODEL_LEN`.
+
 <!-- issue:anthropic-auth-token begin -->
 **Use `ANTHROPIC_AUTH_TOKEN`, never `ANTHROPIC_API_KEY`.** Both engines accept only
 `Authorization: Bearer <key>`. Setting `ANTHROPIC_API_KEY` makes Claude Code send an `x-api-key`
@@ -242,6 +248,7 @@ Every variable this recipe honors, with its default and effect.
 | `API_PORT` | 8000 | Listening port |
 | `MAX_MODEL_LEN` | 32768 | Context window; the checkpoint supports 262144, at a KV cache cost |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
+| `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is `~/.cache/vllm`, which is a small quota here |
 | `TP` | 4 | Tensor parallel size; 4 is one node's GPU count and must stay inside a node |
 | `PP` | 2 | Pipeline parallel size; 2 is the node count |
 | `ENFORCE_EAGER` | 1 | Pass empty to try CUDA graph capture, which is untested here |
@@ -490,7 +497,7 @@ which reads like a different problem entirely. `stop.sh` clears both.
 The validated run reached serving 17 minutes 43 seconds after the launcher was invoked. The difference
 from the total above is Ray bring-up and the Python import of torch and vLLM, before vLLM logs anything.
 
-Measured from the server log, with the checkpoint read from scratch rather than the Lustre testbed
+Measured from the server log, with the checkpoint read from scratch rather than the Lustre repository
 path. The table starts at the vLLM banner; everything before it is the Python import of torch and
 vLLM, which is fast because `ENV_ROOT` is on scratch and slow from Lustre.
 

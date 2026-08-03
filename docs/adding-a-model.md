@@ -48,7 +48,7 @@ Pick what to copy from by toolchain, not by model similarity:
 | One or more RTX GPUs | any `rtx-*` recipe | torch cu130, conda CUDA 13 toolkit, FlashInfer 0.6.15, no NVLink |
 | One or more H200 or H100 GPUs | any `h200-*` recipe | cu129 release wheel, driver 575 constraint |
 | More than one node | any `*-nodes2` recipe | Ray bring-up, InfiniBand settings, PP across nodes |
-| SGLang | the `*-sglang` recipe | different launcher and flags entirely |
+| SGLang | `Kimi-K3/h200-4-nodes4-sglang` | different launcher and flags entirely; the other SGLang recipe ships no scripts |
 
 ## Pin an environment
 
@@ -95,7 +95,7 @@ Candidates to consider: attention backend, `VLLM_USE_DEEP_GEMM`, `NCCL_P2P_DISAB
   hardware share one name on purpose, so a client does not change when the endpoint moves.
 - `--tool-call-parser` and `--reasoning-parser` must be names the engine has registered. Find them by
   listing the registry rather than guessing from filenames, which do not match the registered names.
-- `--enable-auto-tool-choice` is required for agentic use.
+- `--enable-auto-tool-choice` is required for agentic use under vLLM. SGLang has no such flag.
 - To omit a parser entirely for a non-thinking model, the variable must use `${VAR-default}` rather than
   `${VAR:-default}`, so that passing an empty value omits the flag instead of substituting the default.
   A model with no reasoning parser that gets one will have its plain output silently parsed as reasoning.
@@ -114,17 +114,20 @@ bash common/tools/bench.sh --host <node> --model <served-name>
 
 ## Write the README and check it
 
-Fill in all 15 required sections from `common/templates/recipe-README.md`. For failure modes, add the
-recipe to the relevant rows of `common/issues/matrix.tsv`, insert empty marker pairs in the README, and
-let the tooling write the text:
+Fill in all 15 required sections from `common/templates/recipe-README.md`, in that order. For failure modes,
+leave the marker pairs empty:
 
 ```
-bash common/tools/audit_recipes.sh --fix
-bash common/tools/audit_recipes.sh
+<!-- issue:<slug> begin -->
+<!-- issue:<slug> end -->
 ```
 
-Do not write issue text by hand. It is duplicated across recipes on purpose, and the source copy in
-`common/issues/` is what keeps every copy identical.
+Do not write that text yourself. It is duplicated across recipes on purpose, the single source is
+`common/issues/`, and a maintainer fills every copy from it so they cannot drift.
+
+Two conventions the README text has to follow. Give an engine version rather than a calendar date, because a
+date does not tell a reader whether a number still holds. And write about the recipe rather than about
+yourself: no first person, and no citing notes that are not in the repo.
 
 ## Update the indexes
 

@@ -30,6 +30,20 @@ if [ -z "${KEY_FILE:-}" ]; then
   fi
 fi
 
+# Last resort before giving up: a clone with exactly one key in secrets/ has no ambiguity to resolve, and
+# the documented tools take a host and a served name rather than a recipe path, so they cannot know which
+# recipe's key to ask for. With several keys present this stays quiet and the warning below lists them.
+if [ ! -f "$KEY_FILE" ] && [ -z "${VLLM_API_KEY:-}" ]; then
+  _ak_only=""
+  for _ak_f in "$REPO_ROOT"/secrets/*.key; do
+    [ -f "$_ak_f" ] || continue
+    [ -n "$_ak_only" ] && { _ak_only=""; break; }
+    _ak_only="$_ak_f"
+  done
+  [ -n "$_ak_only" ] && KEY_FILE="$_ak_only"
+  unset _ak_f _ak_only
+fi
+
 if [ -n "${VLLM_API_KEY:-}" ]; then
   export VLLM_API_KEY
 elif [ -f "$KEY_FILE" ]; then
@@ -37,7 +51,16 @@ elif [ -f "$KEY_FILE" ]; then
   export VLLM_API_KEY
 else
   echo "warning: no API key at $KEY_FILE and VLLM_API_KEY is unset." >&2
-  echo "         The endpoint will be UNGATED. Create one with:" >&2
+  _ak_n=0
+  for _ak_f in "$REPO_ROOT"/secrets/*.key; do [ -f "$_ak_f" ] && _ak_n=$((_ak_n + 1)); done
+  if [ "$_ak_n" -gt 1 ]; then
+    echo "         secrets/ holds several keys, so pick one with KEY_NAME=<recipe>:" >&2
+    for _ak_f in "$REPO_ROOT"/secrets/*.key; do
+      [ -f "$_ak_f" ] && echo "           $(basename "$_ak_f" .key)" >&2
+    done
+  fi
+  unset _ak_f _ak_n
+  echo "         Otherwise the endpoint will be UNGATED. Create a key with:" >&2
   echo "           mkdir -p '$REPO_ROOT/secrets'" >&2
   # The suggested command must survive being copied. Single quotes around the substitution would
   # suppress it, writing the literal text as the key, which looks random and is not.

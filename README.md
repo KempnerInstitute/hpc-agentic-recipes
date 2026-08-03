@@ -1,15 +1,12 @@
 # HPC Agentic Recipes
 
 Recipes for serving open-weight models on the Kempner AI Cluster and driving them with Claude Code or any
-OpenAI-compatible client. An endpoint here supports whatever agentic work the client does: writing code,
-searching the literature, or analyzing data. Each runnable recipe is self-contained: one directory holds the
-environment build, the launch scripts, the measured performance, and every known failure mode for one model
-on one GPU configuration. A few entries in the table below are documentation only, recording why a
-configuration does not work; those ship no scripts and say so.
+OpenAI-compatible client. Each runnable recipe is self-contained. A few entries in the table below are
+documentation only.
 
 Both vLLM and SGLang are used here, and both serve an Anthropic-compatible endpoint that Claude Code talks
-to directly. vLLM runs most recipes. SGLang runs Kimi-K3, which no vLLM release available here can load,
-from a container. See [docs/engines.md](docs/engines.md).
+to directly. vLLM runs most recipes. SGLang runs Kimi-K3 from a container. See
+[docs/engines.md](docs/engines.md).
 
 ## If someone is already serving a model
 
@@ -35,10 +32,20 @@ Walkthrough in [docs/quickstart.md](docs/quickstart.md).
 
 ## To serve your own
 
-First create an API key. Each recipe reads its own key, named for the recipe, so one endpoint's key does
-not open the others, and the recipes hand it to the engine through the environment so it reaches neither
-`ps` output nor a tracked file. The name is the recipe path with a hyphen, so
-`recipes/GLM-5.2-NVFP4/rtx-8` reads:
+Two things have to be on your PATH before a recipe builds: `uv`, which installs the Python environment, and
+`mamba`, which installs the CUDA toolkit an RTX recipe needs. On this cluster `mamba` comes from a module,
+and a build submitted through Slurm has to load it there too, since an interactive shell's copy is a
+function that a batch job does not inherit:
+
+```
+module load Mambaforge
+command -v uv || curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Run the build on a compute node rather than a login node. It downloads and unpacks about 12 GB across tens
+of thousands of files.
+
+First create an API key. The name is the recipe path with a hyphen, so `recipes/GLM-5.2-NVFP4/rtx-8` reads:
 
 ```
 mkdir -p secrets
@@ -47,20 +54,16 @@ chmod 600 secrets/GLM-5.2-NVFP4-rtx-8.key
 ```
 
 Every recipe names its file at the top of its README. `secrets/vllm_api_key` is read when that file is
-absent, so a single key there still gates everything if you prefer that.
+absent, so a single key there still gates everything.
 
-With a key in place, requests without it receive HTTP 401. Without one the launcher prints a warning and
-serves the endpoint **ungated**, so create the file before launching on a shared network. `secrets/` is
-gitignored, and every file in it is, so no key is ever committed. To rotate, replace the file and restart:
-the engine reads it once at launch.
+With a key in place, requests without it receive HTTP 401. `secrets/` is gitignored. To rotate, replace the
+file and restart: the engine reads it once at launch.
 
 Then start with a single-GPU recipe, which needs one GPU rather than a whole node and so queues fastest:
 [recipes/gemma-4-26B-A4B-it/h200-1](recipes/gemma-4-26B-A4B-it/h200-1/README.md). Follow it from the top.
 Runnable recipes all have the same steps: configure once, build the environment, launch, verify, connect.
-Run them from the repo root.
 
-Each launches two ways: an sbatch submission and a direct launch on nodes you already hold. Use the
-sbatch path unless you have a reason not to.
+Each launches two ways: an sbatch submission and a direct launch on nodes you already hold.
 
 To choose a model, see [docs/choosing-a-model.md](docs/choosing-a-model.md). The fastest model here is not
 the best coder.
@@ -95,22 +98,15 @@ checkpoint supports, which each recipe states.
 | | FP8 | [1 H100 GPU](recipes/gemma-4-31B-it/h100-1) | TP1 | 67.4 tok/s | 2680 at c=512, peak | 32K | Validated |
 | | FP8 | [1 RTX GPU](recipes/gemma-4-31B-it/rtx-1) | TP1 | 39.5 tok/s | 2139 at c=768, saturated | 32K | Validated |
 
-**Single stream** is one request at a time, and it is the only number that describes how fast a reply feels
-to one person. **Aggregate** is total output across every concurrent stream at the stated concurrency, tens
-to hundreds of times larger.
+`Status` is defined in [docs/choosing-a-model.md](docs/choosing-a-model.md).
 
-Each label comes from that recipe's own table. Where the sweep has two or more levels at concurrency 512
-and above, a spread of `(max - min) / max` under 4 percent across them is `saturated`, meaning more
-concurrency buys only queueing delay. Otherwise the label is `rising` if the highest value sits at the top
-of the sweep, so the figure is a floor, and `peak` if throughput turned over before then. Two sweeps
-stopped at 512 because throughput had already turned over at 256, and both are `peak`. `Status` is defined
-in [docs/choosing-a-model.md](docs/choosing-a-model.md).
+## Weights
 
-Kimi-K3 is labeled `capped` rather than by the rule above: its defaults admit only 67 concurrent
-requests, set by the KDA state pool, so the sweep stops at 64 and a rule defined from concurrency 512
-upward cannot apply. Its row is the default configuration; the recipe also measures a speculative setting
-reaching 94.1 tok/s single stream and a wide setting reaching 1442.6 tok/s at concurrency 156. Its
-`Context` cell is the 256K the measured runs served; the checkpoint supports 1M.
+Checkpoints are read from `MODELS_DIR`, which defaults to the Kempner AI Cluster shared model repository,
+currently located at `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models`. Every model a recipe
+references is already there. That directory is read-only, so download your own copies
+anywhere you can write and point `MODELS_DIR` there; scratch also loads faster.
+[docs/downloading-weights.md](docs/downloading-weights.md) covers both.
 
 ## Hardware
 
@@ -121,11 +117,7 @@ reaching 94.1 tok/s single stream and a wide setting reaching 1442.6 tok/s at co
 | H100 | 4 | 80 GiB | `kempner_h100` |
 | A100 | 4 | 40 GiB | `kempner` |
 
-All nodes of a given type are identical, so any node in a partition works. Details, including allocation
-limits and interconnect, in [docs/hardware.md](docs/hardware.md).
-
-No recipe here targets the A100 yet. It is listed because it is available and may suit a smaller
-checkpoint later.
+Details, including allocation limits and interconnect, in [docs/hardware.md](docs/hardware.md).
 
 ## Layout
 
@@ -156,18 +148,11 @@ hardware level, just the checkpoint directory.
 
 ## Contributing a model
 
-[docs/adding-a-model.md](docs/adding-a-model.md) is the checklist. Run `common/tools/audit_recipes.sh`
-before opening a pull request.
+[docs/adding-a-model.md](docs/adding-a-model.md) is the checklist, and `common/templates/recipe-README.md`
+is the shape a recipe README has to take. Open a pull request when your recipe launches and serves; a
+maintainer runs the repository checks on it and asks for whatever is missing.
 
 ## License
 
 MIT, in [LICENSE](LICENSE). Model weights are not covered by it: each checkpoint carries its own license
 from whoever published it, and the recipe for that model names the Hugging Face repo where it is stated.
-
-## Weights
-
-Checkpoints are read from `MODELS_DIR`, which defaults to
-`/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models`. Every model a recipe references is already
-there. That directory is read-only for most users, so download your own copies anywhere you can write and
-point `MODELS_DIR` there; scratch also loads faster.
-[docs/downloading-weights.md](docs/downloading-weights.md) covers both.

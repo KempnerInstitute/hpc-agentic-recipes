@@ -1,8 +1,8 @@
 # OpenAI-compatible clients
 
-Every recipe here serves an OpenAI-compatible API at `/v1` alongside the Anthropic-compatible one, so
-tools that speak either protocol work without a proxy. That holds under both engines, so a client from
-this page and Claude Code both reach every endpoint here.
+Every endpoint here serves an OpenAI-compatible API at `/v1` alongside the Anthropic-compatible one, so
+tools that speak either protocol work without a proxy. That holds under both engines, so a client from this
+page reaches the same endpoints Claude Code does.
 
 Three settings, whatever the client:
 
@@ -19,8 +19,7 @@ KEY=$(cat secrets/GLM-5.2-NVFP4-rtx-8.key 2>/dev/null || cat secrets/vllm_api_ke
 curl -s -H "Authorization: Bearer $KEY" http://<node>:8000/v1/models
 ```
 
-Cline, Aider, Continue, and OpenHands all take these three settings. Any library that accepts a custom base
-URL works too, including the official `openai` Python package:
+Any library that accepts a custom base URL works, including the official `openai` Python package:
 
 ```
 from openai import OpenAI

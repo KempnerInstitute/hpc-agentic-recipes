@@ -16,8 +16,8 @@ One user may hold **16 GPUs at once** across all four partitions, which is 2 RTX
 A100 nodes. The largest recipe here, Kimi-K3 on 4 H200 nodes, sits exactly at that cap.
 
 Per GPU requested you may take 16 CPUs on `kempner_rtx`, `kempner_h200` and `kempner`, and 24 on
-`kempner_h100`, with about 189 GiB of host memory per RTX GPU, 378 GiB per H200 or H100 GPU, and 252 GiB
-per A100 GPU. Maximum wall time is 2 days everywhere.
+`kempner_h100`. Host memory per GPU is 180 GB on `kempner_rtx`, 360 GB on `kempner_h200` and `kempner_h100`,
+and 240 GB on `kempner`. Maximum wall time is 2 days everywhere.
 
 ## What each type is good for
 

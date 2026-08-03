@@ -19,8 +19,9 @@ printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/Kimi-K3-h200-4-nodes4-s
 chmod 600 secrets/Kimi-K3-h200-4-nodes4-sglang.key
 ```
 
-That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup
-made before per-model keys keeps working.
+That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup made
+before per-recipe keys keeps working. When neither exists but `secrets/` holds exactly one key, that one is
+used, which is how `bench.sh` authenticates without being told which recipe you mean.
 
 Cluster paths otherwise come from `common/defaults.sh`, which is tracked with working defaults.
 Optional overrides, either exported or set in `common/site.conf`:
@@ -29,8 +30,8 @@ Optional overrides, either exported or set in `common/site.conf`:
 | --- | --- | --- |
 | `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
 | `K3_HEAD_NODE` | unset | The head node, for the client configuration |
-| `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
-| `SIF` | testbed copy, or `$MODELS_DIR` if it has one | Use a container image staged elsewhere |
+| `MODELS_DIR` | shared repository path | Point at your own faster copy of the checkpoint |
+| `SIF` | shared repository copy, or `$MODELS_DIR` if it has one | Use a container image staged elsewhere |
 
 ## Status
 
@@ -74,10 +75,10 @@ Read from `config.json` and the model card:
 
 There is no bf16 twin to fall back on: the MXFP4 weights are what the model was trained with.
 
-The testbed path works out of the box. Copying the checkpoint into your own scratch space loads faster,
-because scratch outperforms Lustre for this workload, and the directory names are identical in both
+The shared repository path works out of the box. Copying the checkpoint into your own scratch space loads
+faster, because scratch outperforms Lustre for this workload, and the directory names are identical in both
 locations so only `MODELS_DIR` changes. Scratch has a 90-day retention policy, so treat it as a fast
-cache and keep testbed as the permanent copy.
+cache and keep the shared repository as the permanent copy.
 
 ## Hardware
 
@@ -220,8 +221,8 @@ effort is set with a top-level `reasoning_effort` field taking `low`, `high` or 
 
 ### Replayed thinking corrupts the reply on the Anthropic route
 
-Measured on this build. When a conversation on `/v1/messages` sends earlier `thinking` blocks back, as
-Claude Code does, the model sometimes opens its think channel with a malformed marker, `<|sep|` twice
+On this build, when a conversation on `/v1/messages` sends earlier `thinking` blocks back, as Claude Code
+does, the model sometimes opens its think channel with a malformed marker, `<|sep|` twice
 rather than once. SGLang's detector matches the marker as a literal string, so it does not match, the
 detector concludes there is no reasoning to strip, and the whole channel-marked output is delivered as
 visible text. The reply then begins `<|open|>think<|sep|<|sep|>` and the reasoning is not separated.
@@ -250,11 +251,12 @@ Every variable this recipe honors, with its default and effect.
 | --- | --- | --- |
 | `MODEL` | `$MODELS_DIR/Kimi-K3` | Serve a different copy of the checkpoint |
 | `DRAFT` | `$MODELS_DIR/Kimi-K3-DSpark` | The speculative draft, used only when `SPEC_MODE=dspark` |
-| `SIF` | testbed copy, or `$MODELS_DIR/Kimi-K3/container/…` if present | Use a container staged elsewhere |
+| `SIF` | shared repository copy, or `$MODELS_DIR/Kimi-K3/container/…` if present | Use a container staged elsewhere |
 | `SPEC_MODE` | `none` | Set to `dspark` for speculative decoding |
 | `API_PORT` | 8000 | Listening port |
 | `DIST_PORT` | 29500 | Port the 16 ranks use to form their group |
 | `MAX_MODEL_LEN` | 262144 | Context window; the checkpoint supports 1048576 |
+| `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is `~/.cache/vllm`, which is a small quota here |
 | `MEM_FRACTION` | 0.88, 0.90 under `WIDE=1` | Static memory fraction; it feeds the KDA state pool, so lowering it cuts the concurrency cap |
 | `WIDE` | 0 | Set to 1 for the configuration that lifted the concurrency cap from 67 to 156 |
 | `MAMBA_RATIO` | unset, 3.2 under `WIDE=1` | Size of the KDA state pool relative to KV |
@@ -487,7 +489,7 @@ bash common/tools/stop.sh <node0> <node1> <node2> <node3>
 
 | Stage | Measured |
 | --- | --- |
-| Container staging, one time | none, the image is staged in the testbed |
+| Container staging, one time | none, the image is staged in the shared repository |
 | Weight load, 96 shards across 16 ranks | about 12 min |
 | Total, launch to serving | 13 min 54 s to 15 min 35 s |
 

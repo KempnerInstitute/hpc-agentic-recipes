@@ -10,6 +10,7 @@ export ANTHROPIC_BASE_URL=http://<node>:8000
 export ANTHROPIC_AUTH_TOKEN=<the api key>
 export ANTHROPIC_MODEL=<served model name>
 export ANTHROPIC_SMALL_FAST_MODEL=<the same name>
+export CLAUDE_CODE_ATTRIBUTION_HEADER=0
 claude
 ```
 
@@ -46,20 +47,30 @@ That is expected when pointing at a local endpoint and affects nothing.
 export CLAUDE_CODE_ATTRIBUTION_HEADER=0
 ```
 
-By default Claude Code prepends a system block reading
-`x-anthropic-billing-header: cc_version=...; cc_entrypoint=...;` ahead of its own system prompt. Despite
-the name it is not sent as a header: it is text, 70 characters in an interactive session and 74 under
-`claude -p`, at the very front of the prompt. A prefix cache hit requires the prompt to match from the
-first token, so those characters gate reuse of the much larger remainder, the client's own system prompt
-and every tool definition. Setting this to 0 removes that block and changes nothing else in the request.
+By default Claude Code puts a line reading `x-anthropic-billing-header: cc_version=...; cc_entrypoint=...;`
+at the very start of the prompt, ahead of its own system prompt. Despite the name it is not an HTTP header,
+just text, and setting this to 0 removes it.
 
-What it is worth, measured rather than assumed. Two callers on the same client version and the same
-entrypoint send a byte-identical block, so between them this setting gains nothing. The block carries the
-client version, so callers on different versions differ at the first character, and since the client
-updates itself a shared endpoint drifts into that state on its own. That is the case worth setting it
-for, and it is the one not verified here, because only one client version was available to test against.
+A prefix cache hit needs the prompt to match from the first token, so that line gates reuse of everything
+behind it: the client's system prompt and every tool definition. Because it carries the client version,
+callers on different versions match on nothing, and a self-updating client drifts into that state on its
+own. Callers on the same version send an identical line, so between them this changes nothing, and the same
+holds turn to turn within one conversation. The cross-version case is the reason to set it, and the one case
+not tested here, since only one client version was installed.
 
-Do not expect it to help within a conversation: every turn of one conversation sends the same block.
+## A small context needs the output request capped
+
+Claude Code's own system prompt and tool definitions run to about 24K tokens before you type anything, and
+it asks for 32000 output tokens by default. Against an endpoint serving 32K or 40K that exceeds the context
+and every request fails with a maximum context length error. Cap the request:
+
+```
+export CLAUDE_CODE_MAX_OUTPUT_TOKENS=4096
+```
+
+The recipes that serve a small context set this in their `client.env` already. The alternative is to raise
+the endpoint's own context: every one of those checkpoints supports far more than the recipe serves by
+default, at the cost of KV cache.
 
 ## Verify before blaming the client
 

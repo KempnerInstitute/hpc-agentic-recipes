@@ -15,8 +15,9 @@ printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/GLM-5.2-FP8-h200-4-node
 chmod 600 secrets/GLM-5.2-FP8-h200-4-nodes2.key
 ```
 
-That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup
-made before per-model keys keeps working.
+That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup made
+before per-recipe keys keeps working. When neither exists but `secrets/` holds exactly one key, that one is
+used, which is how `bench.sh` authenticates without being told which recipe you mean.
 
 Nothing else is required. Cluster paths come from `common/defaults.sh`, which is tracked with working
 defaults, so a fresh clone runs as is. Optional overrides, either exported or set in
@@ -26,7 +27,7 @@ defaults, so a fresh clone runs as is. Optional overrides, either exported or se
 | --- | --- | --- |
 | `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
 | `GLM52_HEAD`, `GLM52_WORKER` | unset | Two nodes you already hold, for the SSH path |
-| `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
+| `MODELS_DIR` | shared repository path | Point at your own faster copy of the checkpoint |
 | `ENV_ROOT` | scratch | Where this recipe builds its environment |
 
 One constraint is specific to a two-node recipe: `ENV_ROOT` and `MODELS_DIR` must both resolve to the
@@ -78,10 +79,10 @@ Read from the checkpoint:
 The MTP head cannot be used in this configuration, and the reason is structural rather than a missing
 flag. See "Parallelism and quantization".
 
-The testbed path works out of the box. Copying the checkpoint into your own scratch space loads
+The shared repository path works out of the box. Copying the checkpoint into your own scratch space loads
 faster, because scratch outperforms Lustre for this workload, and the directory names are identical in both
 locations so only `MODELS_DIR` changes. Scratch has a 90-day retention policy, so treat it as a fast
-cache and keep testbed as the permanent copy.
+cache and keep the shared repository as the permanent copy.
 
 ## Hardware
 
@@ -233,6 +234,7 @@ Every variable this recipe honors, with its default and effect.
 | `API_PORT` | 8000 | Listening port |
 | `MAX_MODEL_LEN` | 131072 | Context window; the checkpoint supports 1048576, at a KV cache cost |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
+| `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is `~/.cache/vllm`, which is a small quota here |
 | `TP` | 4 | Tensor parallel size; 4 is one node's GPU count and must stay inside a node |
 | `PP` | 2 | Pipeline parallel size; 2 is the node count |
 | `PERF` | unset | Retry CUDA graph capture instead of eager; currently crashes |
@@ -478,7 +480,7 @@ vLLM logs anything.
 
 Both columns are measured on two different node pairs, with the checkpoint read from
 scratch in both cases. The difference is page cache: the fast pair had already loaded this
-checkpoint, the freshly allocated pair had not. Reading from the Lustre testbed path instead is slower
+checkpoint, the freshly allocated pair had not. Reading from the Lustre repository path instead is slower
 again.
 
 Nothing in this window looks like progress if you only watch the port, so watch the log. A first launch

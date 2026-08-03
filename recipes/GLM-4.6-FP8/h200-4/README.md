@@ -15,8 +15,9 @@ printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/GLM-4.6-FP8-h200-4.key
 chmod 600 secrets/GLM-4.6-FP8-h200-4.key
 ```
 
-That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup
-made before per-model keys keeps working.
+That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup made
+before per-recipe keys keeps working. When neither exists but `secrets/` holds exactly one key, that one is
+used, which is how `bench.sh` authenticates without being told which recipe you mean.
 
 Nothing else is required. Cluster paths come from `common/defaults.sh`, which is tracked with working
 defaults, so a fresh clone runs as is. Four optional overrides, either exported or set in
@@ -26,7 +27,7 @@ defaults, so a fresh clone runs as is. Four optional overrides, either exported 
 | --- | --- | --- |
 | `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
 | `GLM46_NODE` | unset | A node you already hold, for the SSH path |
-| `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
+| `MODELS_DIR` | shared repository path | Point at your own faster copy of the checkpoint |
 | `ENV_ROOT` | scratch | Where this recipe builds its environment |
 
 ## Status
@@ -48,10 +49,10 @@ proxy.
 - Hugging Face repo: `zai-org/GLM-4.6-FP8`
 - Documented path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/GLM-4.6-FP8`
 
-The testbed path works out of the box. Copying the checkpoint into your own scratch space loads
+The shared repository path works out of the box. Copying the checkpoint into your own scratch space loads
 faster, because scratch outperforms Lustre for this workload, and the directory names are identical in
 both locations so only `MODELS_DIR` changes. Scratch has a 90-day retention policy, so treat it as a
-fast cache and keep testbed as the permanent copy.
+fast cache and keep the shared repository as the permanent copy.
 
 ## Hardware
 
@@ -173,6 +174,7 @@ Every variable this recipe honors, with its default and effect.
 | `API_PORT` | 8000 | Listening port |
 | `MAX_MODEL_LEN` | 131072 | Context window; larger costs KV cache memory |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
+| `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is `~/.cache/vllm`, which is a small quota here |
 | `TP` | 4 | Tensor parallel size; 4 is the node's GPU count |
 | `MTP_TOKENS` | 1 | Speculative tokens per step |
 | `NO_MTP` | unset | Set to disable speculative decoding |
@@ -332,7 +334,7 @@ four GPUs before you relaunch, or the next start will fail on memory.
 | Launch to serving, cold page cache | 6 min 6 s |
 | Launch to serving, warm page cache | 4 min 2 s |
 
-Measured with the checkpoint read from scratch rather than the default testbed path;
+Measured with the checkpoint read from scratch rather than the default repository path;
 reading from Lustre is slower. First launch on a fresh node is slower than later ones, because the page
 cache is cold and any just-in-time kernel compilation happens once. A launch that looks hung during this
 window is usually still loading, so check the log before killing it.

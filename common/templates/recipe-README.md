@@ -3,8 +3,8 @@
 Status: Untested - not yet run end to end
 
 Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
-Do not link out for anything required: repeat it here instead. Issue text is injected from
-common/issues by common/tools/audit_recipes.sh --fix, so add empty marker pairs rather than prose:
+Do not link out for anything required: repeat it here instead. Shared failure-mode text comes from
+common/issues and a maintainer fills it in, so leave empty marker pairs rather than writing prose:
 
     <!-- issue:<slug> begin -->
     <!-- issue:<slug> end -->
@@ -20,7 +20,7 @@ common/issues by common/tools/audit_recipes.sh --fix, so add empty marker pairs 
 
 ## What this is
 
-<!-- Model, checkpoint directory, Hugging Face repo id, documented testbed path, faster-copy note. -->
+<!-- Model, checkpoint directory, Hugging Face repo id, documented repository path, faster-copy note. -->
 
 ## Hardware
 

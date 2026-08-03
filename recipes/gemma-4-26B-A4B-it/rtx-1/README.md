@@ -15,8 +15,9 @@ printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/gemma-4-26B-A4B-it-rtx-
 chmod 600 secrets/gemma-4-26B-A4B-it-rtx-1.key
 ```
 
-That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup
-made before per-model keys keeps working.
+That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup made
+before per-recipe keys keeps working. When neither exists but `secrets/` holds exactly one key, that one is
+used, which is how `bench.sh` authenticates without being told which recipe you mean.
 
 Nothing else is required. Cluster paths come from `common/defaults.sh`, which is tracked with working
 defaults, so a fresh clone runs as is. Optional overrides, either exported or set in
@@ -26,7 +27,7 @@ defaults, so a fresh clone runs as is. Optional overrides, either exported or se
 | --- | --- | --- |
 | `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
 | `GEMMA26_RTX_NODE` | unset | An RTX node you already hold, for the SSH path |
-| `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
+| `MODELS_DIR` | shared repository path | Point at your own faster copy of the checkpoint |
 | `ENV_ROOT` | scratch | Where this recipe builds its environment |
 
 ## Status
@@ -53,10 +54,10 @@ API, so Claude Code connects to it directly with no proxy.
 - Optional drafter: `gemma-4-26B-A4B-it-assistant`, under 1 GB, wired through `SPEC_DRAFT` and
   currently unusable on this engine (see Gotchas)
 
-The testbed path works out of the box. Copying the checkpoint into your own scratch space loads
+The shared repository path works out of the box. Copying the checkpoint into your own scratch space loads
 faster, because scratch outperforms Lustre for this workload, and the directory names are identical in
 both locations so only `MODELS_DIR` changes. Scratch has a 90-day retention policy, so treat it as a
-fast cache and keep testbed as the permanent copy.
+fast cache and keep the shared repository as the permanent copy.
 
 ## Hardware
 
@@ -188,6 +189,11 @@ source recipes/gemma-4-26B-A4B-it/rtx-1/client.env
 claude
 ```
 
+`client.env` caps the client's output request with `CLAUDE_CODE_MAX_OUTPUT_TOKENS=4096`. Claude Code asks
+for 32000 output tokens by default, which leaves 768 tokens of this endpoint's 32768-token context for the
+prompt, so every request would fail before the model saw it. Raise the cap only if you also raise
+`MAX_MODEL_LEN`.
+
 <!-- issue:anthropic-auth-token begin -->
 **Use `ANTHROPIC_AUTH_TOKEN`, never `ANTHROPIC_API_KEY`.** Both engines accept only
 `Authorization: Bearer <key>`. Setting `ANTHROPIC_API_KEY` makes Claude Code send an `x-api-key`
@@ -209,6 +215,7 @@ Every variable this recipe honors, with its default and effect.
 | `API_PORT` | 8000 | Listening port, and part of the SSH log file name |
 | `MAX_MODEL_LEN` | 32768 | Context window; 262144 is supported and costs 10 GB of KV cache |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
+| `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is `~/.cache/vllm`, which is a small quota here |
 | `TP` | 1 | Tensor parallel size; one GPU holds this checkpoint at full context |
 | `QUANT` | unset, meaning bf16 | `fp8` quantizes weights on load; measured no change in rate for this MoE, so use it only to free VRAM |
 | `KV_FP8` | unset | `--kv-cache-dtype fp8`; halves KV bytes, measured no change in rate |
@@ -384,5 +391,4 @@ check only that device: another job may legitimately be holding the other seven.
 First launch on a fresh node is slower than later ones: page cache is cold, and the FlashInfer sm_120
 kernels are compiled from source on the first request after a fresh environment because no matching
 cubin package exists. A launch that looks hung during this window is usually still loading. Check the
-log before killing it. These numbers will be filled in when this recipe is validated on hardware; they
-are deliberately blank rather than guessed.
+log before killing it. These numbers will be filled in when this recipe is validated on hardware.

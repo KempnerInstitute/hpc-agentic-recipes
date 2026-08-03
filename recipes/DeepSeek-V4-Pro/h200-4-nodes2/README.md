@@ -20,8 +20,9 @@ printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/DeepSeek-V4-Pro-h200-4-
 chmod 600 secrets/DeepSeek-V4-Pro-h200-4-nodes2.key
 ```
 
-That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup
-made before per-model keys keeps working.
+That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup made
+before per-recipe keys keeps working. When neither exists but `secrets/` holds exactly one key, that one is
+used, which is how `bench.sh` authenticates without being told which recipe you mean.
 
 Cluster paths otherwise come from `common/defaults.sh`, which is tracked with working defaults.
 Optional overrides, either exported or set in `common/site.conf`:
@@ -30,7 +31,7 @@ Optional overrides, either exported or set in `common/site.conf`:
 | --- | --- | --- |
 | `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
 | `DSV4_H200_HEAD`, `DSV4_H200_WORKER` | unset | Two nodes you already hold, for the SSH path |
-| `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
+| `MODELS_DIR` | shared repository path | Point at your own faster copy of the checkpoint |
 | `ENV_ROOT` | scratch | Where this recipe builds its environment |
 
 ## Status
@@ -117,7 +118,7 @@ Two consequences of the checkpoint's contents that are easy to get wrong:
 
 Copying the checkpoint into scratch loads faster than Lustre for this workload, and the directory
 names are identical in both locations so only `MODELS_DIR` changes. Scratch has a 90-day retention
-policy, so treat it as a fast cache and keep testbed as the permanent copy.
+policy, so treat it as a fast cache and keep the shared repository as the permanent copy.
 
 ## Hardware
 
@@ -266,10 +267,11 @@ Every variable this recipe honors, with its default and effect.
 | Variable | Default | Effect |
 | --- | --- | --- |
 | `MODEL` | `$MODELS_DIR/DeepSeek-V4-Pro` | Serve a different copy of the checkpoint |
-| `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
+| `MODELS_DIR` | shared repository path | Point at your own faster copy of the checkpoint |
 | `API_PORT` | 8000 | Listening port |
 | `MAX_MODEL_LEN` | 131072 | Context window; the checkpoint supports 1048576 |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
+| `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is `~/.cache/vllm`, which is a small quota here |
 | `TP` | 4 | Tensor parallel size; 4 is the node's GPU count |
 | `PP` | 2 | Pipeline parallel size; 2 is the node count |
 | `PERF` | unset | Attempt CUDA graph capture instead of eager |
@@ -473,5 +475,4 @@ and it fails on resources rather than on memory, which reads like a different pr
 
 First launch on a fresh node is slower than later ones: page cache is cold and any just-in-time kernel
 compilation happens once. A launch that looks hung during this window is usually still loading. Check
-the log before killing it. These numbers will be filled in if this recipe is run on hardware; they are
-deliberately blank rather than guessed.
+the log before killing it. These numbers will be filled in if this recipe is run on hardware.

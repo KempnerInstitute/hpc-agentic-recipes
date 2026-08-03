@@ -17,7 +17,7 @@ faster than the much smaller Qwen3-235B on the same hardware.
 
 **Highest published coding scores:** Kimi-K3, a 2.8T MoE in MXFP4, which needs 4 H200 nodes and runs only
 under SGLang. Kimi-K2.7-Code, 1T in INT4, is the largest coding-specialized checkpoint and fits a single
-RTX node. Both trade a lot of latency for that quality: 40.3 and 20.7 tok/s.
+RTX node. Both trade a lot of latency for that quality: 40.2 and 20.7 tok/s.
 
 **Longest context:** GLM-5.2-FP8 across two H200 nodes and Kimi-K3 both support 1M tokens. The recipes
 serve less by default and raising it costs decode rate.
@@ -130,10 +130,8 @@ Rates measured with different protocols are not comparable:
 - `single-generation` times one request and divides tokens by wall time, counting prefill and fixed cost
   as decode, so it understates sustained decode. The shorter the generation, the larger the error.
 
-Every rate in this repo is slope-measured. The vLLM recipes use `common/tools/bench.sh`; the Kimi-K3
-figures came from a separate harness applying the same `slope(128,1152)` protocol, which is why that
-recipe is Untested until it is re-measured from its own scripts. Details in
-[benchmarking.md](benchmarking.md).
+Every rate in this repo is slope-measured with `common/tools/bench.sh`, run against an endpoint the recipe's
+own scripts launched. Details in [benchmarking.md](benchmarking.md).
 
 ## Read the status column
 
@@ -142,10 +140,12 @@ rates were measured from those files rather than carried over. `Untested` means 
 never been launched and every number in it is a prediction. `Blocked` means it does not currently run at
 all, and the recipe says why.
 
-Aggregate rates carry one of three labels. `peak` means throughput turned over inside the sweep, so it is
+Aggregate rates carry one of four labels. `peak` means throughput turned over inside the sweep, so it is
 a measured maximum. `saturated` means it varies by under 4 percent from concurrency 512 to 1024, so it is
 a real ceiling even though no single level stands out. `rising` means it was still climbing at 1024, the
-top of the sweep, so the figure is a floor and the true peak is higher.
+top of the sweep, so the figure is a floor and the true peak is higher. `capped` means the engine admits
+fewer concurrent requests than the sweep would reach, so the figure is the most that endpoint accepts
+rather than a point on a curve.
 
 ## Three performance regimes, and why flags help or do not
 

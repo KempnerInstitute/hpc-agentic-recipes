@@ -3,10 +3,14 @@
 #
 #   download_model.sh [--dry-run] <hf_repo> <dest_parent_dir> [local_name]
 #
-# The destination is required rather than defaulting to MODELS_DIR. MODELS_DIR points at the shared
-# testbed, which is read-only for everyone outside the data administrators group, so defaulting there
-# would send most users into a permission error several minutes into a large transfer, and would let
-# anyone who does have write access fill a shared directory by accident.
+# The destination is required rather than defaulting to MODELS_DIR, which points at the shared model
+# repository. That is read-only for almost everyone, so defaulting there would send most users into a
+# permission error several minutes into a large transfer, and would let anyone who does have write access
+# fill a shared directory by accident.
+#
+# It reports no free space. df would show the whole filesystem, while what actually limits a download is
+# the group quota: lfs quota -g <group> <lustre-path>, or quota -g <group> /n/netscratch on scratch.
+# Confirm your own space first.
 set -euo pipefail
 export PATH="$HOME/.local/bin:$PATH"
 
@@ -29,7 +33,6 @@ command -v hf >/dev/null 2>&1 || { echo "download_model.sh: hf is not on PATH" >
 
 echo "repo:        $REPO"
 echo "destination: $DEST"
-echo "free space:  $(df -h --output=avail "$PARENT" 2>/dev/null | tail -1 | tr -d ' ')"
 [ "$DRY" = 1 ] && { echo "dry run, nothing transferred"; exit 0; }
 
 # Both accelerated transfer backends are off: the plain path resumes cleanly after an interruption,
