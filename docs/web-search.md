@@ -33,8 +33,9 @@ bash common/tools/search.sh wiki     "tensor parallelism"
 bash common/tools/search.sh fetch    https://example.com/page
 ```
 
-Web search needs the `ddgs` package, which is installed into a small local environment on first use. The
-literature modes need nothing but network access.
+Only `web` mode needs a package. On first use it builds `.venv-tools` in the repo root and installs `ddgs`
+there with `uv`, so `uv` has to be available, or set `SEARCH_PYTHON` to an interpreter that already has
+`ddgs`. The other six modes run on plain `python3` and need nothing but network access.
 
 ## Making the model use it
 
@@ -55,8 +56,9 @@ search.sh wiki "tensor parallelism" 1
 If that reports `search.sh: command not found`, add `~/.local/bin` to your `PATH` in your shell profile.
 The skill also gives the model the full path as a fallback, so it works either way.
 
-The skill tells the model what the tool does, when to use each mode, and to reach for it when a hosted
-web search fails.
+The skill tells the model what the tool does and when to use each mode. It can only react to a failure it
+can see, which on vLLM is the 400. On SGLang the hosted search is dropped silently, so nothing signals the
+model to switch: ask for the search tool explicitly there, or expect an answer written without searching.
 
 ## Reliability
 
