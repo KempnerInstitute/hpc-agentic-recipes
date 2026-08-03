@@ -112,6 +112,14 @@ upward cannot apply. Its row is the default configuration; the recipe also measu
 reaching 94.1 tok/s single stream and a wide setting reaching 1442.6 tok/s at concurrency 156. Its
 `Context` cell is the 256K the measured runs served; the checkpoint supports 1M.
 
+## Weights
+
+Checkpoints are read from `MODELS_DIR`, which defaults to
+`/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models`. Every model a recipe references is already
+there. That directory is read-only for most users, so download your own copies anywhere you can write and
+point `MODELS_DIR` there; scratch also loads faster.
+[docs/downloading-weights.md](docs/downloading-weights.md) covers both.
+
 ## Hardware
 
 | Type | GPUs per node | Memory per GPU | Partition |
@@ -163,11 +171,3 @@ before opening a pull request.
 
 MIT, in [LICENSE](LICENSE). Model weights are not covered by it: each checkpoint carries its own license
 from whoever published it, and the recipe for that model names the Hugging Face repo where it is stated.
-
-## Weights
-
-Checkpoints are read from `MODELS_DIR`, which defaults to
-`/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models`. Every model a recipe references is already
-there. That directory is read-only for most users, so download your own copies anywhere you can write and
-point `MODELS_DIR` there; scratch also loads faster.
-[docs/downloading-weights.md](docs/downloading-weights.md) covers both.
