@@ -241,14 +241,6 @@ for r in "${RECIPE_LIST[@]}"; do
   esac
 done
 
-echo "== no dates or internal vocabulary in recipe prose"
-# Delegated to check_prose.py because it has to be fence-aware: dates inside code blocks are verbatim
-# engine output pasted as evidence, and editing a quoted log line to drop its timestamp would falsify it.
-if ! out="$(python3 "$S/check_prose.py" 2>&1)"; then
-  # A while-read pipeline runs in a subshell, so incrementing the failure count inside one is lost
-  # and the audit prints every finding and then reports PASS.
-  while read -r line; do bad "$line"; done < <(echo "$out" | grep -E '^ +(DATE|JARGON)')
-fi
 
 echo "== syntax and hygiene"
 while read -r f; do

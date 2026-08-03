@@ -126,6 +126,10 @@ bash common/tools/audit_recipes.sh
 Do not write issue text by hand. It is duplicated across recipes on purpose, and the source copy in
 `common/issues/` is what keeps every copy identical.
 
+Two conventions the README text has to follow. Give an engine version rather than a calendar date, because a
+date does not tell a reader whether a number still holds. And write about the recipe rather than about
+yourself: no first person, and no citing notes that are not in the repo.
+
 ## Update the indexes
 
 - One row in the model table in the top-level README
