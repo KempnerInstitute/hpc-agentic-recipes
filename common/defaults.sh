@@ -1,6 +1,7 @@
 # Cluster defaults. Tracked on purpose, so a fresh clone works with no configuration.
-# Source this, do not execute. Override precedence: this file, then common/site.conf, then the
-# environment. Nothing here is user-specific.
+# Source this, do not execute. common/site.conf is read first and wins; every default below fills in
+# only what it left unset, so paths derived from those values follow the override. Nothing here is
+# user-specific.
 [ -n "${REPO_ROOT:-}" ] || source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/repo_root.sh"
 
 # Local overrides first. Everything below either defaults around them or is derived from them, so

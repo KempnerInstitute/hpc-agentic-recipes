@@ -15,8 +15,9 @@ printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/gemma-4-31B-it-h100-1.k
 chmod 600 secrets/gemma-4-31B-it-h100-1.key
 ```
 
-That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup
-made before per-model keys keeps working.
+That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup made
+before per-recipe keys keeps working. When neither exists but `secrets/` holds exactly one key, that one is
+used, which is how `bench.sh` authenticates without being told which recipe you mean.
 
 Nothing else is required. Cluster paths come from `common/defaults.sh`, which is tracked with working
 defaults, so a fresh clone runs as is. Optional overrides, either exported or set in
@@ -175,6 +176,11 @@ source recipes/gemma-4-31B-it/h100-1/client.env
 claude
 ```
 
+`client.env` caps the client's output request with `CLAUDE_CODE_MAX_OUTPUT_TOKENS=4096`. Claude Code asks
+for 32000 output tokens by default, which leaves 768 tokens of this endpoint's 32768-token context for the
+prompt, so every request would fail before the model saw it. Raise the cap only if you also raise
+`MAX_MODEL_LEN`.
+
 <!-- issue:anthropic-auth-token begin -->
 **Use `ANTHROPIC_AUTH_TOKEN`, never `ANTHROPIC_API_KEY`.** Both engines accept only
 `Authorization: Bearer <key>`. Setting `ANTHROPIC_API_KEY` makes Claude Code send an `x-api-key`
@@ -196,6 +202,7 @@ Every variable this recipe honors, with its default and effect.
 | `API_PORT` | 8000 | Listening port, and part of the SSH log file name |
 | `MAX_MODEL_LEN` | 32768 | Context window; 262144 is supported and costs 41 GB of KV cache, which needs the FP8 default |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
+| `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is `~/.cache/vllm`, which is a small quota here |
 | `TP` | 1 | Tensor parallel size; one GPU holds this checkpoint |
 | `QUANT` | `fp8` | Weight quantization applied at load. Set `QUANT=` (empty) for bf16, which measured 41 percent slower on this GPU and caps context near 55K |
 | `KV_FP8` | unset | `--kv-cache-dtype fp8`; halves KV bytes, measured no change in rate, and the cheapest way to buy context on this card |

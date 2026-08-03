@@ -15,8 +15,9 @@ printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/Kimi-K2.7-Code-rtx-8.ke
 chmod 600 secrets/Kimi-K2.7-Code-rtx-8.key
 ```
 
-That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup
-made before per-model keys keeps working.
+That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup made
+before per-recipe keys keeps working. When neither exists but `secrets/` holds exactly one key, that one is
+used, which is how `bench.sh` authenticates without being told which recipe you mean.
 
 Nothing else is required. Cluster paths come from `common/defaults.sh`, which is tracked with working
 defaults, so a fresh clone runs as is. Four optional overrides, either exported or set in
@@ -194,6 +195,11 @@ source recipes/Kimi-K2.7-Code/rtx-8/client.env
 claude
 ```
 
+`client.env` caps the client's output request with `CLAUDE_CODE_MAX_OUTPUT_TOKENS=4096`. Claude Code asks
+for 32000 output tokens by default, which leaves 768 tokens of this endpoint's 32768-token context for the
+prompt, so every request would fail before the model saw it. Raise the cap only if you also raise
+`MAX_MODEL_LEN`.
+
 <!-- issue:anthropic-auth-token begin -->
 **Use `ANTHROPIC_AUTH_TOKEN`, never `ANTHROPIC_API_KEY`.** Both engines accept only
 `Authorization: Bearer <key>`. Setting `ANTHROPIC_API_KEY` makes Claude Code send an `x-api-key`
@@ -215,6 +221,7 @@ Every variable this recipe honors, with its default and effect.
 | `API_PORT` | 8000 | Listening port |
 | `MAX_MODEL_LEN` | 32768 | Context window; larger costs KV cache memory |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
+| `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is `~/.cache/vllm`, which is a small quota here |
 | `TP` | 8 | Tensor parallel size; 8 is the node's GPU count |
 | `ENFORCE_EAGER` | 1 | Set to empty to try CUDA graph capture, which is untested here |
 | `ATTN_BACKEND` | unset | Override vLLM's attention backend selection |

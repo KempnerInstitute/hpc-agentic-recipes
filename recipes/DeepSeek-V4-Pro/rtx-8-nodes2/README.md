@@ -15,8 +15,9 @@ printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/DeepSeek-V4-Pro-rtx-8-n
 chmod 600 secrets/DeepSeek-V4-Pro-rtx-8-nodes2.key
 ```
 
-That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup
-made before per-model keys keeps working.
+That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup made
+before per-recipe keys keeps working. When neither exists but `secrets/` holds exactly one key, that one is
+used, which is how `bench.sh` authenticates without being told which recipe you mean.
 
 Cluster paths otherwise come from `common/defaults.sh`, which is tracked with working defaults.
 Optional overrides, either exported or set in `common/site.conf`:
@@ -251,6 +252,7 @@ Every variable this recipe honors, with its default and effect.
 | `API_PORT` | 8000 | Listening port |
 | `MAX_MODEL_LEN` | 131072 | Context window; the checkpoint supports 1048576 |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
+| `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is `~/.cache/vllm`, which is a small quota here |
 | `TP` | 8 | Tensor parallel size; 8 is one node's GPU count and the largest legal value |
 | `PP` | 2 | Pipeline parallel size; 2 is the node count |
 | `PERF` | unset | Attempt CUDA graph capture instead of eager |
