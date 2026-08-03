@@ -1,8 +1,8 @@
 # OpenAI-compatible clients
 
-Every recipe here serves an OpenAI-compatible API at `/v1` alongside the Anthropic-compatible one, so
-tools that speak either protocol work without a proxy. That holds under both engines, so a client from
-this page and Claude Code both reach every endpoint here.
+Every endpoint here serves an OpenAI-compatible API at `/v1` alongside the Anthropic-compatible one, so
+tools that speak either protocol work without a proxy. That holds under both engines, so a client from this
+page reaches the same endpoints Claude Code does.
 
 Three settings, whatever the client:
 
