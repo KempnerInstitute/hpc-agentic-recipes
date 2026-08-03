@@ -9,13 +9,14 @@ Three settings, whatever the client:
 | Setting | Value |
 | --- | --- |
 | Base URL | `http://<node>:8000/v1` |
-| API key | the contents of `secrets/vllm_api_key` |
+| API key | the contents of the recipe's key file, or `secrets/vllm_api_key` |
 | Model | the served model name, for example `glm-5.2` |
 
 Confirm the model name from the endpoint rather than guessing:
 
 ```
-curl -s -H "Authorization: Bearer $(cat secrets/vllm_api_key)" http://<node>:8000/v1/models
+KEY=$(cat secrets/GLM-5.2-NVFP4-rtx-8.key 2>/dev/null || cat secrets/vllm_api_key)
+curl -s -H "Authorization: Bearer $KEY" http://<node>:8000/v1/models
 ```
 
 Cline, Aider, Continue, and OpenHands all take these three settings. Any library that accepts a custom base
@@ -23,7 +24,8 @@ URL works too, including the official `openai` Python package:
 
 ```
 from openai import OpenAI
-client = OpenAI(base_url="http://<node>:8000/v1", api_key=open("secrets/vllm_api_key").read().strip())
+key = open("secrets/GLM-5.2-NVFP4-rtx-8.key").read().strip()
+client = OpenAI(base_url="http://<node>:8000/v1", api_key=key)
 ```
 
 Thinking models return their reasoning in a separate field rather than inside `content`: vLLM calls it

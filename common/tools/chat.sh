@@ -1,16 +1,19 @@
 #!/usr/bin/env bash
 # Send one chat message to the served model and print the reply.
 # Usage: chat.sh "prompt" [host] [port] [model]
-# Sends the API key (VLLM_API_KEY env, else secrets/vllm_api_key) so it works against gated endpoints.
+# Sends the API key so it works against gated endpoints: VLLM_API_KEY if set, else the recipe's key
+# file, else the shared one.
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/../lib/repo_root.sh"
 source "$S/../defaults.sh"
-source "$S/../lib/api_key.sh"
 PROMPT="${1:?usage: chat.sh <prompt> [host] [port] [model]}"
 HOST="${2:?usage: chat.sh <prompt> <host> [port] [model]}"
 PORT="${3:-8000}"
 MODEL="${4:-glm-5.2}"
+# Source the recipe's client.env first, or export KEY_NAME, to reach an endpoint whose key is not
+# the shared one.
+source "$S/../lib/api_key.sh"
 KEY="${VLLM_API_KEY:-}"
 CHAT_KEY="$KEY" python3 - "$PROMPT" "$HOST" "$PORT" "$MODEL" <<'PY'
 import json, sys, urllib.request, os
