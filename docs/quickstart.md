@@ -58,6 +58,20 @@ own. Callers on the same version send an identical line, so between them this ch
 holds turn to turn within one conversation. The cross-version case is the reason to set it, and the one case
 not tested here, since only one client version was installed.
 
+## A small context needs the output request capped
+
+Claude Code's own system prompt and tool definitions run to about 24K tokens before you type anything, and
+it asks for 32000 output tokens by default. Against an endpoint serving 32K or 40K that exceeds the context
+and every request fails with a maximum context length error. Cap the request:
+
+```
+export CLAUDE_CODE_MAX_OUTPUT_TOKENS=4096
+```
+
+The recipes that serve a small context set this in their `client.env` already. The alternative is to raise
+the endpoint's own context: every one of those checkpoints supports far more than the recipe serves by
+default, at the cost of KV cache.
+
 ## Verify before blaming the client
 
 ```
