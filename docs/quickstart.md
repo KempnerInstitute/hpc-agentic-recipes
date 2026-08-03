@@ -54,11 +54,10 @@ the name it is not sent as a header: it is text, 70 characters in an interactive
 first token, so those characters gate reuse of the much larger remainder, the client's own system prompt
 and every tool definition. Setting this to 0 removes that block and changes nothing else in the request.
 
-What it is worth, measured rather than assumed. Two callers on the same client version and the same
-entrypoint send a byte-identical block, so between them this setting gains nothing. The block carries the
-client version, so callers on different versions differ at the first character, and since the client
-updates itself a shared endpoint drifts into that state on its own. That is the case worth setting it
-for, and it is the one not verified here, because only one client version was available to test against.
+Two callers on the same client version and the same entrypoint send a byte-identical block, so between them
+this setting gains nothing. The block carries the client version, so callers on different versions differ at
+the first character, and a client that updates itself drifts into that state on its own. That is the case
+worth setting it for. It is also the case not tested here, because only one client version was installed.
 
 Do not expect it to help within a conversation: every turn of one conversation sends the same block.
 
