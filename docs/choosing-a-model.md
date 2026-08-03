@@ -142,10 +142,12 @@ rates were measured from those files rather than carried over. `Untested` means 
 never been launched and every number in it is a prediction. `Blocked` means it does not currently run at
 all, and the recipe says why.
 
-Aggregate rates carry one of three labels. `peak` means throughput turned over inside the sweep, so it is
+Aggregate rates carry one of four labels. `peak` means throughput turned over inside the sweep, so it is
 a measured maximum. `saturated` means it varies by under 4 percent from concurrency 512 to 1024, so it is
 a real ceiling even though no single level stands out. `rising` means it was still climbing at 1024, the
-top of the sweep, so the figure is a floor and the true peak is higher.
+top of the sweep, so the figure is a floor and the true peak is higher. `capped` means the engine admits
+fewer concurrent requests than the sweep would reach, so the figure is the most that endpoint accepts
+rather than a point on a curve.
 
 ## Three performance regimes, and why flags help or do not
 
