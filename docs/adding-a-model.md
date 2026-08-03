@@ -114,17 +114,16 @@ bash common/tools/bench.sh --host <node> --model <served-name>
 
 ## Write the README and check it
 
-Fill in all 15 required sections from `common/templates/recipe-README.md`. For failure modes, add the
-recipe to the relevant rows of `common/issues/matrix.tsv`, insert empty marker pairs in the README, and
-let the tooling write the text:
+Fill in all 15 required sections from `common/templates/recipe-README.md`, in that order. For failure modes,
+leave the marker pairs empty:
 
 ```
-bash common/tools/audit_recipes.sh --fix
-bash common/tools/audit_recipes.sh
+<!-- issue:<slug> begin -->
+<!-- issue:<slug> end -->
 ```
 
-Do not write issue text by hand. It is duplicated across recipes on purpose, and the source copy in
-`common/issues/` is what keeps every copy identical.
+Do not write that text yourself. It is duplicated across recipes on purpose, the single source is
+`common/issues/`, and a maintainer fills every copy from it so they cannot drift.
 
 Two conventions the README text has to follow. Give an engine version rather than a calendar date, because a
 date does not tell a reader whether a number still holds. And write about the recipe rather than about

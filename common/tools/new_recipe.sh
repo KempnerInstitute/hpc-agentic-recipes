@@ -61,9 +61,7 @@ Next, in order:
      needs a provenance comment within the 3 lines above it, or the audit rejects it.
   2. Edit serve.sh for this model: served name, parsers, TP and PP, context length.
   3. Update client.env so ANTHROPIC_MODEL equals serve.sh's --served-model-name.
-  4. Add rows for this recipe to common/issues/matrix.tsv, then:
-       bash common/tools/audit_recipes.sh --fix
+  4. Leave the <!-- issue:<slug> --> marker pairs empty. A maintainer fills them from common/issues.
   5. Rewrite every section of README.md. Inherited prose from $FROM is wrong until you change it.
   6. Add one row to the model table in README.md.
-  7. bash common/tools/audit_recipes.sh
 MSG

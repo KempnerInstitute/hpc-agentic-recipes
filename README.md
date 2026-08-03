@@ -135,8 +135,9 @@ hardware level, just the checkpoint directory.
 
 ## Contributing a model
 
-[docs/adding-a-model.md](docs/adding-a-model.md) is the checklist. Run `common/tools/audit_recipes.sh`
-before opening a pull request.
+[docs/adding-a-model.md](docs/adding-a-model.md) is the checklist, and `common/templates/recipe-README.md`
+is the shape a recipe README has to take. Open a pull request when your recipe launches and serves; a
+maintainer runs the repository checks on it and asks for whatever is missing.
 
 ## License
 

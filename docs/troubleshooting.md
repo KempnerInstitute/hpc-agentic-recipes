@@ -4,9 +4,8 @@ Aggregated view of failure modes across models, for browsing and for spotting pa
 of any of them: every recipe repeats in full the issues that affect it, so if you are working on one model
 you do not need this page.
 
-The source text for each issue lives in `common/issues/`, and the recipes embed copies of it.
-`common/tools/audit_recipes.sh` checks that every copy still matches its source and fails if one has
-drifted.
+The source text for each issue lives in `common/issues/`, and the recipes embed copies of it. Every copy is
+generated from that source rather than written by hand, so they cannot drift apart.
 
 | Symptom | Cause | Affects |
 | --- | --- | --- |

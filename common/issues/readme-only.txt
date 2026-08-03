@@ -1,6 +1,6 @@
-# Recipes that are documentation only, so the audit requires README.md and nothing else.
+# Recipes that are documentation only, so only README.md is required of them.
 #
-# One path per line, in the same form audit_recipes.sh enumerates, which is
+# One path per line, as <Checkpoint-Name>/<hardware>, which is
 # <Checkpoint-Name>/<hardware> for a variant directory. Matched with grep -qxF, so the line must be
 # the whole path with no leading "recipes/" and no trailing slash. Lines starting with # are ignored
 # because they cannot match any recipe path.
@@ -18,7 +18,7 @@ Qwen3-Coder-480B-A35B-Instruct-FP8/h200-4
 GLM-5.2-FP8/h200-4-nodes2-sglang
 
 # The two entries below name model directories that hold a README.md and no hardware subdirectory.
-# audit_recipes.sh globs recipes/*/*/ and therefore does not enumerate them at all, so these lines
+# The checks glob recipes/*/*/ and therefore do not enumerate them at all, so these lines
 # are documentation of intent rather than something the audit consults today. They are listed so that
 # the intent survives if the audit is later taught to walk model-level READMEs.
 #

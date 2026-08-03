@@ -108,6 +108,6 @@ warns and skips a run if the long request did not take longer than the short one
 
 ## Recording a result
 
-A recipe's Measured performance section states the rate, the concurrency, and the protocol.
-`common/tools/audit_recipes.sh` refuses a `Validated` status that does not name both an engine version and a
-protocol label, so a number measured one way is never silently compared against one measured the other way.
+A recipe's Measured performance section states the rate, the concurrency, and the protocol, and a
+`Validated` status has to name both an engine version and a protocol label. That is what stops a number
+measured one way from being compared against one measured the other way.
