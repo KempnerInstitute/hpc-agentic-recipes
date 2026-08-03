@@ -7,10 +7,9 @@
 source "$REPO_ROOT/common/defaults.sh"
 
 # The container, staged beside the weights in the shared repository so anyone who can read the checkpoint
-# can run it. MODELS_DIR is checked first, so a private copy of the checkpoint can carry its own image,
-# and the shared repository falls back in when it does not: someone who copies only the weights to
-# faster storage
-# should not have to copy 16 GB of container as well.
+# can run it. MODELS_DIR is checked first, so a private copy of the checkpoint can carry its own image, and
+# the shared repository falls back in when it does not: someone who copies only the weights to faster
+# storage should not have to copy 16 GB of container as well.
 _K3_SHARED=/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/Kimi-K3/container/sglang-kimi-k3-cu12.sif
 if [ -z "${SIF:-}" ]; then
   if [ -f "$MODELS_DIR/Kimi-K3/container/sglang-kimi-k3-cu12.sif" ]; then
