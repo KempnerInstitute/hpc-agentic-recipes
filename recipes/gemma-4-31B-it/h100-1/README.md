@@ -26,7 +26,7 @@ defaults, so a fresh clone runs as is. Optional overrides, either exported or se
 | --- | --- | --- |
 | `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
 | `GEMMA31_H100_NODE` | unset | An H100 node you already hold, for the SSH path |
-| `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
+| `MODELS_DIR` | shared repository path | Point at your own faster copy of the checkpoint |
 | `ENV_ROOT` | scratch | Where this recipe builds its environment |
 
 ## Status
@@ -55,10 +55,10 @@ Anthropic-compatible API, so Claude Code connects to it directly with no proxy.
 This recipe serves the bf16 checkpoint with FP8 weight quantization applied at load time, which is why
 there is no separate FP8 checkpoint directory.
 
-The testbed path works out of the box. Copying the checkpoint into your own scratch space loads
+The shared repository path works out of the box. Copying the checkpoint into your own scratch space loads
 faster, because scratch outperforms Lustre for this workload, and the directory names are identical in
 both locations so only `MODELS_DIR` changes. Scratch has a 90-day retention policy, so treat it as a
-fast cache and keep testbed as the permanent copy.
+fast cache and keep the shared repository as the permanent copy.
 
 ## Hardware
 

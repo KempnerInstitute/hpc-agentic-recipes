@@ -2,7 +2,7 @@
 # Make the SGLang container available for this recipe. Idempotent; --force re-pulls.
 #
 # This recipe has no virtual environment. The engine is a container, so "building the environment"
-# means having the image, and the image is already staged beside the weights in the shared testbed.
+# means having the image, and the image is already staged beside the weights in the shared repository.
 # The normal path therefore costs nothing: it verifies the staged copy and stops.
 #
 # The pull exists only for a site that has no staged copy. It took 2 hours 6 minutes when it was done
@@ -12,7 +12,7 @@ set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/../../../../common/lib/repo_root.sh"
 source "$REPO_ROOT/common/defaults.sh"
-source "$S/env.sh"   # resolves SIF, preferring MODELS_DIR and falling back to the testbed
+source "$S/env.sh"   # resolves SIF, preferring MODELS_DIR and falling back to the shared repository
 
 IMAGE="${IMAGE:-docker://lmsysorg/sglang:kimi-k3-cu12}"
 FORCE=0

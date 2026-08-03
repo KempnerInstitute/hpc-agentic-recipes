@@ -26,7 +26,7 @@ defaults, so a fresh clone runs as is. Optional overrides, either exported or se
 | --- | --- | --- |
 | `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
 | `GLM52_HEAD`, `GLM52_WORKER` | unset | Two nodes you already hold, for the SSH path |
-| `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
+| `MODELS_DIR` | shared repository path | Point at your own faster copy of the checkpoint |
 | `ENV_ROOT` | scratch | Where this recipe builds its environment |
 
 One constraint is specific to a two-node recipe: `ENV_ROOT` and `MODELS_DIR` must both resolve to the
@@ -78,10 +78,10 @@ Read from the checkpoint:
 The MTP head cannot be used in this configuration, and the reason is structural rather than a missing
 flag. See "Parallelism and quantization".
 
-The testbed path works out of the box. Copying the checkpoint into your own scratch space loads
+The shared repository path works out of the box. Copying the checkpoint into your own scratch space loads
 faster, because scratch outperforms Lustre for this workload, and the directory names are identical in both
 locations so only `MODELS_DIR` changes. Scratch has a 90-day retention policy, so treat it as a fast
-cache and keep testbed as the permanent copy.
+cache and keep the shared repository as the permanent copy.
 
 ## Hardware
 
@@ -478,7 +478,7 @@ vLLM logs anything.
 
 Both columns are measured on two different node pairs, with the checkpoint read from
 scratch in both cases. The difference is page cache: the fast pair had already loaded this
-checkpoint, the freshly allocated pair had not. Reading from the Lustre testbed path instead is slower
+checkpoint, the freshly allocated pair had not. Reading from the Lustre repository path instead is slower
 again.
 
 Nothing in this window looks like progress if you only watch the port, so watch the log. A first launch

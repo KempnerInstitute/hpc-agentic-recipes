@@ -4,7 +4,8 @@
 #   download_model.sh [--dry-run] <hf_repo> <dest_parent_dir> [local_name]
 #
 # The destination is required rather than defaulting to MODELS_DIR. MODELS_DIR points at the shared
-# testbed, which is read-only for everyone outside the data administrators group, so defaulting there
+# shared repository, which is read-only for everyone outside the data administrators group, so
+# defaulting there
 # would send most users into a permission error several minutes into a large transfer, and would let
 # anyone who does have write access fill a shared directory by accident.
 set -euo pipefail

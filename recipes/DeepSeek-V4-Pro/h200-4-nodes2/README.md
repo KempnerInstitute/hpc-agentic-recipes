@@ -30,7 +30,7 @@ Optional overrides, either exported or set in `common/site.conf`:
 | --- | --- | --- |
 | `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
 | `DSV4_H200_HEAD`, `DSV4_H200_WORKER` | unset | Two nodes you already hold, for the SSH path |
-| `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
+| `MODELS_DIR` | shared repository path | Point at your own faster copy of the checkpoint |
 | `ENV_ROOT` | scratch | Where this recipe builds its environment |
 
 ## Status
@@ -117,7 +117,7 @@ Two consequences of the checkpoint's contents that are easy to get wrong:
 
 Copying the checkpoint into scratch loads faster than Lustre for this workload, and the directory
 names are identical in both locations so only `MODELS_DIR` changes. Scratch has a 90-day retention
-policy, so treat it as a fast cache and keep testbed as the permanent copy.
+policy, so treat it as a fast cache and keep the shared repository as the permanent copy.
 
 ## Hardware
 
@@ -266,7 +266,7 @@ Every variable this recipe honors, with its default and effect.
 | Variable | Default | Effect |
 | --- | --- | --- |
 | `MODEL` | `$MODELS_DIR/DeepSeek-V4-Pro` | Serve a different copy of the checkpoint |
-| `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
+| `MODELS_DIR` | shared repository path | Point at your own faster copy of the checkpoint |
 | `API_PORT` | 8000 | Listening port |
 | `MAX_MODEL_LEN` | 131072 | Context window; the checkpoint supports 1048576 |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |

@@ -1,7 +1,7 @@
 # Downloading weights
 
-Every model a recipe references is already staged in the shared testbed, which `MODELS_DIR` points at by
-default. Check there before downloading hundreds of gigabytes.
+Every model a recipe references is already staged in the shared model repository on Kempner AI Cluster,
+which `MODELS_DIR` points at by default. Check there before downloading hundreds of gigabytes.
 
 That directory is **read-only** unless you are in the data administrators group, so it is where you read
 from, not where you download to. If a checkpoint you need is missing from it, either ask an administrator

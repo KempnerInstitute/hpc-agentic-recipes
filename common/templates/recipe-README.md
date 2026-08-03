@@ -20,7 +20,7 @@ common/issues by common/tools/audit_recipes.sh --fix, so add empty marker pairs 
 
 ## What this is
 
-<!-- Model, checkpoint directory, Hugging Face repo id, documented testbed path, faster-copy note. -->
+<!-- Model, checkpoint directory, Hugging Face repo id, documented repository path, faster-copy note. -->
 
 ## Hardware
 

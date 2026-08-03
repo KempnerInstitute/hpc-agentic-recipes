@@ -26,7 +26,7 @@ defaults, so a fresh clone runs as is. Optional overrides, either exported or se
 | --- | --- | --- |
 | `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
 | `KIMI_HEAD`, `KIMI_WORKER` | unset | Two nodes you already hold, for the SSH path |
-| `MODELS_DIR` | shared testbed path | Point at your own faster copy of the checkpoint |
+| `MODELS_DIR` | shared repository path | Point at your own faster copy of the checkpoint |
 | `ENV_ROOT` | scratch | Where this recipe builds its environment |
 
 One constraint is specific to a two-node recipe: `ENV_ROOT` and `MODELS_DIR` must both resolve to the
@@ -76,10 +76,10 @@ vLLM 0.25.1 implements this architecture, so no out-of-tree model code is needed
 `--trust-remote-code` is still passed, because the checkpoint ships its own configuration and processor
 modules, which the multimodal path loads.
 
-The testbed path works out of the box. Copying the checkpoint into your own scratch space loads
+The shared repository path works out of the box. Copying the checkpoint into your own scratch space loads
 faster, because scratch outperforms Lustre for this workload, and the directory names are identical in both
 locations so only `MODELS_DIR` changes. Scratch has a 90-day retention policy, so treat it as a fast
-cache and keep testbed as the permanent copy.
+cache and keep the shared repository as the permanent copy.
 
 ## Hardware
 
@@ -490,7 +490,7 @@ which reads like a different problem entirely. `stop.sh` clears both.
 The validated run reached serving 17 minutes 43 seconds after the launcher was invoked. The difference
 from the total above is Ray bring-up and the Python import of torch and vLLM, before vLLM logs anything.
 
-Measured from the server log, with the checkpoint read from scratch rather than the Lustre testbed
+Measured from the server log, with the checkpoint read from scratch rather than the Lustre repository
 path. The table starts at the vLLM banner; everything before it is the Python import of torch and
 vLLM, which is fast because `ENV_ROOT` is on scratch and slow from Lustre.
 

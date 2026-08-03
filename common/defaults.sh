@@ -3,7 +3,7 @@
 # environment. Nothing here is user-specific.
 [ -n "${REPO_ROOT:-}" ] || source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/repo_root.sh"
 
-# Where checkpoints live. This shared testbed copy is readable by any cluster user and is the permanent
+# Where checkpoints live. This shared repository copy is readable by any cluster user and is the permanent
 # one. A copy on your own scratch space loads faster; override MODELS_DIR to use it.
 : "${MODELS_DIR:=/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models}"
 
