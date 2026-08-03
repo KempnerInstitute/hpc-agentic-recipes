@@ -12,6 +12,7 @@
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/../lib/repo_root.sh"
+source "$REPO_ROOT/common/defaults.sh"
 
 NAME="${1:-}"; HW="${2:-}"; FROM=""
 shift 2 2>/dev/null || true
@@ -33,8 +34,8 @@ DST="$REPO_ROOT/recipes/$NAME/$HW"
 [ -d "$SRC" ] || { echo "source recipe not found: recipes/$FROM" >&2; exit 1; }
 [ -e "$DST" ] && { echo "destination already exists: recipes/$NAME/$HW" >&2; exit 1; }
 
-if [ ! -d "$REPO_ROOT/../$NAME" ] && [ ! -d "${MODELS_DIR:-}/$NAME" ]; then
-  echo "note: no checkpoint directory named $NAME was found under MODELS_DIR."
+if [ ! -d "$MODELS_DIR/$NAME" ]; then
+  echo "note: no checkpoint directory named $NAME under $MODELS_DIR."
   echo "      Recipe directory names must match the checkpoint directory exactly."
 fi
 
@@ -50,7 +51,14 @@ s = re.sub(r"^Status:.*$", "Status: Untested - scaffolded from %s, not yet run e
 s = re.sub(r"^# .*$", "# %s on %s" % (name, hw), s, count=1, flags=re.M)
 open(p, "w").write(s)
 PY
-grep -rl "$(basename "$FROM")" "$DST" 2>/dev/null | sed 's|^|  still mentions the source recipe: |'
+FROM_NAME="$(dirname "$FROM")"
+FROM_HW="$(basename "$FROM")"
+STALE=("$FROM_NAME")
+[ "$FROM_HW" != "$HW" ] && STALE+=("$FROM_HW")
+for pat in "${STALE[@]}"; do
+  grep -rl -- "$pat" "$DST" 2>/dev/null \
+    | sed "s|^$REPO_ROOT/||;s|^|  still says $pat: |"
+done
 
 cat <<MSG
 
