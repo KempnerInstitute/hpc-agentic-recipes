@@ -483,5 +483,4 @@ which reads like a different problem entirely. `stop.sh` clears both.
 First launch on a fresh node is slower than later ones: page cache is cold, and the FlashInfer sm_120
 kernels are compiled from source once because no cubin package matches the installed version. A launch
 that looks hung during this window is usually still loading. Check the log before killing it. These
-numbers will be filled in when this recipe is run on hardware; they are deliberately blank rather than
-guessed.
+numbers will be filled in when this recipe is run on hardware.

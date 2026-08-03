@@ -410,4 +410,4 @@ First launch on a fresh node is slower than later ones: page cache is cold, and 
 kernels are compiled from source once because no matching cubin package exists. Both caches are
 node-local, so a different node pays the JIT cost again. A launch that looks hung during this window
 is usually still loading. Check the log before killing it. These numbers will be filled in when this
-recipe is validated on hardware; they are deliberately blank rather than guessed.
+recipe is validated on hardware.

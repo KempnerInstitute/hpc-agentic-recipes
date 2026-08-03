@@ -91,7 +91,7 @@ checkpoint supports, which each recipe states.
 
 Checkpoints are read from `MODELS_DIR`, which defaults to the Kempner AI Cluster shared model repository,
 currently located at `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models`. Every model a recipe
-references is already there. That directory is read-only for most users, so download your own copies
+references is already there. That directory is read-only, so download your own copies
 anywhere you can write and point `MODELS_DIR` there; scratch also loads faster.
 [docs/downloading-weights.md](docs/downloading-weights.md) covers both.
 

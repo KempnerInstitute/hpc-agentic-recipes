@@ -384,5 +384,4 @@ check only that device: another job may legitimately be holding the other seven.
 First launch on a fresh node is slower than later ones: page cache is cold, and the FlashInfer sm_120
 kernels are compiled from source on the first request after a fresh environment because no matching
 cubin package exists. A launch that looks hung during this window is usually still loading. Check the
-log before killing it. These numbers will be filled in when this recipe is validated on hardware; they
-are deliberately blank rather than guessed.
+log before killing it. These numbers will be filled in when this recipe is validated on hardware.

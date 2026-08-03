@@ -396,4 +396,4 @@ First launch on a fresh node is slower than later ones: page cache is cold, the 
 kernels are compiled from source on the first request after a fresh environment because no matching
 cubin package exists, and FP8 quantization happens during weight load. A launch that looks hung during
 this window is usually still loading. Check the log before killing it. These numbers will be filled in
-when this recipe is validated on hardware; they are deliberately blank rather than guessed.
+when this recipe is validated on hardware.

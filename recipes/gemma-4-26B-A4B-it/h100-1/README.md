@@ -362,5 +362,4 @@ check only that device: another job may legitimately be holding the other three.
 
 First launch on a fresh node is slower than later ones: page cache is cold and any just-in-time kernel
 compilation happens once. A launch that looks hung during this window is usually still loading. Check
-the log before killing it. These numbers will be filled in when this recipe is validated on hardware;
-they are deliberately blank rather than guessed.
+the log before killing it. These numbers will be filled in when this recipe is validated on hardware.

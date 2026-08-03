@@ -220,8 +220,8 @@ effort is set with a top-level `reasoning_effort` field taking `low`, `high` or 
 
 ### Replayed thinking corrupts the reply on the Anthropic route
 
-Measured on this build. When a conversation on `/v1/messages` sends earlier `thinking` blocks back, as
-Claude Code does, the model sometimes opens its think channel with a malformed marker, `<|sep|` twice
+On this build, when a conversation on `/v1/messages` sends earlier `thinking` blocks back, as Claude Code
+does, the model sometimes opens its think channel with a malformed marker, `<|sep|` twice
 rather than once. SGLang's detector matches the marker as a literal string, so it does not match, the
 detector concludes there is no reasoning to strip, and the whole channel-marked output is delivered as
 visible text. The reply then begins `<|open|>think<|sep|<|sep|>` and the reasoning is not separated.

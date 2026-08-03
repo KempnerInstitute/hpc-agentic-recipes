@@ -473,5 +473,4 @@ and it fails on resources rather than on memory, which reads like a different pr
 
 First launch on a fresh node is slower than later ones: page cache is cold and any just-in-time kernel
 compilation happens once. A launch that looks hung during this window is usually still loading. Check
-the log before killing it. These numbers will be filled in if this recipe is run on hardware; they are
-deliberately blank rather than guessed.
+the log before killing it. These numbers will be filled in if this recipe is run on hardware.

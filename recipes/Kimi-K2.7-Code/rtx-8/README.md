@@ -390,4 +390,4 @@ Expect this one to be slow: 64 shards of weights, and on a cold node the sm_120 
 compiled from source once because no matching cubin package exists. Both caches are node-local, so a
 different node pays the JIT cost again. A launch that looks hung during this window is usually still
 loading. Check the log before killing it. These numbers will be filled in when this recipe is
-validated on hardware; they are deliberately blank rather than guessed.
+validated on hardware.

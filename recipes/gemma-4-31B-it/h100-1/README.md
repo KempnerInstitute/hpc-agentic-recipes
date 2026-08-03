@@ -371,4 +371,4 @@ check only that device: another job may legitimately be holding the other three.
 First launch on a fresh node is slower than later ones: page cache is cold, any just-in-time kernel
 compilation happens once, and FP8 quantization happens during weight load. A launch that looks hung
 during this window is usually still loading. Check the log before killing it. These numbers will be
-filled in when this recipe is validated on hardware; they are deliberately blank rather than guessed.
+filled in when this recipe is validated on hardware.

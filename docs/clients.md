@@ -19,8 +19,7 @@ KEY=$(cat secrets/GLM-5.2-NVFP4-rtx-8.key 2>/dev/null || cat secrets/vllm_api_ke
 curl -s -H "Authorization: Bearer $KEY" http://<node>:8000/v1/models
 ```
 
-Cline, Aider, Continue, and OpenHands all take these three settings. Any library that accepts a custom base
-URL works too, including the official `openai` Python package:
+Any library that accepts a custom base URL works, including the official `openai` Python package:
 
 ```
 from openai import OpenAI
