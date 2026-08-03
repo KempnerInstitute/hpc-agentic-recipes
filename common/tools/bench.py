@@ -29,6 +29,7 @@ token. Use --prompt-tokens to measure decode at a realistic context length rathe
 """
 import argparse
 import json
+import os
 import statistics
 import sys
 import time
@@ -151,7 +152,9 @@ def main():
     ap.add_argument("--host", required=True)
     ap.add_argument("--port", type=int, default=8000)
     ap.add_argument("--model", required=True)
-    ap.add_argument("--key", default="")
+    # Defaults from the environment so the key never reaches a command line, where any user on the
+    # node could read it out of /proc.
+    ap.add_argument("--key", default=os.environ.get("VLLM_API_KEY", ""))
     ap.add_argument("--concurrency", type=int, default=1,
                     help="simultaneous requests; 1 measures interactive latency, higher saturates")
     ap.add_argument("--prompt-tokens", type=int, default=0,

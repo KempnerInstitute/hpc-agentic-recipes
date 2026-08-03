@@ -5,10 +5,12 @@ set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/../lib/repo_root.sh"
 source "$S/../defaults.sh"
-source "$S/../lib/api_key.sh"
 HOST="${1:?usage: smoke_test.sh <host> [port] [model]}"
 PORT="${2:-$API_PORT}"
 MODEL="${3:-glm-5.2}"
+# Source the recipe's client.env first, or export KEY_NAME, to reach an endpoint whose key is not
+# the shared one.
+source "$S/../lib/api_key.sh"
 BASE="http://$HOST:$PORT/v1"
 KEY="${VLLM_API_KEY:-}"
 AUTH=(); [ -n "$KEY" ] && AUTH=(-H "Authorization: Bearer $KEY")

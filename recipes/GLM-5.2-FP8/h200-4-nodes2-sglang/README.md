@@ -231,7 +231,7 @@ node without adding key gating or restricting the port.
 <!-- issue:sglang-ungated end -->
 
 This matters even for a recipe that does not work, because an ungated launcher is easy to copy. Every vLLM recipe here reads
-`secrets/vllm_api_key` and passes it to the engine through the environment, so a keyless request gets
+the key file for its served model and passes it to the engine through the environment, so a keyless request gets
 HTTP 401. The SGLang launcher passed no `--api-key` and its environment library loaded no key file, so
 had this ever started serving, the port would have been open to anyone who could reach the node. Add key
 gating before running it, not after.

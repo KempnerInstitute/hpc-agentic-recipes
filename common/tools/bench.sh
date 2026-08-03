@@ -27,5 +27,8 @@
 set -uo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/../lib/repo_root.sh"
+# The key is handed over in the environment rather than as an argument, so it stays out of ps for the
+# life of the run. Source the recipe's client.env first, or export KEY_NAME, to measure a gated endpoint
+# whose key is not the shared one.
 source "$S/../lib/api_key.sh"
-exec python3 "$S/bench.py" --key "${VLLM_API_KEY:-}" "$@"
+exec python3 "$S/bench.py" "$@"

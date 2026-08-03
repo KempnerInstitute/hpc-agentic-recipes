@@ -7,8 +7,8 @@
 set -uo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/env/env.sh"
+KEY_NAME=Kimi-K3-h200-4-nodes4-sglang
 source "$REPO_ROOT/common/lib/api_key.sh"
-
 MODEL="${MODEL:-$MODELS_DIR/Kimi-K3}"
 DRAFT="${DRAFT:-$MODELS_DIR/Kimi-K3-DSpark}"
 RANK="${RANK:?set RANK, 0 through 3}"
@@ -49,11 +49,20 @@ for _d in /sys/class/infiniband/*; do
   case "$_s$_l" in *ACTIVE*InfiniBand*) _hca+="${_hca:+,}$(basename "$_d")" ;; esac
 done
 
+# The key travels in the environment, never in an argument. singularity passes the host environment into
+# the container, and the SINGULARITYENV_ form covers a site that has turned that off; --env would defeat
+# the point by putting the key back on singularity's own command line.
+LAUNCHER="$REPO_ROOT/common/tools/sglang_launch.py"
+if [ -n "${VLLM_API_KEY:-}" ]; then
+  export SINGULARITYENV_VLLM_API_KEY="$VLLM_API_KEY"
+  export APPTAINERENV_VLLM_API_KEY="$VLLM_API_KEY"
+fi
+
 SPEC=()
 # The draft is bind-mounted only when it is used. Singularity requires every bind source to exist, so an
 # unconditional mount would stop a default launch for anyone who copied only the checkpoint to faster
 # storage and pointed MODELS_DIR at it.
-BINDS=(-B "$MODEL:$MODEL:ro" -B "$K3_LOG_DIR:$K3_LOG_DIR")
+BINDS=(-B "$MODEL:$MODEL:ro" -B "$K3_LOG_DIR:$K3_LOG_DIR" -B "$LAUNCHER:$LAUNCHER:ro")
 if [ "$SPEC_MODE" = dspark ]; then
   [ -d "$DRAFT" ] || { echo "SPEC_MODE=dspark needs the draft checkpoint at $DRAFT" >&2; exit 1; }
   BINDS+=(-B "$DRAFT:$DRAFT:ro")
@@ -113,7 +122,7 @@ exec singularity exec --nv \
   --env TORCHINDUCTOR_CACHE_DIR="$TORCHINDUCTOR_CACHE_DIR" \
   --env PYTHONDONTWRITEBYTECODE="$PYTHONDONTWRITEBYTECODE" \
   "$SIF" \
-  python3 -m sglang.launch_server \
+  python3 "$REPO_ROOT/common/tools/sglang_launch.py" \
     --model-path "$MODEL" \
     --served-model-name kimi-k3 \
     --trust-remote-code \
@@ -126,7 +135,6 @@ exec singularity exec --nv \
     --dist-init-addr "$HEAD_IB:$DIST_PORT" \
     --host 0.0.0.0 \
     --port "$API_PORT" \
-    --api-key "$VLLM_API_KEY" \
     --context-length "$MAX_MODEL_LEN" \
     --mem-fraction-static "$MEM_FRACTION" \
     --kv-cache-dtype bf16 \

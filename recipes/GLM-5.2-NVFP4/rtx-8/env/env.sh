@@ -3,8 +3,8 @@
 # written out here rather than inherited, so this file can be read on its own.
 S="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$S/../../../../common/defaults.sh"
+KEY_NAME=GLM-5.2-NVFP4-rtx-8
 source "$S/../../../../common/lib/api_key.sh"
-
 VENV="${VENV_DIR:-$ENV_ROOT/GLM-5.2-NVFP4/rtx-8/venv}"
 [ -f "$VENV/bin/activate" ] || { echo "no environment at $VENV; run env/build.sh first" >&2; return 1 2>/dev/null || exit 1; }
 export PATH="$HOME/.local/bin:$PATH"

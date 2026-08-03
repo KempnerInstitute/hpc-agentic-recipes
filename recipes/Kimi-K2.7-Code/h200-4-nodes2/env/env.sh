@@ -4,8 +4,8 @@
 # file, so it must be valid on the Ray head and on the worker alike.
 S="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$S/../../../../common/defaults.sh"
+KEY_NAME=Kimi-K2.7-Code-h200-4-nodes2
 source "$S/../../../../common/lib/api_key.sh"
-
 VENV="${VENV_DIR:-$ENV_ROOT/Kimi-K2.7-Code/h200-4-nodes2/venv}"
 [ -f "$VENV/bin/activate" ] || { echo "no environment at $VENV; run env/build.sh first" >&2; return 1 2>/dev/null || exit 1; }
 export PATH="$HOME/.local/bin:$PATH"

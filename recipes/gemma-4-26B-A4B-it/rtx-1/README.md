@@ -6,14 +6,17 @@ Everything needed to build, launch, verify, connect to, and debug this endpoint 
 
 ## Configure once
 
-Create the API key. The endpoint refuses requests without it, and the key is passed through the
-environment rather than the command line so it never appears in `ps` output.
+Create the API key. The endpoint refuses requests without it, and the key reaches the engine through
+the environment rather than as an argument, so it does not appear in `ps` output.
 
 ```
 mkdir -p secrets
-printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/vllm_api_key
-chmod 600 secrets/vllm_api_key
+printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/gemma-4-26B-A4B-it-rtx-1.key
+chmod 600 secrets/gemma-4-26B-A4B-it-rtx-1.key
 ```
+
+That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup
+made before per-model keys keeps working.
 
 Nothing else is required. Cluster paths come from `common/defaults.sh`, which is tracked with working
 defaults, so a fresh clone runs as is. Optional overrides, either exported or set in
@@ -154,7 +157,7 @@ instead.
 ## Verify
 
 ```
-KEY=$(cat secrets/vllm_api_key)
+KEY=$(cat secrets/gemma-4-26B-A4B-it-rtx-1.key 2>/dev/null || cat secrets/vllm_api_key)
 NODE=<the node serving it>
 
 curl -s -H "Authorization: Bearer $KEY" http://$NODE:8000/v1/models

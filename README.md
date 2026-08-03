@@ -35,19 +35,24 @@ Walkthrough in [docs/quickstart.md](docs/quickstart.md).
 
 ## To serve your own
 
-First create an API key. The recipes pass it through the environment so it never appears in `ps` output or
-in a tracked file:
+First create an API key. Each recipe reads its own key, named for the recipe, so one endpoint's key does
+not open the others, and the recipes hand it to the engine through the environment so it reaches neither
+`ps` output nor a tracked file. The name is the recipe path with a hyphen, so
+`recipes/GLM-5.2-NVFP4/rtx-8` reads:
 
 ```
 mkdir -p secrets
-printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/vllm_api_key
-chmod 600 secrets/vllm_api_key
+printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/GLM-5.2-NVFP4-rtx-8.key
+chmod 600 secrets/GLM-5.2-NVFP4-rtx-8.key
 ```
+
+Every recipe names its file at the top of its README. `secrets/vllm_api_key` is read when that file is
+absent, so a single key there still gates everything if you prefer that.
 
 With a key in place, requests without it receive HTTP 401. Without one the launcher prints a warning and
 serves the endpoint **ungated**, so create the file before launching on a shared network. `secrets/` is
-gitignored. To rotate, replace the file and restart. The Kimi-K3 recipe gates its port the same way;
-the blocked GLM-5.2 SGLang recipe passes no key at all.
+gitignored, and every file in it is, so no key is ever committed. To rotate, replace the file and restart:
+the engine reads it once at launch.
 
 Then start with a single-GPU recipe, which needs one GPU rather than a whole node and so queues fastest:
 [recipes/gemma-4-26B-A4B-it/h200-1](recipes/gemma-4-26B-A4B-it/h200-1/README.md). Follow it from the top.

@@ -11,14 +11,17 @@ Everything needed to build, launch, verify, connect to, and debug this endpoint 
 
 ## Configure once
 
-Create the API key. The endpoint refuses requests without it, and the key is passed through the
-environment rather than the command line so it never appears in `ps` output.
+Create the API key. The endpoint refuses requests without it, and the key reaches the engine through
+the environment rather than as an argument, so it does not appear in `ps` output.
 
 ```
 mkdir -p secrets
-printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/vllm_api_key
-chmod 600 secrets/vllm_api_key
+printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/DeepSeek-V4-Pro-h200-4-nodes2.key
+chmod 600 secrets/DeepSeek-V4-Pro-h200-4-nodes2.key
 ```
+
+That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup
+made before per-model keys keeps working.
 
 Cluster paths otherwise come from `common/defaults.sh`, which is tracked with working defaults.
 Optional overrides, either exported or set in `common/site.conf`:
@@ -199,7 +202,7 @@ instead.
 ## Verify
 
 ```
-KEY=$(cat secrets/vllm_api_key)
+KEY=$(cat secrets/DeepSeek-V4-Pro-h200-4-nodes2.key 2>/dev/null || cat secrets/vllm_api_key)
 NODE=<the head node serving it>
 
 curl -s -H "Authorization: Bearer $KEY" http://$NODE:8000/v1/models
