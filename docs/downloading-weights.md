@@ -34,9 +34,10 @@ tool refuses to start if the destination does not exist or is not writable by yo
 several minutes into the transfer. Pass `--dry-run` first to see the resolved destination without
 transferring anything.
 
-Check that you have room before starting. The tool does not, because free space on the filesystem is not
-the limit that applies to you: what binds is your group's quota. Read it with `lfs quota -g <group> <path>`
-on Lustre, or `quota` on netscratch.
+Check that you have room before starting. The tool does not, because free space on the filesystem is not the
+limit that applies to you: what binds is your group's quota. Read it with `lfs quota -g <group>
+/n/holylfs06` on Lustre, or `quota -g <group> /n/netscratch` on scratch, which is not Lustre and so has no
+`lfs quota`.
 
 It turns off both accelerated Hugging Face transfer backends, `HF_HUB_ENABLE_HF_TRANSFER` and the Xet
 backend. The plain path resumes cleanly after an interruption, which matters more than peak speed for a
@@ -44,20 +45,17 @@ several-hundred-gigabyte repository. An interrupted transfer can simply be rerun
 
 ## Verify before serving
 
-A truncated shard fails deep inside weight loading with a confusing error, so confirm the download is
-complete first. Compare the shard count against the index:
+An incomplete download fails deep inside weight loading with an error that points at the model rather than
+at the file, so rule it out first:
 
 ```
-python3 -c "
-import json, glob, sys
-d = sys.argv[1]
-idx = json.load(open(d + '/model.safetensors.index.json'))
-want = set(idx['weight_map'].values())
-have = {p.split('/')[-1] for p in glob.glob(d + '/*.safetensors')}
-print('shards expected', len(want), 'present', len(have))
-print('missing:', sorted(want - have)[:5])
-" /path/to/checkpoint
+python3 common/tools/verify_checkpoint.py /path/to/checkpoint
 ```
+
+It reports a missing shard, and also a shard that is present but short, which counting files cannot see.
+Every safetensors file states its own length in its header, so that is compared against the size on disk,
+down to a single byte. Only headers are read, so a 1.5 TiB checkpoint verifies in seconds. It exits non-zero
+and names the files when something is wrong.
 
 ## Point a recipe at it
 

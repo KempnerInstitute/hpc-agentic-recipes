@@ -9,7 +9,8 @@
 # fill a shared directory by accident.
 #
 # It reports no free space. df would show the whole filesystem, while what actually limits a download is
-# the group quota, read with lfs quota -g on Lustre or quota on netscratch. Confirm your own space first.
+# the group quota: lfs quota -g <group> <lustre-path>, or quota -g <group> /n/netscratch on scratch.
+# Confirm your own space first.
 set -euo pipefail
 export PATH="$HOME/.local/bin:$PATH"
 
