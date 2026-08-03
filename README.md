@@ -32,6 +32,19 @@ Walkthrough in [docs/quickstart.md](docs/quickstart.md).
 
 ## To serve your own
 
+Two things have to be on your PATH before a recipe builds: `uv`, which installs the Python environment, and
+`mamba`, which installs the CUDA toolkit an RTX recipe needs. On this cluster `mamba` comes from a module,
+and a build submitted through Slurm has to load it there too, since an interactive shell's copy is a
+function that a batch job does not inherit:
+
+```
+module load Mambaforge
+command -v uv || curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Run the build on a compute node rather than a login node. It downloads and unpacks about 12 GB across tens
+of thousands of files.
+
 First create an API key. The name is the recipe path with a hyphen, so `recipes/GLM-5.2-NVFP4/rtx-8` reads:
 
 ```

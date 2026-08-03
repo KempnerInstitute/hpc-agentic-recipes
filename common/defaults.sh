@@ -3,6 +3,14 @@
 # environment. Nothing here is user-specific.
 [ -n "${REPO_ROOT:-}" ] || source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/repo_root.sh"
 
+# Local overrides first. Everything below either defaults around them or is derived from them, so
+# reading this file last left ENV_ROOT overridden while the directory it created and the cache paths
+# built from it still pointed at the default. Gitignored.
+if [ -f "$REPO_ROOT/common/site.conf" ]; then
+  source "$REPO_ROOT/common/site.conf"
+fi
+
+
 # Where checkpoints live. This shared repository copy is readable by any cluster user and is the permanent
 # one. A copy on your own scratch space loads faster; override MODELS_DIR to use it.
 : "${MODELS_DIR:=/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models}"
@@ -37,6 +45,13 @@ fi
 : "${UV_CACHE_DIR:=$ENV_ROOT/.uv-cache}"
 export UV_CACHE_DIR
 
+# vLLM caches torch.compile output, and it defaults to ~/.cache/vllm. Home directories here are a
+# small quota shared with everything else you keep, and one recipe measured 30 GB of compiled
+# artifacts, so this puts them beside the environment that produced them. Keeping them on scratch
+# rather than node-local means a relaunch on any node skips the recompile.
+: "${VLLM_CACHE_ROOT:=$ENV_ROOT/.vllm-cache}"
+export VLLM_CACHE_ROOT
+
 : "${API_PORT:=8000}"
 
 # Partitions. All nodes of a given type share one hardware spec, so only the partition matters.
@@ -52,11 +67,6 @@ export UV_CACHE_DIR
 # Slurm account. There is no correct default for a public repo, so pass --account at submit time or
 # set ACCOUNT in common/site.conf.
 : "${ACCOUNT:=}"
-
-# Optional local overrides: hostnames you hold, and ACCOUNT. Gitignored.
-if [ -f "$REPO_ROOT/common/site.conf" ]; then
-  source "$REPO_ROOT/common/site.conf"
-fi
 
 # Return success explicitly. A sourced file's exit status is that of its last command, and callers run
 # under set -e: ending on a failed test for an optional file would abort them silently, with no output.
