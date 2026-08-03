@@ -22,15 +22,17 @@ bash common/tools/bench.sh --host <node> --model <name> --sweep 1,8,32,128     f
 
 ## Sweep until throughput turns over
 
-A sweep that stops early reports a floor, not a ceiling, and the two look identical. That same
-GLM-5.2-NVFP4 endpoint reports 683 tok/s if the sweep stops at concurrency 32, half its actual capacity at
-256. Of the 14 recipes here, sweeping to 1024 found 6 that turn over at a peak, 4 flat to within 4 percent
-between 512 and 1024, and 4 still climbing at 1024 whose figures remain floors.
+A sweep that stops early reports a floor, not a ceiling, and the two look identical. That same GLM-5.2-NVFP4
+endpoint reports 683 tok/s if the sweep stops at concurrency 32, half its actual capacity at 256. Of the 14
+rates the labeling rule covers, 6 turn over at a peak, 4 are flat to within 4 percent between 512 and 1024,
+and 4 were still climbing at the top of their sweep, so those figures are floors. Twelve sweeps ran to 1024
+and two stopped at 512.
 
 **Report the sequence cap next to the rate.** vLLM sets `max_num_seqs` from device memory when the flag is
-absent, which is 1024 on every GPU here. That cap binds: every recipe in this repo reached a running batch
-of 1024 at the top of its sweep. A rate quoted without its cap is not reproducible, and forcing the cap
-down throttles the result.
+absent, and that resolves to 1024 on every GPU here. It binds: every vLLM recipe that swept to 1024 reached
+a running batch of 1024 there. The SGLang recipe is the exception, admitting 67 requests, which is why its
+rate is labeled capped. A rate quoted without its cap is not reproducible, and forcing the cap down
+throttles the result.
 
 **What binds first is model-dependent, so measure it.** KV cache usage reached 100 percent in most recipes,
 so requests queue on KV blocks. It reached only 78 percent for DeepSeek-V4-Pro across two RTX nodes and 73
@@ -68,7 +70,7 @@ bash common/tools/bench.sh --host <node> --model <served-name>
 It times the same greedy request at 128 and 1152 output tokens, three times, and reports
 
 ```
-rate = (1152 - 128) / (t_1152 - t_128)
+rate = concurrency * (1152 - 128) / (t_1152 - t_128)
 ```
 
 along with the protocol string `slope(128,1152)` to paste into a recipe README. It posts to
@@ -85,13 +87,11 @@ prompt, both protocols agree closely, and the gap shrinks as the generation leng
 | gemma-4-26B-A4B | 236.4 tok/s | 233.1 | 235.4 | 236.3 |
 | gemma-4-31B | 85.1 tok/s | 85.2 | 85.4 | 85.4 |
 
-The largest gap is 1.4 percent, on the faster model at the shortest generation, which is where fixed cost
-weighs most. So prefer the slope method because it removes fixed cost by construction rather than because it
-will change your number here. It matters more on a cold endpoint, a long prompt, or a very short reply, and
-the point of subtracting is that you do not have to know which of those applies.
+The largest gap is 1.4 percent, on the faster model at the shortest generation, where fixed cost weighs
+most. Prefer the slope method anyway: it removes that cost by construction, so you do not have to know
+whether a cold endpoint, a long prompt or a short reply is about to make it matter.
 
-`bench.sh --single` keeps the one-generation behavior and warns about the bias, which is occasionally what
-you want if you are measuring a short reply as a user experiences it.
+`bench.sh --single` keeps the one-generation behavior and warns about the bias.
 
 ## Making runs comparable
 
