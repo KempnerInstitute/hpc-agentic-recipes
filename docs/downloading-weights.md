@@ -3,9 +3,8 @@
 Every model a recipe references is already staged in the shared model repository on Kempner AI Cluster,
 which `MODELS_DIR` points at by default. Check there before downloading hundreds of gigabytes.
 
-That directory is **read-only** unless you are in the data administrators group, so it is where you read
-from, not where you download to. If a checkpoint you need is missing from it, either ask an administrator
-to stage it, or download your own copy anywhere you can write and point `MODELS_DIR` at that instead.
+That directory is **read-only**. If a checkpoint you need is missing from it, either submit a ticket to
+request it, or download your own copy anywhere you can write and point `MODELS_DIR` at that instead.
 
 ## Choosing where to put it
 
