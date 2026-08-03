@@ -34,10 +34,10 @@ tool refuses to start if the destination does not exist or is not writable by yo
 several minutes into the transfer. Pass `--dry-run` first to see the resolved destination without
 transferring anything.
 
-Check that you have room before starting. The tool does not, because free space on the filesystem is not the
-limit that applies to you: what binds is your group's quota. Read it with `lfs quota -g <group>
-/n/holylfs06` on Lustre, or `quota -g <group> /n/netscratch` on scratch, which is not Lustre and so has no
-`lfs quota`.
+Check that you have room before starting. The tool does not, because free space on the filesystem is not
+the limit that applies to you: what binds is your group's quota. Read it on Lustre with
+`lfs quota -g <group> /n/holylfs06`, and on scratch with `quota -g <group> /n/netscratch`, since scratch is
+not Lustre and has no `lfs quota`.
 
 It turns off both accelerated Hugging Face transfer backends, `HF_HUB_ENABLE_HF_TRANSFER` and the Xet
 backend. The plain path resumes cleanly after an interruption, which matters more than peak speed for a
