@@ -10,6 +10,7 @@ export ANTHROPIC_BASE_URL=http://<node>:8000
 export ANTHROPIC_AUTH_TOKEN=<the api key>
 export ANTHROPIC_MODEL=<served model name>
 export ANTHROPIC_SMALL_FAST_MODEL=<the same name>
+export CLAUDE_CODE_ATTRIBUTION_HEADER=0
 claude
 ```
 
