@@ -28,12 +28,13 @@ The two coexist. Each recipe builds its own environment, so an SGLang environmen
 
 ## Authentication
 
-vLLM accepts `Authorization: Bearer <key>` only. It ignores the `x-api-key` header that Anthropic's own API
-accepts, which is the most common configuration mistake here: setting `ANTHROPIC_API_KEY` instead of
+Both engines accept `Authorization: Bearer <key>` only. They ignore the `x-api-key` header that Anthropic's
+own API accepts, which is the most common configuration mistake here: setting `ANTHROPIC_API_KEY` instead of
 `ANTHROPIC_AUTH_TOKEN` makes the client send `x-api-key`, and every request returns 401.
 
-The vLLM recipes pass `--api-key`. The SGLang recipe passes none, so its port accepts any request that can
-reach it. Do not run it on a shared network.
+Every recipe gates its endpoint, and none of them puts the key on a command line, where any user on the node
+could read it out of `/proc`. vLLM reads `VLLM_API_KEY` from the environment. SGLang accepts a key only as
+an argument, so that recipe starts through `common/tools/sglang_launch.py`, which supplies it after exec.
 
 ## Hosted tools work on neither engine
 
