@@ -155,6 +155,9 @@ SPEC_MODE=dspark WIDE=1 bash recipes/Kimi-K3/h200-4-nodes4-sglang/serve_ssh.sh <
 Which one to pick is under Measured performance below. `sbatch` passes the submitting environment to the
 job by default, so a variable set on that line reaches every rank.
 
+`K3_PARSER_PATCH=1` is not one of the four. It changes no performance characteristic and composes with
+any of them, so add it to whichever line you use: see channel markers below.
+
 Submit from the repo root either way. Slurm stages the batch script into its own spool directory, so
 the script cannot locate the repo from its own path and resolves paths against the submit directory
 instead.
@@ -219,15 +222,17 @@ Multi-turn use requires passing the complete previous assistant message back, `r
 effort is set with a top-level `reasoning_effort` field taking `low`, `high` or `max`, defaulting to
 `max`. On the Anthropic route that advice has a caveat, below.
 
-### Replayed thinking corrupts the reply on the Anthropic route
+### Channel markers can reach the visible text, and how to stop it
 
-On this build, when a conversation on `/v1/messages` sends earlier `thinking` blocks back, as Claude Code
-does, the model sometimes opens its think channel with a malformed marker, `<|sep|` twice
-rather than once. SGLang's detector matches the marker as a literal string, so it does not match, the
-detector concludes there is no reasoning to strip, and the whole channel-marked output is delivered as
-visible text. The reply then begins `<|open|>think<|sep|<|sep|>` and the reasoning is not separated.
+The container this recipe pins predates a fix upstream. Its detector ends the reasoning channel only on
+the tool marker, so a reply that opens the response channel instead is never closed and its markers
+arrive in the text a client displays. `K3_PARSER_PATCH=1` applies the upstream fix over the image: see
+`patches/README.md`.
 
-Twelve trials per row at temperature 1.0, one tool round, half of each row streamed:
+The work completes either way. This is a display defect, not a functional one: unpatched, Claude Code
+still wrote and ran files, and so did an OpenAI client driving tools.
+
+Unpatched, twelve trials per row at temperature 1.0, one tool round, half of each row streamed:
 
 | Route | History | Markers in visible text | Reasoning separated |
 | --- | --- | --- | --- |
@@ -235,13 +240,15 @@ Twelve trials per row at temperature 1.0, one tool round, half of each row strea
 | `/v1/messages` | thinking omitted | 0 of 12 | 9 of 12 |
 | `/v1/chat/completions` | `reasoning_content` replayed | 0 of 12 | 12 of 12 |
 
-The work still completes: tool calls are unaffected, and an end-to-end Claude Code run wrote a file and
-read it back correctly. What breaks is the prose around it, and the reasoning separation this recipe
-turns the parser on for.
+How often the first row bites depends on the shape of the conversation rather than on replay alone: a
+later run of eight two-turn replays with no tool round and no streaming was clean on every trial. Treat
+the row as evidence that it happens, not as a rate to expect.
 
-The OpenAI route is unaffected on every trial, so it is the better choice for multi-turn work that needs
-clean reasoning. This is a serving-layer defect rather than a model or template one, so a later SGLang
-build may fix it; the numbers above belong to the image this recipe pins.
+With `K3_PARSER_PATCH=1`, markers were gone from both the raw `/v1/responses` body and from an OpenAI
+client's displayed output, where unpatched every reply had carried them. Nothing else moved: request cap
+67, token pool 383,223, context 262,144, and 33.4 to 39.3 tok/s against 33.8 to 39.3 before. The patch is
+opt-in because it mounts pre-release files over a pinned image; retire it once a rebuilt `kimi-k3-cu12`
+image carries the fix, or once the fix reaches a numbered SGLang release.
 
 ## Tunable inputs
 
@@ -261,6 +268,7 @@ Every variable this recipe honors, with its default and effect.
 | `WIDE` | 0 | Set to 1 for the configuration that lifted the concurrency cap from 67 to 156 |
 | `MAMBA_RATIO` | unset, 3.2 under `WIDE=1` | Size of the KDA state pool relative to KV |
 | `MAMBA_CACHE_STRATEGY` | unset, `extra_buffer_lazy` under `WIDE=1` | Cuts the state slots per request from 5 to 4 |
+| `K3_PARSER_PATCH` | 0 | Set to 1 to keep channel markers out of the visible text, using the files in `patches/` |
 | `K3_LOG_DIR` | `/tmp/$USER/k3` | Node-local logs and JIT caches |
 
 ## Web search
