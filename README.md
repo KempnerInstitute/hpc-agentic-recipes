@@ -32,10 +32,10 @@ Walkthrough in [docs/quickstart.md](docs/quickstart.md).
 
 ## To serve your own
 
-Two things have to be on your PATH before a recipe builds: `uv`, which installs the Python environment, and
-`mamba`, which installs the CUDA toolkit an RTX recipe needs. On this cluster `mamba` comes from a module,
-and a build submitted through Slurm has to load it there too, since an interactive shell's copy is a
-function that a batch job does not inherit:
+`uv` has to be on your PATH before any recipe builds, because it installs the Python environment. An RTX
+recipe also needs `mamba`, which installs the CUDA toolkit; the H200 and H100 recipes do not use it. On this
+cluster `mamba` comes from a module, and a build submitted through Slurm has to load it there too, since an
+interactive shell's copy is a function that a batch job does not inherit:
 
 ```
 module load Mambaforge
@@ -53,7 +53,7 @@ printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/GLM-5.2-NVFP4-rtx-8.key
 chmod 600 secrets/GLM-5.2-NVFP4-rtx-8.key
 ```
 
-Every recipe names its file at the top of its README. `secrets/vllm_api_key` is read when that file is
+Every runnable recipe names its file at the top of its README. `secrets/vllm_api_key` is read when that file is
 absent, so a single key there still gates everything.
 
 With a key in place, requests without it receive HTTP 401. `secrets/` is gitignored. To rotate, replace the
