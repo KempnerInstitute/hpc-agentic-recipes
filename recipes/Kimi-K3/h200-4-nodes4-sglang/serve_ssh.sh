@@ -26,6 +26,7 @@ for i in 0 1 2 3; do
     MODEL='${MODEL:-}' DRAFT='${DRAFT:-}' MAX_MODEL_LEN='${MAX_MODEL_LEN:-}' \
     MEM_FRACTION='${MEM_FRACTION:-}' MAMBA_RATIO='${MAMBA_RATIO:-}' \
     MAMBA_CACHE_STRATEGY='${MAMBA_CACHE_STRATEGY:-}' WIDE='${WIDE:-0}' SIF='$SIF' \
+    K3_PARSER_PATCH='${K3_PARSER_PATCH:-0}' \
     nohup bash '$S/serve.sh' > /dev/null 2>&1 < /dev/null & echo '  rank $i launched on ${NODES[$i]}'"
 done
 
