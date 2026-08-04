@@ -68,8 +68,8 @@ an environment stops rebuilding months later.
 
 ## Write the flags
 
-`env/env.sh` holds the runtime environment. Every flag needs a provenance comment, and the audit rejects
-one without it:
+`env/env.sh` holds the runtime environment. Every flag needs a provenance comment, and a review will ask
+for any that is missing:
 
 ```
 # verified: <symptom>, <engine version>
@@ -90,8 +90,8 @@ Candidates to consider: attention backend, `VLLM_USE_DEEP_GEMM`, `NCCL_P2P_DISAB
 
 `serve.sh` holds the engine command. The decisions that actually take time:
 
-- `--served-model-name` must match `ANTHROPIC_MODEL` in `client.env`, which the audit checks, because a
-  mismatch produces a confusing model-not-found at first use. Recipes for the same model on different
+- `--served-model-name` must match `ANTHROPIC_MODEL` in `client.env`, because a mismatch produces a
+  confusing model-not-found at first use. Recipes for the same model on different
   hardware share one name on purpose, so a client does not change when the endpoint moves.
 - `--tool-call-parser` and `--reasoning-parser` must be names the engine has registered. Find them by
   listing the registry rather than guessing from filenames, which do not match the registered names.
@@ -136,5 +136,5 @@ yourself: no first person, and no citing notes that are not in the repo.
 - An entry in `common/issues/readme-only.txt` if the recipe is documentation-only
 - A mention in [choosing-a-model.md](choosing-a-model.md) if it is a model someone should reach for
 
-Then run the audit once more. It checks index coverage in both directions, so a recipe missing from a
-table and a table row pointing at a missing recipe both fail.
+Coverage is checked in both directions when your pull request is reviewed, so a recipe missing from a table
+and a table row pointing at a missing recipe are both caught. Adding every row above avoids a round trip.

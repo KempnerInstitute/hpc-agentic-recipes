@@ -137,7 +137,7 @@ hardware level, just the checkpoint directory.
 | --- | --- |
 | [quickstart.md](docs/quickstart.md) | Connecting to an endpoint someone else runs |
 | [choosing-a-model.md](docs/choosing-a-model.md) | Which model to serve, and what the rates mean |
-| [clients.md](docs/clients.md) | Cline, Aider, Continue, or any OpenAI-compatible client |
+| [clients.md](docs/clients.md) | Codex, or any OpenAI-compatible client |
 | [engines.md](docs/engines.md) | Which engine a model needs, and what each one serves |
 | [hardware.md](docs/hardware.md) | Node types, partitions, allocation limits |
 | [downloading-weights.md](docs/downloading-weights.md) | Fetching a new checkpoint |

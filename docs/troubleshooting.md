@@ -27,6 +27,8 @@ generated from that source rather than written by hand, so they cannot drift apa
 | `a and b must have same reduction dim, but got [s47, 3840] X [5632, 1024]` | `gemma4_mtp` is broken in vLLM 0.25.1 and 0.26.0 | both Gemma models with `SPEC_DRAFT` |
 | HTTP 400 mentioning `input_schema` and `web_search_20250305` | Anthropic hosted tools carry no input schema and vLLM rejects them | every vLLM recipe |
 | The model answers without searching and reports no error | SGLang accepts the hosted search tool with 200 and drops it | Kimi-K3 |
+| Raw channel markers such as `<\|open\|>think<\|sep\|` appear in the visible reply | The container's parser ends the reasoning channel only on the tool marker, so a reply opening the response channel is never closed | Kimi-K3, set `K3_PARSER_PATCH=1` |
+| A client reports that web access is disabled, and the search helper fails under it while working in your own shell | The client sandboxes the commands it runs and blocks outbound network | Codex, see [clients.md](clients.md) |
 | Every request returns 401 with an apparently correct key | Client sent `x-api-key` because `ANTHROPIC_API_KEY` was set instead of `ANTHROPIC_AUTH_TOKEN` | every recipe |
 | Response has empty `content` and `stop_reason: max_tokens` | Thinking model spent the whole budget on reasoning, returned as `reasoning` by vLLM and `reasoning_content` by SGLang | every thinking model |
 | Cross-node tensor parallelism hangs at NCCL init | Under vLLM, TP must stay inside a node and PP goes across nodes | every multi-node vLLM recipe |
@@ -35,4 +37,4 @@ generated from that source rather than written by hand, so they cannot drift apa
 | An endpoint serves requests that carry no API key | Nothing gates the port, and SGLang takes a key only as an argument | any SGLang endpoint whose launcher does not supply one |
 | A recipe's environment is gone and `serve.sh` cannot find its interpreter | `ENV_ROOT` defaults to scratch, which has a 90-day retention policy | any recipe, rebuild with `common/tools/rebuild_envs.sh` or the recipe's own `env/build.sh` |
 | Relaunch fails with out of memory right after stopping a server | The old process had not released the KV cache yet | any recipe, use `common/tools/stop.sh` which waits |
-| A sourced setup script exits silently with no output | A sourced file returning non-zero aborts a caller running under `set -e` | fixed in `common/defaults.sh`, checked by the audit |
+| A sourced setup script exits silently with no output | A sourced file returning non-zero aborts a caller running under `set -e` | fixed in `common/defaults.sh` |
