@@ -63,6 +63,23 @@ SPEC=()
 # unconditional mount would stop a default launch for anyone who copied only the checkpoint to faster
 # storage and pointed MODELS_DIR at it.
 BINDS=(-B "$MODEL:$MODEL:ro" -B "$K3_LOG_DIR:$K3_LOG_DIR" -B "$LAUNCHER:$LAUNCHER:ro")
+
+# The SGLang inside this image predates the fix to K3's channel parser, which ends the reasoning channel
+# only on the tool marker. A reply that opens the response channel instead is never closed, so its markers
+# reach the visible text: every Codex reply arrived wrapped in <|close|>think<|open|>response<|sep|>, and
+# Claude Code showed the same intermittently. The work itself completed either way, so this is a display
+# defect. K3_PARSER_PATCH=1 mounts two upstream files over the container's copies, measured to cost nothing
+# in decode rate, request cap or token pool. See patches/README.md, including when to retire it.
+if [ "${K3_PARSER_PATCH:-0}" = 1 ]; then
+  _pp="$S/patches"
+  _pp_rp=/sgl-workspace/sglang/python/sglang/srt/parser/reasoning_parser.py
+  _pp_fmt=/sgl-workspace/sglang/python/sglang/srt/function_call/kimik3_format.py
+  for _f in reasoning_parser.py kimik3_format.py; do
+    [ -f "$_pp/$_f" ] || { echo "K3_PARSER_PATCH=1 but $_pp/$_f is missing" >&2; exit 1; }
+  done
+  BINDS+=(-B "$_pp/reasoning_parser.py:$_pp_rp:ro" -B "$_pp/kimik3_format.py:$_pp_fmt:ro")
+fi
+
 if [ "$SPEC_MODE" = dspark ]; then
   [ -d "$DRAFT" ] || { echo "SPEC_MODE=dspark needs the draft checkpoint at $DRAFT" >&2; exit 1; }
   BINDS+=(-B "$DRAFT:$DRAFT:ro")
