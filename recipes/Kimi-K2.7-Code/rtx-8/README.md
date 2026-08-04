@@ -195,10 +195,9 @@ source recipes/Kimi-K2.7-Code/rtx-8/client.env
 claude
 ```
 
-`client.env` caps the client's output request with `CLAUDE_CODE_MAX_OUTPUT_TOKENS=4096`. Claude Code asks
-for 32000 output tokens by default, which leaves 768 tokens of this endpoint's 32768-token context for the
-prompt, so every request would fail before the model saw it. Raise the cap only if you also raise
-`MAX_MODEL_LEN`.
+No output-token cap is needed. Claude Code asks for 32000 output tokens by default and sends about 21K of
+its own prompt, which the 131072-token context holds with room to spare. Lowering `MAX_MODEL_LEN` below
+about 56000 brings the cap back, because those two together stop fitting.
 
 <!-- issue:anthropic-auth-token begin -->
 **Use `ANTHROPIC_AUTH_TOKEN`, never `ANTHROPIC_API_KEY`.** Both engines accept only
@@ -219,7 +218,8 @@ Every variable this recipe honors, with its default and effect.
 | --- | --- | --- |
 | `MODEL` | `$MODELS_DIR/Kimi-K2.7-Code` | Serve a different copy of the checkpoint |
 | `API_PORT` | 8000 | Listening port |
-| `MAX_MODEL_LEN` | 32768 | Context window; larger costs KV cache memory |
+| `MAX_MODEL_LEN` | 131072 | Context window. The KV cache holds 137,664 tokens, so this is near the
+ceiling; the checkpoint's own limit is 262144, which does not fit |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
 | `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is `~/.cache/vllm`, which is a small quota here |
 | `TP` | 8 | Tensor parallel size; 8 is the node's GPU count |
