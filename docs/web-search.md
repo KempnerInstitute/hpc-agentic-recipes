@@ -60,6 +60,12 @@ The skill tells the model what the tool does and when to use each mode. It can o
 can see, which on vLLM is the 400. On SGLang the hosted search is dropped silently, so nothing signals the
 model to switch: ask for the search tool explicitly there, or expect an answer written without searching.
 
+Both steps above are specific to Claude Code. Another client needs two things instead. Name the script in
+the prompt, since the skill format is Claude Code's and no other client reads it. And check whether the
+client sandboxes the commands it runs: Codex blocks outbound network by default, so the tool fails under it
+while working in your own shell, which looks like a missing tool rather than a sandbox setting. See the
+Codex section of clients.md for the setting that opens it.
+
 ## Reliability
 
 Web mode scrapes a search engine, so it is the least stable of the seven: results can change format or
