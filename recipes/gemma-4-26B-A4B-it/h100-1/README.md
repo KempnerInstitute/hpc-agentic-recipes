@@ -49,11 +49,14 @@ tail -f gemma26-h100-1-<jobid>.log
 Direct, on a node you already hold:
 
 ```
+# whole node to yourself
 bash recipes/gemma-4-26B-A4B-it/h100-1/serve_ssh.sh <node>
-GPU=1 bash recipes/gemma-4-26B-A4B-it/h100-1/serve_ssh.sh <node>    # pin one device
+
+# shared node, the usual case: read the device Slurm gave you, then pin it
+scontrol show job -d <jobid> | grep -oE 'IDX:[0-9]+' | cut -d: -f2
+GPU=<n> bash recipes/gemma-4-26B-A4B-it/h100-1/serve_ssh.sh <node>
 ```
 
-- On a shared node pass `GPU=<n>`. Read `n` from `scontrol show job -d <jobid>`, field `GRES=...(IDX:n)`.
 - The server log is node-local at `/tmp/$USER/vllm/`; read it over SSH on that node.
 - `env/env.sh` sets `VLLM_ENGINE_READY_TIMEOUT_S=3600`, above vLLM's 600 s default.
 
