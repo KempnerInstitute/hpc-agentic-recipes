@@ -2,14 +2,14 @@
 
 Status: Validated - vLLM 0.25.1+cu129, protocol: slope(128,1152) at concurrency 1, 64, 256, 640 and 1024
 
-Serves `gemma-4-26b` on one H100 GPU at 256K context. One GPU, no NCCL, no multi-node coordination.
-
 | | |
 | --- | --- |
-| Checkpoint | `gemma-4-26B-A4B-it`, Hugging Face `google/gemma-4-26B-A4B-it` |
-| Size | 51.6 GB on disk, bf16, `Gemma4ForConditionalGeneration` |
-| Context | 262144, the checkpoint maximum |
 | Served name | `gemma-4-26b` |
+| Checkpoint | `gemma-4-26B-A4B-it`, Hugging Face `google/gemma-4-26B-A4B-it` |
+| On disk | 51.6 GB, bf16, `Gemma4ForConditionalGeneration` |
+| Context | 262144, the checkpoint maximum |
+| Hardware | 1 H100, 80 GB, TP1, no NCCL |
+| Engine | vLLM 0.25.1+cu129 |
 
 ## 1. Create the API key
 
@@ -19,8 +19,11 @@ printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/gemma-4-26B-A4B-it-h100
 chmod 600 secrets/gemma-4-26B-A4B-it-h100-1.key
 ```
 
-- The endpoint returns 401 without it.
-- `secrets/vllm_api_key` is read when this file is absent.
+| | |
+| --- | --- |
+| Without a key | every request returns HTTP 401 |
+| If this file is absent | `secrets/vllm_api_key` is read instead |
+| Rotation | replace the file and relaunch; the engine reads it once at launch |
 
 ## 2. Build the environment
 
@@ -30,9 +33,13 @@ Run on a compute node, not a login node.
 bash recipes/gemma-4-26B-A4B-it/h100-1/env/build.sh
 ```
 
-- About 13 GB, built under `ENV_ROOT` on scratch.
-- Installs the cu129 wheel: these nodes run driver 575, CUDA 12.9, and vLLM's default wheel is CUDA 13.
-- Scratch expires after 90 days; rebuild with the same command.
+| | |
+| --- | --- |
+| Size | about 13 GB |
+| Location | under `ENV_ROOT`, default scratch; set `ENV_ROOT` in `common/site.conf` to move it |
+| Wheel | cu129. These nodes run driver 575, CUDA 12.9; vLLM's default wheel is CUDA 13 and will not run |
+| Retention | scratch expires after 90 days; rerun the same command to rebuild |
+| Record | `env/requirements.lock` after a build, plus `env/WHEELS` for non-PyPI artifacts |
 
 ## 3. Launch
 
@@ -40,7 +47,7 @@ Slurm, from the repo root:
 
 ```
 sbatch --account=<your-account> recipes/gemma-4-26B-A4B-it/h100-1/serve.sbatch
-squeue --me                       # NODELIST gives the host
+squeue --me                                  # NODELIST gives the host
 tail -f gemma26-h100-1-<jobid>.log
 ```
 
@@ -48,14 +55,24 @@ Direct, on a node you already hold:
 
 ```
 bash recipes/gemma-4-26B-A4B-it/h100-1/serve_ssh.sh <node>
-GPU=1 bash recipes/gemma-4-26B-A4B-it/h100-1/serve_ssh.sh <node>    # pin one device of a shared node
+GPU=1 bash recipes/gemma-4-26B-A4B-it/h100-1/serve_ssh.sh <node>    # pin one device
 ```
 
-- Startup is 3 to 7 minutes, mostly weight loading. A launch that looks hung is still loading.
-- On a shared node, pass `GPU=` the device Slurm gave you: `scontrol show job -d <jobid>`, field
-  `GRES=...(IDX:n)`.
-- `env/env.sh` sets `VLLM_ENGINE_READY_TIMEOUT_S=3600`, above vLLM's 600 second default.
-- The server log is node-local at `/tmp/$USER/vllm/`; read it over SSH on that node.
+| | |
+| --- | --- |
+| Shared node | pass `GPU=<n>`. Read `n` from `scontrol show job -d <jobid>`, field `GRES=...(IDX:n)` |
+| Server log | node-local, `/tmp/$USER/vllm/`; read it over SSH on that node |
+| Readiness timeout | `env/env.sh` sets `VLLM_ENGINE_READY_TIMEOUT_S=3600`, above vLLM's 600 s default |
+
+Startup, measured:
+
+| Stage | Time |
+| --- | --- |
+| Imports and config | 27 s |
+| Weight load | 29 s |
+| Engine init: profile, KV cache, warmup | 78 s |
+| Of which CUDA graph capture | 21 s |
+| Total to listening | about 3 min |
 
 ## 4. Verify
 
@@ -65,16 +82,22 @@ NODE=<the node serving it>
 
 curl -s -H "Authorization: Bearer $KEY" http://$NODE:8000/v1/models
 
-curl -s -o /dev/null -w '%{http_code}\n' http://$NODE:8000/v1/models          # must print 401
+curl -s -o /dev/null -w '%{http_code}\n' http://$NODE:8000/v1/models
 
 curl -s -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
   http://$NODE:8000/v1/chat/completions \
   -d '{"model":"gemma-4-26b","messages":[{"role":"user","content":"What is 2+2? Answer briefly."}],"max_tokens":400}'
 ```
 
-- 401 without a key is correct.
-- Use at least 400 output tokens. This model reasons first, returned in a separate `reasoning` field, so a
-  smaller budget leaves `content` empty with `finish_reason: length`.
+| Command | Expected |
+| --- | --- |
+| `/v1/models` with the key | `"id": "gemma-4-26b"`, `"max_model_len": 262144` |
+| `/v1/models` without a key | `401` |
+| chat completion | `content` holds the answer, `finish_reason: stop` |
+
+| | |
+| --- | --- |
+| Output budget | use at least 400. Reasoning arrives in a separate `reasoning` field, and a smaller budget can end with `finish_reason: length` and empty `content` |
 
 ## 5. Connect a client
 
@@ -84,11 +107,12 @@ source recipes/gemma-4-26B-A4B-it/h100-1/client.env
 claude
 ```
 
-- No output-token cap is needed at 256K.
-- Use `ANTHROPIC_AUTH_TOKEN`, never `ANTHROPIC_API_KEY`, which sends `x-api-key` and returns 401.
-- `client.env` also sets `ANTHROPIC_SMALL_FAST_MODEL`, without which the client reaches for a hosted Haiku.
-- OpenAI-compatible clients such as Codex: base URL `http://<node>:8000/v1`, same key, model
-  `gemma-4-26b`. See [docs/clients.md](../../../docs/clients.md).
+| | |
+| --- | --- |
+| Output cap | none needed at 262144 |
+| Auth variable | `ANTHROPIC_AUTH_TOKEN`. `ANTHROPIC_API_KEY` sends `x-api-key` and returns 401 |
+| Also set | `ANTHROPIC_SMALL_FAST_MODEL`, in `client.env`; without it the client reaches for a hosted Haiku |
+| OpenAI clients | base URL `http://<node>:8000/v1`, same key, model `gemma-4-26b`. See [docs/clients.md](../../../docs/clients.md) |
 
 ## 6. Stop it
 
@@ -97,7 +121,9 @@ scancel <jobid>                        # Slurm path
 bash common/tools/stop.sh <node>       # direct path
 ```
 
-- On a shared node, confirm only your own device reads 0 MiB before relaunching.
+| | |
+| --- | --- |
+| Shared node | confirm only your own device reads 0 MiB before relaunching |
 
 ## Tunable inputs
 
@@ -108,37 +134,51 @@ bash common/tools/stop.sh <node>       # direct path
 | `MAX_MODEL_LEN` | 262144 | Context window, the checkpoint maximum |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
 | `TP` | 1 | Tensor parallel size |
-| `QUANT` | unset, meaning bf16 | `fp8` quantizes weights on load; measured no change in rate |
+| `QUANT` | unset, bf16 | `fp8` quantizes weights on load; measured no change in rate |
 | `KV_FP8` | unset | `--kv-cache-dtype fp8`; halves KV bytes, measured no change in rate |
 | `ENFORCE_EAGER` | unset | Skip torch.compile and CUDA graph capture, to debug a startup failure |
 | `SPEC_DRAFT` | unset | Must stay unset on vLLM 0.25.1 and 0.26.0; see Known limits |
+| `SPEC_TOKENS` | 3 | Speculative tokens per step, read only when `SPEC_DRAFT` is set |
 | `EXTRA_ARGS` | unset | Extra flags appended to the `vllm serve` command line |
 | `TOOL_PARSER` | `gemma4` | Tool call parser |
 | `REASONING_PARSER` | `gemma4` | Reasoning parser |
-| `GPU` | unset | SSH path only: pin one device of a shared node, for example `GPU=1` |
+| `GPU` | unset | SSH path only: pin one device of a shared node |
 | `LOG_DIR` | `/tmp/$USER/vllm` | Where the SSH path writes the server log |
 | `VENV_DIR` | under `ENV_ROOT` | Use an environment built elsewhere |
-
-`MODELS_DIR` and `VLLM_CACHE_ROOT` come from `common/defaults.sh`; override there or in `common/site.conf`.
+| `ACCOUNT` | unset | Slurm account, or pass `--account` at submit time |
+| `MODELS_DIR`, `ENV_ROOT`, `VLLM_CACHE_ROOT` | `common/defaults.sh` | Override there or in `common/site.conf` |
 
 ## Benchmarking
 
-vLLM 0.25.1+cu129, `MAX_MODEL_LEN=262144`, protocol slope(128,1152), 3 repeats per level, median, warm
-endpoint. The node's other three GPUs ran unrelated jobs; the serving device held 1980 MHz throughout.
+Conditions:
 
-| Concurrency | Aggregate | Per stream |
-| --- | --- | --- |
-| 1 | 214.7 tok/s | 214.7 tok/s |
-| 64 | 5245.6 tok/s | 82.0 tok/s |
-| 256 | 6358.4 tok/s | 24.8 tok/s |
-| 640 | 7048.6 tok/s | 11.0 tok/s |
-| 1024 | 7070.7 tok/s | 6.9 tok/s |
+| | |
+| --- | --- |
+| Protocol | slope(128,1152), 3 repeats per level, median reported |
+| Input length | ISL 19 tokens. Rates at a long input are not measured; use `--prompt-tokens` |
+| Output length | OSL 1152 tokens, output only, `ignore_eos` |
+| Context | `MAX_MODEL_LEN=262144` |
+| Sequence cap | `max_num_seqs` 1024, which equals the top sweep level |
+| Endpoint | idle, no other traffic |
+| Node | GPUs 0 and 3 ran unrelated jobs, GPU 2 idle; the serving device held 1980 MHz of 1980 MHz |
 
-- Saturated: 0.3 percent from 640 to 1024, so 7070.7 tok/s is a ceiling, not a rising curve.
-- Quote 214.7 tok/s for one person coding, 7070.7 tok/s for a shared endpoint.
-- Warm first. A fresh endpoint reads 204.5 tok/s at concurrency 1; concurrency 640 is unaffected.
-- KV cache holds 661,098 tokens, 2.52 full-length requests at once.
-- A 240,022-token prompt was served in 14 seconds.
+Results:
+
+| Concurrency | Aggregate | Per stream | Spread over 3 runs |
+| --- | --- | --- | --- |
+| 1 | 204.5 tok/s | 204.5 tok/s | 204.5 to 204.5 |
+| 64 | 5171.2 tok/s | 80.8 tok/s | 5169.0 to 5174.6 |
+| 256 | 6304.7 tok/s | 24.6 tok/s | 6293.6 to 6314.3 |
+| 640 | 7164.7 tok/s | 11.2 tok/s | 7154.9 to 7188.8 |
+| 1024 | 7146.9 tok/s | 7.0 tok/s | 7120.7 to 7148.3 |
+
+| | |
+| --- | --- |
+| Label | peak. Throughput turns over at 640; 1024 is 0.25 percent lower |
+| Quote for one caller | 204.5 tok/s |
+| Quote for a shared endpoint | 7164.7 tok/s at concurrency 640 |
+| KV cache | 661,098 tokens, 2.52 full-length requests at once |
+| Long prompt | 240,043 tokens in 20 s cold; 0.6 s when the prefix is already cached |
 
 Reproduce:
 
@@ -148,14 +188,14 @@ KEY_NAME=gemma-4-26B-A4B-it-h100-1 bash common/tools/bench.sh --host <node> --mo
   --sweep 1,64,256,640,1024
 ```
 
-- `KEY_NAME` is required once `secrets/` holds both this recipe's key and `vllm_api_key`: the server uses
-  the recipe key, `bench.sh` alone resolves the shared one, and every request returns 401.
+| | |
+| --- | --- |
+| `KEY_NAME` | required once `secrets/` holds both this recipe's key and `vllm_api_key`. The server uses the recipe key, `bench.sh` alone resolves the shared one, and every request returns 401 |
 
 ## Known limits
 
-- `SPEC_DRAFT` must stay unset on vLLM 0.25.1 and 0.26.0. `gemma4_mtp` fails at the first request with
-  `a and b must have same reduction dim, but got [s47, 3840] X [5632, 1024]`. The fix is on vLLM `main`.
-- Anthropic's hosted tools do not work: `web_search_20250305`, `web_fetch_20250910` and
-  `code_execution_20250522` run on Anthropic's servers, carry no `input_schema`, and vLLM rejects all
-  three with HTTP 400. Use [docs/web-search.md](../../../docs/web-search.md) instead.
-- Client-side tools work normally: file edits, shell commands, Slurm submission.
+| Limit | Detail |
+| --- | --- |
+| Speculative decoding | `SPEC_DRAFT` must stay unset on vLLM 0.25.1 and 0.26.0. `gemma4_mtp` fails at the first request with `a and b must have same reduction dim, but got [s47, 3840] X [5632, 1024]`. Fixed on vLLM `main` |
+| Anthropic hosted tools | `web_search_20250305`, `web_fetch_20250910` and `code_execution_20250522` run on Anthropic's servers, carry no `input_schema`, and vLLM rejects all three with HTTP 400. Use [docs/web-search.md](../../../docs/web-search.md) |
+| Client-side tools | work normally: file edits, shell commands, Slurm submission |
