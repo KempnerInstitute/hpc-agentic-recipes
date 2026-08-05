@@ -22,7 +22,7 @@ exec vllm serve "$MODEL" \
   --served-model-name gemma-4-26b \
   --tensor-parallel-size "${TP:-1}" \
   --host 0.0.0.0 --port "${API_PORT:-8000}" \
-  --max-model-len "${MAX_MODEL_LEN:-32768}" \
+  --max-model-len "${MAX_MODEL_LEN:-262144}" \
   --gpu-memory-utilization "${GPU_UTIL:-0.90}" \
   --enable-prefix-caching \
   --enable-auto-tool-choice \
