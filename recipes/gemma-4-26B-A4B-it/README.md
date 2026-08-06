@@ -1,34 +1,30 @@
 # gemma-4-26B-A4B-it
 
 Gemma 4 26B-A4B, instruction tuned: a mixture-of-experts model that activates 4B of its 26B parameters
-per token, with native tool calling and a separate reasoning channel. It runs on a single GPU and has
-the highest decode rate of anything in this repo, which makes it the best default for interactive work.
+per token, with native tool calling and a separate reasoning channel. It runs on one GPU and has the
+highest single stream rate in this repo, which makes it the best default for interactive coding.
 
 Served as `gemma-4-26b` on `http://<node>:8000/v1`, and on vLLM's Anthropic-compatible API at
 `http://<node>:8000`, so Claude Code connects with no proxy.
 
 ## Variants
 
-One per GPU type, because the toolchains genuinely differ: on RTX PRO 6000 (sm_120) this checkpoint
-needs torch cu130, a conda CUDA 13.0 toolkit, and FlashInfer 0.6.15, while the Hopper nodes run driver
-575 and need the cu129 release wheel instead. All three are TP1 on one GPU and serve the same name, so
-they differ only in hardware, environment, and rate.
+One per GPU type, because the toolchains differ: RTX PRO 6000 (sm_120) needs torch cu130, a conda CUDA
+13.0 toolkit and FlashInfer 0.6.15, while the Hopper nodes run driver 575 and take the cu129 release
+wheel. All three are TP1 on one GPU and serve the same name.
 
-| Variant | GPU | Single stream | Aggregate | Status |
-| --- | --- | --- | --- | --- |
-| [`h200-1`](h200-1/README.md) | 1 H200, 143771 MiB | 250.5 tok/s | 10905 at c=1024, saturated | Validated |
-| [`h100-1`](h100-1/README.md) | 1 H100, 80 GB | 204.5 tok/s | 7165 at c=640, peak | Validated |
-| [`rtx-1`](rtx-1/README.md) | 1 RTX PRO 6000 Blackwell, 97887 MiB | 141.1 tok/s | 5798 at c=1024, rising | Validated |
+| Variant | GPU | Single stream | Aggregate | KV cache | Status |
+| --- | --- | --- | --- | --- | --- |
+| [`h200-1`](h200-1/README.md) | 1 H200, 143771 MiB | 250.5 tok/s | 10905 at c=1024, saturated | 2,776,615 tokens | Validated |
+| [`h100-1`](h100-1/README.md) | 1 H100, 81559 MiB | 204.5 tok/s | 7165 at c=640, peak | 661,098 tokens | Validated |
+| [`rtx-1`](rtx-1/README.md) | 1 RTX PRO 6000 Blackwell, 97887 MiB | 141.1 tok/s | 5798 at c=1024, rising | 1,013,590 tokens | Validated |
 
-Single stream is one request at a time, which is what interactive coding feels like. Saturated is total
-output across every concurrent stream at the stated concurrency, 35 to 45 times larger here, and it says
-nothing about how fast a single reply arrives. The labels differ by GPU: the H100 turned over at concurrency 640, so that is a measured `peak`; the H200
-is flat within 3.8 percent from 256 to 1024, so `saturated`; the RTX variant was still `rising` at 1024, so
-its figure is a floor. All three measured with bf16, protocol slope(128,1152) over output tokens only, 3
-repeats per level. All three were measured at a 262144 context.
+Measured in bf16 at the 262144 default, protocol slope(128,1152) over output tokens only, 3 repeats per
+level. Rates are defined in [docs/benchmarking.md](../../docs/benchmarking.md), the aggregate labels in
+[docs/choosing-a-model.md](../../docs/choosing-a-model.md).
 
-Pick by what you can get. The spread across GPU types is only 1.8x, because this model is host overhead
-bound rather than memory bandwidth bound, so an idle RTX GPU beats a queued H200.
+- Single stream varies only 1.8x across the three GPU types, so an idle GPU beats queueing for a faster one.
+- `QUANT=fp8` measured no change in rate on any of them, so every variant serves bf16.
 
 ## Checkpoint
 
@@ -39,11 +35,5 @@ bound rather than memory bandwidth bound, so an idle RTX GPU beats a queued H200
 | Documented path | `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/gemma-4-26B-A4B-it` |
 | Size on disk | 51.6 GB, bf16 |
 | Architecture | `Gemma4ForConditionalGeneration`, 128 experts with top-8 routing, multimodal |
-| Context | 262144 supported, and served by default on all three variants |
-| KV cache | 17.05 GiB available on one H100, holding 661,098 tokens at a 262144 ceiling |
-| Drafter | `gemma-4-26B-A4B-it-assistant`, under 1 GB, wired through `SPEC_DRAFT` and unusable on vLLM 0.25.1 and 0.26.0 |
-
-Quantization is deliberately not used. FP8 weights measured no change in decode rate on any GPU type,
-because only 4B parameters are read per token and there is almost nothing for a narrower dtype to save.
-The dense `gemma-4-31B-it` sibling is the opposite case, where FP8 is worth 52 to 74 percent depending
-on the card. Each variant page carries the numbers and the reasoning for its own hardware.
+| Context | 262144, the checkpoint maximum, served by default on all three variants |
+| Drafter | `gemma-4-26B-A4B-it-assistant`, under 1 GB, wired through `SPEC_DRAFT`, unusable on vLLM 0.25.1 and 0.26.0 |
