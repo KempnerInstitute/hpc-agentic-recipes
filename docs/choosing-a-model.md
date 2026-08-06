@@ -97,7 +97,7 @@ apples-to-apples comparison in this document:
 
 Source: the `gemma-4-31B-it` and `gemma-4-26B-A4B-it` cards, which publish the same family table. The 26B
 model with 4B active parameters lands within 3 points of the 31B dense model on every row while decoding
-about 2.8x faster here, which is why it is the recommended default.
+about 2.9x faster here, which is why it is the recommended default.
 
 ### Models with no published scores
 
