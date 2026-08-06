@@ -1,6 +1,4 @@
 # Runtime environment for gemma-4-26B-A4B-it on one H100 GPU. Source, do not execute.
-# Self-contained apart from cluster paths and key resolution: everything model or hardware specific is
-# written out here rather than inherited, so this file can be read on its own.
 S="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$S/../../../../common/defaults.sh"
 KEY_NAME=gemma-4-26B-A4B-it-h100-1
@@ -10,21 +8,13 @@ VENV="${VENV_DIR:-$ENV_ROOT/gemma-4-26B-A4B-it/h100-1/venv}"
 export PATH="$HOME/.local/bin:$PATH"
 source "$VENV/bin/activate"
 
-# The pip CUDA stack ships no nvcc and system gcc 8.5 is too old for the C++20 kernels, so load the
-# cluster toolchain for any just-in-time compilation.
 source /etc/profile.d/lmod.sh 2>/dev/null || true
 module load gcc/12.2.0-fasrc01 cuda/12.9.1-fasrc01 2>/dev/null || true
 export CUDAHOSTCXX="$(command -v g++)"
 
-# required: weights are staged locally, so never reach for the Hub at launch
 export HF_HUB_OFFLINE=1
-# required: unbuffered output, or the log stays empty during startup and looks hung
 export PYTHONUNBUFFERED=1
-
-# required: node-local JIT caches; a shared home hit stale file handles under concurrent compiles
 export TRITON_CACHE_DIR="/tmp/${USER}/triton"
 export TORCHINDUCTOR_CACHE_DIR="/tmp/${USER}/torchinductor"
 mkdir -p "$TRITON_CACHE_DIR" "$TORCHINDUCTOR_CACHE_DIR" 2>/dev/null || true
-
-# required: weight load plus torch.compile plus graph capture exceeds the 600s default readiness timeout
 export VLLM_ENGINE_READY_TIMEOUT_S=3600
