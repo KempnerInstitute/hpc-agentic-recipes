@@ -11,9 +11,6 @@
 # Submit from the repo root, and pass your account:
 #   sbatch --account=<acct> recipes/gemma-4-31B-it/h100-1/serve.sbatch
 #
-# 24 CPUs is the per-GPU allowance on kempner_h100, and 180 GB of host memory is far more than a single-GPU server needs. The request therefore schedules easily and leaves the node's other three GPUs to other jobs.
-# Slurm stages this script into its spool directory, so $0 does not point into the repo and the path
-# below is resolved against the submit directory instead. The log lands in the submit directory.
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 R=recipes/gemma-4-31B-it/h100-1

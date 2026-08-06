@@ -94,12 +94,12 @@ claude
 ```
 
 - No output cap is needed at 262144.
-- `client.env` sets `CLAUDE_CODE_MAX_CONTEXT_TOKENS=262144`. Claude Code does not recognise this served
+- `client.env` sets `CLAUDE_CODE_MAX_CONTEXT_TOKENS=262144`. Claude Code does not recognize this served
   name and assumes a 200k window. Client 2.1.223 began enforcing that assumption, where earlier versions
-  disabled auto-compact for an unrecognised model. Without the variable the client compacts at about
+  disabled auto-compact for an unrecognized model. Without the variable the client compacts at about
   167,000 input tokens; with it, about 229,144.
 - That leaves roughly 1,000 tokens of headroom against the 262144 window, because the client also assumes a
-  32000-token output request for an unrecognised model. Raising the output request needs the context
+  32000-token output request for an unrecognized model. Raising the output request needs the context
   variable lowered to match.
 - Use `ANTHROPIC_AUTH_TOKEN`. `ANTHROPIC_API_KEY` sends `x-api-key` and returns 401.
 - `client.env` also sets `ANTHROPIC_SMALL_FAST_MODEL`; without it the client reaches for a hosted Haiku.
@@ -166,12 +166,12 @@ Results:
 
 | | |
 | --- | --- |
-| Label | rising. The highest measured value is 5797.5 tok/s at 1024, the top of the sweep, but the curve is not monotonic: 256 measures 4.1 per cent below 128 |
-| What binds at the top | the KV cache, not the sequence cap. One run at 1024 produced 11,070 preemptions with KV usage at 100 per cent and 878 requests waiting, so raising `max_num_seqs` above 1024 would not lift this number |
+| Label | rising. The highest measured value is 5797.5 tok/s at 1024, the top of the sweep, but the curve is not monotonic: 256 measures 4.1 percent below 128 |
+| What binds at the top | the KV cache, not the sequence cap. One run at 1024 produced 11,070 preemptions with KV usage at 100 percent and 878 requests waiting, so raising `max_num_seqs` above 1024 would not lift this number |
 | Quote for one caller | 141.1 tok/s |
 | Quote for a shared endpoint | 5797.5 tok/s at concurrency 1024 |
 | KV cache | 1,013,590 tokens from 32.18 GiB, 3.87 full-length requests at once |
-| Cost of the larger context | concurrency 1024 measures 5960.8 tok/s at a 32768 context against 5797.5 at 262144, so 2.7 per cent. Single stream is unaffected, 141.0 against 141.1 |
+| Cost of the larger context | concurrency 1024 measures 5960.8 tok/s at a 32768 context against 5797.5 at 262144, so 2.7 percent. Single stream is unaffected, 141.0 against 141.1 |
 | Long prompt, cold | 30,047 tokens in 2.1 s, 120,048 in 19.1 s, 240,048 in 68.3 s |
 | Power | peak 521 W of a 600 W limit, never throttled across 900 samples, clocks 2332 to 2422 MHz |
 

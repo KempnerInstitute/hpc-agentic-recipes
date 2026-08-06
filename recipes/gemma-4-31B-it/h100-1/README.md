@@ -1,13 +1,18 @@
 # gemma-4-31B-it on one H100 GPU
 
-Status: Validated - vLLM 0.25.1+cu129, protocol: slope(128,1152) swept at concurrency 1 through 1024
+Status: Validated - vLLM 0.25.1, protocol: slope(128,1152) at concurrency 1, 64, 128, 256, 512 and 1024
 
-Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
+| | |
+| --- | --- |
+| Served name | `gemma-4-31b` |
+| Checkpoint | `gemma-4-31B-it`, Hugging Face `google/gemma-4-31B-it` |
+| On disk | 62.6 GB, bf16, `Gemma4ForConditionalGeneration` |
+| Served precision | FP8, quantized on load, 31.73 GiB of weights |
+| Context | 262144, the checkpoint maximum |
+| Hardware | 1 H100, 81559 MiB, TP1 |
+| Engine | vLLM 0.25.1 with torch cu129 |
 
-## Configure once
-
-Create the API key. The endpoint refuses requests without it, and the key reaches the engine through
-the environment rather than as an argument, so it does not appear in `ps` output.
+## 1. Create the API key
 
 ```
 mkdir -p secrets
@@ -15,134 +20,45 @@ printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/gemma-4-31B-it-h100-1.k
 chmod 600 secrets/gemma-4-31B-it-h100-1.key
 ```
 
-That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup made
-before per-recipe keys keeps working. When neither exists but `secrets/` holds exactly one key, that one is
-used, which is how `bench.sh` authenticates without being told which recipe you mean.
+- `secrets/vllm_api_key` is read when this file is absent.
+- To rotate, replace the file and relaunch; the engine reads it once at launch.
 
-Nothing else is required. Cluster paths come from `common/defaults.sh`, which is tracked with working
-defaults, so a fresh clone runs as is. Optional overrides, either exported or set in
-`common/site.conf`:
+## 2. Build the environment
 
-| Variable | Default | Why you might change it |
-| --- | --- | --- |
-| `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
-| `GEMMA31_H100_NODE` | unset | An H100 node you already hold, for the SSH path |
-| `MODELS_DIR` | shared repository path | Point at your own faster copy of the checkpoint |
-| `ENV_ROOT` | scratch | Where this recipe builds its environment |
-
-## Status
-
-Validated. The environment was built from `env/build.sh`, the endpoint was
-launched with `serve.sbatch` through Slurm on one H100 GPU, and throughput was measured with `common/tools/bench.sh`
-across concurrency 1, 8, 32, 64, 128, 256, 512, 640, 768, 896 and 1024. The endpoint was still answering after the sweep finished.
-
-Single stream and saturated throughput are different measurements and neither substitutes for
-the other. See Measured performance below for the full curve and the disclosure block.
-
-## What this is
-
-Gemma 4 31B, instruction tuned: a dense model, so every parameter is read for every token, with native
-tool calling and a separate reasoning channel. It is the higher-quality half of the single-GPU Gemma 4
-pair and roughly a third the decode rate of its 26B mixture-of-experts sibling. It exposes vLLM's
-Anthropic-compatible API, so Claude Code connects to it directly with no proxy.
-
-- Checkpoint directory: `gemma-4-31B-it`
-- Hugging Face repo: `google/gemma-4-31B-it`
-- Documented path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/gemma-4-31B-it`
-- On disk: 62.6 GB, bf16, `Gemma4ForConditionalGeneration`, multimodal, 256K context
-- Optional drafter: `gemma-4-31B-it-assistant`, under 1 GB, wired through `SPEC_DRAFT` and currently
-  unusable on this engine (see Gotchas)
-
-This recipe serves the bf16 checkpoint with FP8 weight quantization applied at load time, which is why
-there is no separate FP8 checkpoint directory.
-
-The shared repository path works out of the box. Copying the checkpoint into your own scratch space loads
-faster, because scratch outperforms Lustre for this workload, and the directory names are identical in
-both locations so only `MODELS_DIR` changes. Scratch has a 90-day retention policy, so treat it as a
-fast cache and keep the shared repository as the permanent copy.
-
-## Hardware
-
-| Requirement | Value |
-| --- | --- |
-| GPU | H100, 1 of the 4 on the node, 80 GB |
-| Nodes | 1 |
-| Parallelism | TP1 |
-| Partition | `kempner_h100` |
-| Per-GPU allocation limit | 24 CPUs, about 378 GiB host memory |
-| Maximum wall time | 2 days |
-
-All H100 nodes on this cluster share one hardware specification, so any node in the partition works.
-This recipe claims one GPU and leaves the other three to other jobs, so expect to share the node; on
-the SSH path set `GPU=<n>` to pin a device.
-
-The KV cache costs 160 KiB per token, from 10 full attention layers plus 50 sliding-window layers of
-1024 tokens: 5.8 GB at 32K, 21 GB at 128K, and 41 GB at the full 256K. Weights are 62.6 GB in bf16 and
-about half that in FP8, and this is the tightest of the three GPU types for this checkpoint. At the 0.90
-utilization default an 80 GB card has roughly 72 GB to spend, so bf16 weights leave only about 9 GB of
-KV cache, which is around 55K tokens; FP8 weights leave roughly 40 GB, about what the full 256K context
-costs. So on this card the quantization choice decides both the rate and the usable context length.
-
-Driver 575 and CUDA 12.9 are why this variant has its own toolchain, and why the RTX, H200, and H100
-variants of this checkpoint are three separate recipes rather than one recipe with a switch.
-
-## Environment build
-
-This recipe builds its own environment, shared with no other recipe. Roughly 13 GB, and it lands under
-`ENV_ROOT` on scratch rather than in the repo, because startup is dominated by page faulting the
-torch shared objects and stat-ing tens of thousands of small package files: measured on GPU nodes,
-the interval from process start to the first vLLM log line was about 14 minutes from Lustre and 58
-seconds from scratch. A bare torch and vLLM import from scratch is 9.2 seconds, so most of that 58 seconds
-is engine startup rather than filesystem cost.
+Run on a compute node, not a login node.
 
 ```
 bash recipes/gemma-4-31B-it/h100-1/env/build.sh
 ```
 
-That is the only supported build path, because the install needs uv flags a requirements file cannot
-express. What it does, and why:
+- About 13 GB, under `ENV_ROOT`, default scratch. Set `ENV_ROOT` in `common/site.conf` to move it.
+- Installs the cu129 wheel. These nodes run driver 575, CUDA 12.9, and vLLM's default wheel is CUDA 13.
 
-<!-- issue:hopper-cu129-wheel begin -->
-**Hopper nodes need the cu129 wheel, not vLLM's default.** These nodes run NVIDIA driver 575
-(CUDA 12.9), which cannot run vLLM's default CUDA 13 PyPI wheel. The recipe installs the cu129
-release wheel from the vLLM GitHub release with `--torch-backend=cu129`.
-<!-- issue:hopper-cu129-wheel end -->
+## 3. Launch
 
-Ray is installed alongside vLLM. A TP1 endpoint never uses it, but it is what the earlier
-environment contained, so keeping it means the rates below were measured in this exact environment.
-
-Scratch expires after 90 days, so this environment is disposable. Rebuild it with the same command,
-or `--force` to replace an existing one. Record the exact resolution in `env/requirements.lock` and any non-PyPI artifact URLs with their
-hashes in `env/WHEELS` after a build, which is what makes a drifted rebuild visible.
-
-## Launch
-
-Slurm path, submitted from the repo root:
+Slurm, from the repo root:
 
 ```
 sbatch --account=<your-account> recipes/gemma-4-31B-it/h100-1/serve.sbatch
-```
-
-Find the host once it starts, then use that node name with the client:
-
-```
-squeue --me                       # NODELIST column
+squeue --me                                  # NODELIST gives the host
 tail -f gemma31-h100-1-<jobid>.log
 ```
 
-Direct path, for a node you already hold. Use the Slurm submission above unless you already have
-the node, or you are deploying an endpoint on behalf of others:
+Direct, on a node you already hold:
 
 ```
+# whole node to yourself
 bash recipes/gemma-4-31B-it/h100-1/serve_ssh.sh <node>
-GPU=1 bash recipes/gemma-4-31B-it/h100-1/serve_ssh.sh <node>    # pin one device of a busy node
+
+# shared node, the usual case: read the device Slurm gave you, then pin it
+scontrol show job -d <jobid> | grep -oE 'IDX:[0-9]+' | cut -d: -f2
+GPU=<n> bash recipes/gemma-4-31B-it/h100-1/serve_ssh.sh <node>
 ```
 
-Submit from the repo root either way. Slurm stages the batch script into its own spool directory, so
-the script cannot locate the repo from its own path and resolves paths against the submit directory
-instead.
+- Startup is about 3 to 4 minutes.
+- On the direct path the server log is node-local at `/tmp/$USER/vllm/`. Under Slurm it lands in the submit directory.
 
-## Verify
+## 4. Verify
 
 ```
 KEY=$(cat secrets/gemma-4-31B-it-h100-1.key 2>/dev/null || cat secrets/vllm_api_key)
@@ -150,25 +66,23 @@ NODE=<the node serving it>
 
 curl -s -H "Authorization: Bearer $KEY" http://$NODE:8000/v1/models
 
-curl -s -o /dev/null -w '%{http_code}\n' http://$NODE:8000/v1/models          # must print 401
+curl -s -o /dev/null -w '%{http_code}\n' http://$NODE:8000/v1/models
 
 curl -s -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
   http://$NODE:8000/v1/chat/completions \
   -d '{"model":"gemma-4-31b","messages":[{"role":"user","content":"What is 2+2? Answer briefly."}],"max_tokens":400}'
 ```
 
-A keyless request returning 401 is the expected, correct behavior.
+| Command | Expected |
+| --- | --- |
+| `/v1/models` with the key | `"id": "gemma-4-31b"`, `"max_model_len": 262144` |
+| `/v1/models` without a key | `401` |
+| chat completion | `content` holds the answer, `finish_reason: stop` |
 
-<!-- issue:thinking-model-max-tokens begin -->
-**Give thinking models room, or `content` comes back empty.** This model emits reasoning before its
-answer, and vLLM returns that in a separate `reasoning` field, not `reasoning_content`. With a small
-budget the whole allowance is spent reasoning, `finish_reason` is `length`, and `content` is empty,
-which looks like a broken endpoint but is not. Use at least 400 output tokens for a smoke test, and 800
-or more for a model that reasons at length. If `content` is empty, raise the budget before suspecting
-the endpoint.
-<!-- issue:thinking-model-max-tokens end -->
+- Use at least 400 output tokens. Reasoning arrives in a separate `reasoning` field, so a smaller budget
+  can end with `finish_reason: length` and empty `content`.
 
-## Connect a client
+## 5. Connect a client
 
 ```
 export NODE=<the node serving it>
@@ -176,206 +90,96 @@ source recipes/gemma-4-31B-it/h100-1/client.env
 claude
 ```
 
-`client.env` caps the client's output request with `CLAUDE_CODE_MAX_OUTPUT_TOKENS=4096`. Claude Code asks
-for 32000 output tokens by default, which leaves 768 tokens of this endpoint's 32768-token context for the
-prompt, so every request would fail before the model saw it. Raise the cap only if you also raise
-`MAX_MODEL_LEN`.
+- No output cap is needed at 262144.
+- `client.env` sets `CLAUDE_CODE_MAX_CONTEXT_TOKENS=262144`. Claude Code does not recognize this served name
+  and assumes a 200k window, which client 2.1.223 enforces.
+- Use `ANTHROPIC_AUTH_TOKEN`. `ANTHROPIC_API_KEY` sends `x-api-key` and returns 401.
+- `client.env` also sets `ANTHROPIC_SMALL_FAST_MODEL`; without it the client reaches for a hosted Haiku.
+- OpenAI clients: base URL `http://<node>:8000/v1`, same key, model `gemma-4-31b`. See
+  [docs/clients.md](../../../docs/clients.md).
 
-<!-- issue:anthropic-auth-token begin -->
-**Use `ANTHROPIC_AUTH_TOKEN`, never `ANTHROPIC_API_KEY`.** Both engines accept only
-`Authorization: Bearer <key>`. Setting `ANTHROPIC_API_KEY` makes Claude Code send an `x-api-key`
-header instead, which the engine ignores, and every request returns HTTP 401. Also set
-`ANTHROPIC_SMALL_FAST_MODEL` to this same served model, or the client reaches for a hosted Haiku that
-this endpoint does not serve.
-<!-- issue:anthropic-auth-token end -->
+## 6. Stop it
 
-For an OpenAI-compatible client instead (Cline, Aider, Continue, OpenHands), use base URL
-`http://<node>:8000/v1`, the same key, and model name `gemma-4-31b`.
+```
+scancel <jobid>                        # Slurm path
+bash common/tools/stop.sh <node>       # direct path
+```
 
 ## Tunable inputs
-
-Every variable this recipe honors, with its default and effect.
 
 | Variable | Default | Effect |
 | --- | --- | --- |
 | `MODEL` | `$MODELS_DIR/gemma-4-31B-it` | Serve a different copy of the checkpoint |
 | `API_PORT` | 8000 | Listening port, and part of the SSH log file name |
-| `MAX_MODEL_LEN` | 32768 | Context window; 262144 is supported and costs 41 GB of KV cache, which needs the FP8 default |
+| `MAX_MODEL_LEN` | 262144 | Context window, the checkpoint maximum |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
-| `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is `~/.cache/vllm`, which is a small quota here |
-| `TP` | 1 | Tensor parallel size; one GPU holds this checkpoint |
-| `QUANT` | `fp8` | Weight quantization applied at load. Set `QUANT=` (empty) for bf16, which measured 41 percent slower on this GPU and caps context near 55K |
-| `KV_FP8` | unset | `--kv-cache-dtype fp8`; halves KV bytes, measured no change in rate, and the cheapest way to buy context on this card |
-| `ENFORCE_EAGER` | unset | Skip torch.compile and CUDA graph capture, for debugging a startup failure |
-| `SPEC_DRAFT` | unset | Path to the drafter checkpoint. Must stay unset on vLLM 0.25.1 and 0.26.0, where it fails at the first request; see Gotchas |
-| `SPEC_TOKENS` | 3 | Speculative tokens per step, only read when `SPEC_DRAFT` is set |
+| `TP` | 1 | Tensor parallel size |
+| `QUANT` | `fp8` | Set but empty for bf16. bf16 weights are 58.25 GiB and will not start at 262144, since one full-length request needs 27.04 GiB of KV; cap `MAX_MODEL_LEN` near 52000 for bf16 |
+| `KV_FP8` | unset | `--kv-cache-dtype fp8`; halves KV bytes |
+| `ENFORCE_EAGER` | unset | Skip torch.compile and CUDA graph capture, to debug a startup failure |
+| `SPEC_DRAFT` | unset | Path to the drafter checkpoint. Must stay unset on vLLM 0.25.1 and 0.26.0 |
+| `SPEC_TOKENS` | 3 | Speculative tokens per step, read only when `SPEC_DRAFT` is set |
 | `EXTRA_ARGS` | unset | Extra flags appended to the `vllm serve` command line |
-| `TOOL_PARSER` | `gemma4` | Tool call parser |
-| `REASONING_PARSER` | `gemma4` | Reasoning parser |
-| `GPU` | unset | SSH path only: pin one device of a shared node, for example `GPU=1` |
+| `TOOL_PARSER` | `gemma4` | Tool call parser. Not forwarded by `serve_ssh.sh`, so it only applies on the Slurm path |
+| `REASONING_PARSER` | `gemma4` | Reasoning parser. Not forwarded by `serve_ssh.sh` either |
+| `GPU` | unset | SSH path only: pin one device of a shared node |
 | `LOG_DIR` | `/tmp/$USER/vllm` | Where the SSH path writes the server log |
 | `VENV_DIR` | under `ENV_ROOT` | Use an environment built elsewhere |
+| `VLLM_VERSION` | 0.25.1 | Wheel version `env/build.sh` installs |
+| `UV_CACHE_DIR` | under `ENV_ROOT` | Keep it on the same filesystem as the venv, or uv copies about 13 GB instead of hardlinking |
+| `ACCOUNT` | unset | Read by `common/defaults.sh`; `serve.sbatch` has no account directive, so pass `--account` at submit time |
+| `KEY_NAME`, `KEY_FILE`, `VLLM_API_KEY` | this recipe's key | Which key `common/lib/api_key.sh` resolves; an exported `VLLM_API_KEY` wins |
+| `NODE`, `GEMMA31_H100_NODE` | unset | The node to launch on or connect to; set either, or pass the node as an argument |
+| `MODELS_DIR`, `ENV_ROOT`, `VLLM_CACHE_ROOT` | `common/defaults.sh` | Override there or in `common/site.conf` |
 
-`QUANT` is forwarded as `${QUANT-fp8}` rather than `${QUANT:-}` by `serve_ssh.sh`, so that an unset
-variable keeps the FP8 default instead of arriving on the far side as set and empty, which would
-silently serve bf16 at 59 percent of the rate and with a fraction of the context.
+## Benchmarking
 
-## Web search
+Conditions:
 
-<!-- issue:anthropic-hosted-tools-400 begin -->
-**Anthropic's hosted tools do not work against a local endpoint.** Server-side tools such as
-`web_search_20250305`, `web_fetch_20250910` and `code_execution_20250522` are executed by Anthropic's own
-API rather than by the model, so no endpoint here can run them. What you see differs by engine, measured
-on both.
-
-vLLM rejects all three with HTTP 400, because their definitions carry no `input_schema`:
-
-```
-1 validation error:
-  {'type': 'missing', 'loc': ('body', 'tools', 0, 'input_schema'), 'msg': 'Field required',
-   'input': {'type': 'web_search_20250305', 'name': 'web_search'}}
-```
-
-SGLang is harder to diagnose. It accepts `web_search_20250305` with HTTP 200 and drops the tool, logging
-that it has no native support, so the model answers without searching and nothing in the reply says why.
-It rejects `web_fetch_20250910` and `code_execution_20250522` with HTTP 400.
-
-Client-side tools (file edits, shell, and anything you define) work normally on both. For web access,
-install the repo's keyless search tool and skill, from the repo root:
-
-```
-mkdir -p ~/.local/bin ~/.claude/skills
-ln -sf "$PWD/common/tools/search.sh" ~/.local/bin/search.sh
-cp -r common/skills/local-search ~/.claude/skills/
-```
-
-Check it with `search.sh wiki "tensor parallelism" 1`, and add `~/.local/bin` to your `PATH` if the
-command is not found. The model then searches through `search.sh` (web, arxiv, crossref, pubmed,
-openalex, wiki, fetch) instead of the hosted tool. Full details in
-[docs/web-search.md](../../docs/web-search.md).
-<!-- issue:anthropic-hosted-tools-400 end -->
-
-## Measured performance
-
-| Configuration | Aggregate rate | Per stream | Latency |
-| --- | --- | --- | --- |
-| Single stream, concurrency 1 | 67.4 tok/s | 67.4 tok/s | TTFT median 45 ms, n=3 spanning 67.3 to 67.4 |
-| Concurrency 8 | 491.3 tok/s | 61.4 tok/s | TTFT median 66 ms, p90 68 ms, n=3 spanning 491.2 to 491.3 |
-| Concurrency 32 | 1427.9 tok/s | 44.6 tok/s | TTFT median 99 ms, p90 123 ms, n=3 spanning 1427.6 to 1428.0 |
-| Concurrency 64 | 1824.9 tok/s | 28.5 tok/s | TTFT median 163 ms, p90 223 ms, n=3 spanning 1780.1 to 1845.6 |
-| Concurrency 128 | 2273.0 tok/s | 17.8 tok/s | TTFT median 206 ms, p90 312 ms, n=3 spanning 2270.1 to 2289.0 |
-| Concurrency 256 | 2592.9 tok/s | 10.1 tok/s | TTFT median 338 ms, p90 527 ms, n=3 spanning 2583.6 to 2597.1 |
-| Concurrency 512 (peak) | 2680.3 tok/s | 5.2 tok/s | TTFT median 574 ms, p90 966 ms, n=3 spanning 2670.9 to 2696.2 |
-| Concurrency 640 | 2462.9 tok/s | 3.8 tok/s | TTFT median 715 ms, p90 1205 ms, n=3 spanning 2459.6 to 2466.3 |
-| Concurrency 768 | 2469.7 tok/s | 3.2 tok/s | TTFT median 889 ms, p90 1521 ms, n=3 spanning 2467.0 to 2475.0 |
-| Concurrency 896 | 2457.8 tok/s | 2.7 tok/s | TTFT median 948 ms, p90 1614 ms, n=3 spanning 2457.3 to 2460.8 |
-| Concurrency 1024 | 2448.4 tok/s | 2.4 tok/s | TTFT median 1094 ms, p90 1868 ms, n=3 spanning 2444.3 to 2453.3 |
-
-Measured with `common/tools/bench.sh`. Full disclosure, without which a tokens
-per second figure cannot be compared against anything:
-
-| Parameter | Value |
+| | |
 | --- | --- |
-| ISL, input tokens | 19 |
-| OSL, output tokens | 1152, as the slope between 128 and 1152 |
-| Counted | output tokens only, never input plus output |
-| Concurrency levels | 1,8,32,64,128,256,512,640,768,896,1024 |
 | Protocol | slope(128,1152), 3 repeats per level, median reported |
-| `max_num_seqs` | engine default, 1024 on this hardware |
-| Hardware | one H100 GPU |
+| Input length | ISL 19 tokens. Rates at a long input are not measured; use `--prompt-tokens` |
+| Output length | OSL 1152 tokens, output only, `ignore_eos` |
+| Context | `MAX_MODEL_LEN=262144` |
+| Sequence cap | `max_num_seqs` 1024, which equals the top sweep level |
+| Endpoint | idle, no other traffic |
+| Power cap | these H100s are capped to 550 W of a 700 W default. Under load the device sat at that limit for 1117 of 1200 samples, with clocks ranging 765 to 1980 MHz and a median of 1590. At concurrency 1 it peaked at 468 W, never reached the limit, and held 1980 MHz |
+| Preemption | 110,565 preemptions accumulated across the sweep, so the KV cache saturates well before the sequence cap |
 
-Quote 67.4 tok/s for interactive coding, where one person waits on one
-response. Quote 2680.3 tok/s at concurrency 512 for a shared endpoint under load.
-The two measure different things and neither substitutes for the other.
+Results:
 
-Throughput **peaks at concurrency 512** and falls to 2448 tok/s by concurrency 1024, an 8.7 percent
-spread, so 2680.3 tok/s is a measured ceiling rather than the edge of the sweep.
+| Concurrency | Aggregate | Per stream | Spread over 3 runs |
+| --- | --- | --- | --- |
+| 1 | 68.7 tok/s | 68.7 tok/s | 68.7 to 68.7 |
+| 64 | 1811.1 tok/s | 28.3 tok/s | 1798.2 to 1813.2 |
+| 128 | 2159.4 tok/s | 16.9 tok/s | 2157.2 to 2163.2 |
+| 256 | 2401.5 tok/s | 9.4 tok/s | 2399.7 to 2411.5 |
+| 512 | 2471.4 tok/s | 4.8 tok/s | 2461.8 to 2480.3 |
+| 1024 | 2425.1 tok/s | 2.4 tok/s | 2422.5 to 2438.9 |
 
-Concurrency 512 was measured in both runs, at 2680.3 and 2491.0 tok/s, a -7.1 percent
-difference. That is the check that the two halves of this curve are comparable.
+| | |
+| --- | --- |
+| Label | saturated. It varies 1.9 percent from 512 to 1024, under the 4 percent the rule uses, and the highest value is at 512. An independent run measured 768 at 2465.6, between 512 and 1024, so the decline is monotonic rather than a dip |
+| Quote for one caller | 68.7 tok/s, from nine runs with no spread. The c=1 stage inside a sweep reads 67.4, 1.9 percent lower |
+| Quote for a shared endpoint | 2471.4 tok/s at concurrency 512 |
+| KV cache | 365,231 tokens from 37.68 GiB, 1.39 full-length requests at once |
+| Cost of the larger context | 0.2 percent. Concurrency 512 measures 2476.1 tok/s at 32768 against 2471.4 at 262144 |
+| Against the previously published figures | 5 to 8 percent lower from concurrency 128 to 512, and within 1 percent at 1, 64 and 1024. The context is not the cause: concurrency 512 measures 2476.1 at 32768. The previous page recorded 512 twice itself, at 2680.3 and 2491.0, and this branch measures 2471.4, so 2680.3 is the outlier of three |
+| Long prompt, cold | 30,048 tokens in 3.7 s, 120,049 in 26.6 s, 240,049 in 86.6 s |
 
-The input sequence here is short, which is the best case for decode. Measure with
-`--prompt-tokens` at your working context before quoting a number for long-context work.
-
-## Parallelism and quantization
-
-TP1 works on an 80 GB card only because the weights are quantized: at TP1 there is no all-reduce at all,
-so the node's NVLink fabric is left for jobs that need it, but bf16 weights would leave only about 9 GB
-for KV cache.
-
-FP8 weights are the default because this model is dense and therefore memory bandwidth bound. Every one
-of its 31B parameters is read for every token, so halving the bytes per weight buys most of a
-proportional speedup: 68.7 tok/s against 40.7 in bf16, 69 percent faster on this GPU. The same reasoning
-shows up across GPU types, where the bf16 rates track HBM bandwidth: 1.77x from RTX to H100 and 1.38x
-from H100 to H200, against bandwidth ratios of about 1.86x and 1.43x.
-
-This is exactly the opposite of the 26B-A4B sibling, where FP8 measured no change at all. That model
-activates only 4B of 26B parameters, so it is host overhead bound and there is almost no weight traffic
-for a narrower dtype to save. Same family, same flag, opposite answer, and the reason is the
-architecture rather than anything about the quantization implementation.
-
-On this GPU type FP8 also decides how much context fits, which is not true on the 141 GB H200. Of the
-roughly 72 GB available at the 0.90 default, bf16 weights leave about 9 GB, near 55K tokens, while FP8
-leaves roughly 40 GB, about what the full 256K context costs. Setting `QUANT=` (empty) therefore costs
-41 percent of the rate and most of the context at once, so do it only for a short-context fidelity
-comparison. `KV_FP8=1` halves the 160 KiB per token that the KV cache costs at no measured cost in rate,
-which makes it the cheapest way to stretch context on this card.
-
-## Gotchas
-
-<!-- issue:gemma4-mtp-broken begin -->
-**Speculative decoding is unavailable for Gemma 4 on this engine.** The drafter checkpoints
-(`*-it-assistant`) are downloaded and wired through `SPEC_DRAFT`, but the `gemma4_mtp` method is
-broken in both vLLM 0.25.1 and 0.26.0, failing with a shape mismatch:
+Reproduce:
 
 ```
-a and b must have same reduction dim, but got [s47, 3840] X [5632, 1024]
+KEY_NAME=gemma-4-31B-it-h100-1 bash common/tools/bench.sh --host <node> --model gemma-4-31b
+KEY_NAME=gemma-4-31B-it-h100-1 bash common/tools/bench.sh --host <node> --model gemma-4-31b \
+  --sweep 1,64,128,256,512,1024
 ```
 
-The drafter expects twice 2816 rather than 5632. The fix (`_maybe_share_embeddings`) exists only on
-vLLM's `main` branch, so this needs a build newer than 0.26.0. Do not enable `SPEC_DRAFT` on 0.25.1
-or 0.26.0; it fails at the first request.
-<!-- issue:gemma4-mtp-broken end -->
+- `KEY_NAME` is required once `secrets/` holds both this recipe's key and `vllm_api_key`. The server uses
+  the recipe key, `bench.sh` alone resolves the shared one, and every request returns 401.
 
-This is the model that would benefit most from a working drafter, since it is dense and bandwidth
-bound, which is why the plumbing is kept rather than deleted.
+## Known limits
 
-<!-- issue:engine-ready-timeout begin -->
-**Startup exceeds vLLM's default readiness timeout.** Weight load plus torch.compile plus CUDA graph
-capture routinely takes longer than the 600 second default, so `env/env.sh` sets
-`VLLM_ENGINE_READY_TIMEOUT_S=3600`. A first launch that looks hung is usually still loading; check
-the log before killing it.
-<!-- issue:engine-ready-timeout end -->
-
-<!-- issue:node-local-logs begin -->
-**Logs are written to node-local `/tmp`, not to the repo.** Every rank writes stderr for the life of
-the endpoint, so a log on a network filesystem puts a blocking write on the critical path. During a
-filesystem stall that write hangs, which freezes the server. `LOG_DIR` defaults to
-`/tmp/$USER/vllm`, so read logs over SSH on the node that runs the server.
-<!-- issue:node-local-logs end -->
-
-## Stop the endpoint
-
-If you launched with Slurm, which is the default path, `scancel <jobid>` is all you need: Slurm terminates the job step and reclaims the node. The tool below is only for the direct SSH path, which has no scheduler to clean up after it.
-
-```
-bash common/tools/stop.sh <node>
-```
-
-That kills the server processes and waits for GPU memory to be released. Confirm with
-`ssh <node> nvidia-smi --query-gpu=memory.used --format=csv,noheader`, which should read 0 MiB on the
-device this endpoint used before you relaunch, or the next start will fail on memory. On a shared node
-check only that device: another job may legitimately be holding the other three.
-
-## Expected startup time
-
-| Stage | Cold | Warm |
-| --- | --- | --- |
-| Environment build, one time | 5 to 15 min | skipped |
-| Weight load | to be measured | to be measured |
-| Total to first token | to be measured | to be measured |
-
-First launch on a fresh node is slower than later ones: page cache is cold, any just-in-time kernel
-compilation happens once, and FP8 quantization happens during weight load. A launch that looks hung
-during this window is usually still loading. Check the log before killing it. These numbers will be
-filled in when this recipe is validated on hardware.
+- `SPEC_DRAFT` must stay unset. `gemma4_mtp` fails at the first request on vLLM 0.25.1 and 0.26.0.
+- Anthropic's hosted tools return HTTP 400. Use [docs/web-search.md](../../../docs/web-search.md).
