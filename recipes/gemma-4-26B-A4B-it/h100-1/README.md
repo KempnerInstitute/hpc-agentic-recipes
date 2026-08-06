@@ -138,7 +138,7 @@ Conditions:
 | Context | `MAX_MODEL_LEN=262144` |
 | Sequence cap | `max_num_seqs` 1024, which equals the top sweep level |
 | Endpoint | idle, no other traffic |
-| Power cap | these H100s are capped to 550 W of a 700 W default. At concurrency 640 the device sat at the cap for 132 of 150 samples with clocks between 1545 and 1980 MHz, so the aggregate figures are power limited. At concurrency 1 it peaked at 345 W and never throttled |
+| Power cap | these H100s are capped to 550 W of a 700 W default, unlike the H200 and RTX cards. At concurrency 640 the device sat at that limit for 132 of 150 samples with clocks between 1545 and 1980 MHz. At concurrency 1 it peaked at 345 W and never reached the limit |
 
 Results:
 
