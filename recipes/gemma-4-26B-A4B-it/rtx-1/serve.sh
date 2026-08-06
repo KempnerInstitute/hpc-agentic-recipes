@@ -1,10 +1,5 @@
 #!/usr/bin/env bash
 # Serve gemma-4-26B-A4B-it on one RTX PRO 6000 Blackwell GPU: TP1, bf16, prefix caching on.
-# bf16 is deliberate. This checkpoint activates 4B of its 26B parameters, so it is host overhead bound
-# rather than memory bandwidth bound, and FP8 weights measured no change at all. Set QUANT=fp8 only to
-# free VRAM, never for speed.
-# SPEC_DRAFT wires the gemma-4-26B-A4B-it-assistant drafter. It is broken on vLLM 0.25.1 and 0.26.0,
-# so leave it unset; the plumbing stays so the first engine that fixes it needs no code change.
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/env/env.sh"
@@ -22,7 +17,7 @@ exec vllm serve "$MODEL" \
   --served-model-name gemma-4-26b \
   --tensor-parallel-size "${TP:-1}" \
   --host 0.0.0.0 --port "${API_PORT:-8000}" \
-  --max-model-len "${MAX_MODEL_LEN:-32768}" \
+  --max-model-len "${MAX_MODEL_LEN:-262144}" \
   --gpu-memory-utilization "${GPU_UTIL:-0.90}" \
   --enable-prefix-caching \
   --enable-auto-tool-choice \
