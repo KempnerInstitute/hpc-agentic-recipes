@@ -17,16 +17,15 @@ the same name, so they differ only in hardware, environment, and rate.
 | Variant | GPU | Single stream, FP8 | Aggregate, FP8 | Status |
 | --- | --- | --- | --- | --- |
 | [`h200-1`](h200-1/README.md) | 1 H200, 143771 MiB | 85.1 tok/s | 3136 at c=1024, saturated | Validated |
-| [`h100-1`](h100-1/README.md) | 1 H100, 80 GB | 67.4 tok/s | 2680 at c=512, peak | Validated |
+| [`h100-1`](h100-1/README.md) | 1 H100, 81559 MiB | 68.7 tok/s | 2471 at c=512, saturated | Validated |
 | [`rtx-1`](rtx-1/README.md) | 1 RTX PRO 6000 Blackwell, 97887 MiB | 39.5 tok/s | 2139 at c=768, saturated | Validated |
 
 Single stream is one request at a time, which is what interactive coding feels like. Saturated is total
 output across every concurrent stream, and it says nothing about how fast a single reply arrives.
-The H200 and RTX variants are `saturated`, varying by under 4 percent across concurrency 512 to 1024, so
-adding concurrency past them buys only queueing delay. The H100 turned over at 512, so its figure is a
-measured `peak`. All three are real ceilings. This model reaches
+All three are `saturated`, varying by under 4 percent across concurrency 512 to 1024, so adding concurrency
+beyond that buys only queueing delay. On the H100 the highest value sits at 512. This model reaches
 its limit at lower concurrency than its 26B sibling, which is consistent with it being memory bandwidth
-bound. Measured at 32K context, protocol slope(128,1152) over output tokens only, 3 repeats
+bound. Protocol slope(128,1152) over output tokens only, 3 repeats
 per level, concurrency 1 through 1024.
 
 Running the same weights in bf16 instead of FP8 measured 56.3, 40.7 and 23.0 tok/s single stream on the
@@ -46,8 +45,8 @@ bound, so unlike the 26B sibling it is worth queueing for the faster card.
 | Documented path | `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/gemma-4-31B-it` |
 | Size on disk | 62.6 GB, bf16, quantized to FP8 at load time rather than from a second checkpoint |
 | Architecture | `Gemma4ForConditionalGeneration`, dense, multimodal |
-| Context | 256K supported, 32K default in every variant |
-| KV cache | 160 KiB per token: 5.8 GB at 32K, 21 GB at 128K, 41 GB at 256K |
+| Context | 262144 supported; served by default on `h100-1`, 32768 on the other two |
+| KV cache | 160 KiB per block slot. On `h100-1` the pool is 37.68 GiB and one full-length request costs about 27 GiB, so 1.39 fit at once. Cost is not linear in context, because 50 of the 60 layers keep only a 1024-token sliding window |
 | Drafter | `gemma-4-31B-it-assistant`, under 1 GB, wired through `SPEC_DRAFT` and unusable on vLLM 0.25.1 and 0.26.0 |
 
 FP8 weights are the default everywhere, and this is the most interesting measured fact about the model:
