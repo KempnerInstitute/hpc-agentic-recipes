@@ -19,7 +19,6 @@ printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/gemma-4-26B-A4B-it-h100
 chmod 600 secrets/gemma-4-26B-A4B-it-h100-1.key
 ```
 
-- Every request returns HTTP 401 without a key.
 - `secrets/vllm_api_key` is read when this file is absent.
 - To rotate, replace the file and relaunch; the engine reads it once at launch.
 
@@ -33,8 +32,6 @@ bash recipes/gemma-4-26B-A4B-it/h100-1/env/build.sh
 
 - About 13 GB, under `ENV_ROOT`, default scratch. Set `ENV_ROOT` in `common/site.conf` to move it.
 - Installs the cu129 wheel. These nodes run driver 575, CUDA 12.9, and vLLM's default wheel is CUDA 13.
-- Scratch expires after 90 days; rerun the same command to rebuild.
-- Record `env/requirements.lock` after a build, and `env/WHEELS` for non-PyPI artifacts.
 
 ## 3. Launch
 
@@ -57,18 +54,7 @@ scontrol show job -d <jobid> | grep -oE 'IDX:[0-9]+' | cut -d: -f2
 GPU=<n> bash recipes/gemma-4-26B-A4B-it/h100-1/serve_ssh.sh <node>
 ```
 
-- The server log is node-local at `/tmp/$USER/vllm/`; read it over SSH on that node.
-- `env/env.sh` sets `VLLM_ENGINE_READY_TIMEOUT_S=3600`, above vLLM's 600 s default.
-
-Startup, measured:
-
-| Stage | Time |
-| --- | --- |
-| Imports and config | 27 s |
-| Weight load | 29 s |
-| Engine init: profile, KV cache, warmup | 78 s |
-| Of which CUDA graph capture | 21 s |
-| Total to listening | about 3 min |
+- The server log is node-local at `/tmp/$USER/vllm/`.
 
 ## 4. Verify
 
@@ -114,8 +100,6 @@ claude
 scancel <jobid>                        # Slurm path
 bash common/tools/stop.sh <node>       # direct path
 ```
-
-- On a shared node, confirm only your own device reads 0 MiB before relaunching.
 
 ## Tunable inputs
 
