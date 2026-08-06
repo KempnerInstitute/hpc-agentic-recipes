@@ -93,7 +93,7 @@ checkpoint supports, which each recipe states.
 | | FP8 with FP4 experts | [2 H200 nodes](recipes/DeepSeek-V4-Pro/h200-4-nodes2) | TP4 x PP2 | does not run | n/a | n/a | Blocked, serve on RTX |
 | **Gemma-4-26B-A4B** | bf16 | [1 H200 GPU](recipes/gemma-4-26B-A4B-it/h200-1) | TP1 | 250.5 tok/s | 10905 at c=1024, saturated | 256K | Validated |
 | | bf16 | [1 H100 GPU](recipes/gemma-4-26B-A4B-it/h100-1) | TP1 | 204.5 tok/s | 7165 at c=640, peak | 256K | Validated |
-| | bf16 | [1 RTX GPU](recipes/gemma-4-26B-A4B-it/rtx-1) | TP1 | 140.6 tok/s | 5972 at c=1024, rising | 32K | Validated |
+| | bf16 | [1 RTX GPU](recipes/gemma-4-26B-A4B-it/rtx-1) | TP1 | 141.1 tok/s | 5798 at c=1024, rising | 256K | Validated |
 | **Gemma-4-31B** | FP8 | [1 H200 GPU](recipes/gemma-4-31B-it/h200-1) | TP1 | 85.1 tok/s | 3136 at c=1024, saturated | 32K | Validated |
 | | FP8 | [1 H100 GPU](recipes/gemma-4-31B-it/h100-1) | TP1 | 67.4 tok/s | 2680 at c=512, peak | 32K | Validated |
 | | FP8 | [1 RTX GPU](recipes/gemma-4-31B-it/rtx-1) | TP1 | 39.5 tok/s | 2139 at c=768, saturated | 32K | Validated |

@@ -14,25 +14,25 @@
 # thinking-model warning.
 #
 # slug	include	exclude
-node-local-logs	*/*,Kimi-K3/h200-4-nodes4-sglang	gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1
-engine-ready-timeout	*/*	*-sglang,gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1
-anthropic-hosted-tools-400	*/*,Kimi-K3/h200-4-nodes4-sglang	GLM-5.2-FP8/h200-4-nodes2-sglang,gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1
-anthropic-auth-token	*/*	GLM-5.2-FP8/h200-4-nodes2-sglang,gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1
+node-local-logs	*/*,Kimi-K3/h200-4-nodes4-sglang	gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1,gemma-4-26B-A4B-it/rtx-1
+engine-ready-timeout	*/*	*-sglang,gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1,gemma-4-26B-A4B-it/rtx-1
+anthropic-hosted-tools-400	*/*,Kimi-K3/h200-4-nodes4-sglang	GLM-5.2-FP8/h200-4-nodes2-sglang,gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1,gemma-4-26B-A4B-it/rtx-1
+anthropic-auth-token	*/*	GLM-5.2-FP8/h200-4-nodes2-sglang,gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1,gemma-4-26B-A4B-it/rtx-1
 lustre-watchdog	*/rtx-8*,*/h200-4*,*/h100-4*,Kimi-K3/h200-4-nodes4-sglang	-
 jit-cache-node-local	*/*-nodes2*,Kimi-K3/h200-4-nodes4-sglang	-
 cross-node-tp-hangs	*/*-nodes2*	-
 pp-forbids-spec-decode	*/*-nodes2*,Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8	-
 rtx-no-nvlink	*/rtx-8*	-
 rtx-comms-bound	*/rtx-8*	-
-flashinfer-cubin-skew	*/rtx-*	-
-cuda13-toolkit	*/rtx-*	-
+flashinfer-cubin-skew	*/rtx-*	gemma-4-26B-A4B-it/rtx-1
+cuda13-toolkit	*/rtx-*	gemma-4-26B-A4B-it/rtx-1
 hopper-cu129-wheel	*/h200-*,*/h100-*	Kimi-K3/h200-4-nodes4-sglang,gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1
 h200-cudagraph-crash	GLM-5.2-FP8/h200-4-nodes2,GLM-4.6-FP8/h200-4	-
 deepgemm-h200-crash	*/h200-*	Kimi-K3/h200-4-nodes4-sglang,gemma-4-26B-A4B-it/h200-1
 multimodal-mm-profiling	Kimi-K2.7-Code/h200-4-nodes2	-
 coder480-tp8-divisibility	Qwen3-Coder-480B-A35B-Instruct-FP8/*	-
 coder480-h200-cutlass	Qwen3-Coder-480B-A35B-Instruct-FP8/*	-
-gemma4-mtp-broken	gemma-4-26B-A4B-it/*,gemma-4-31B-it/*	gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1
-thinking-model-max-tokens	GLM-5.2-NVFP4/*,GLM-5.2-FP8/*,GLM-4.6-FP8/*,Kimi-K2.7-Code/*,Qwen3-235B-A22B/*,DeepSeek-V4-Pro/*,gemma-4-26B-A4B-it/*,gemma-4-31B-it/*,Kimi-K3/h200-4-nodes4-sglang	gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1
+gemma4-mtp-broken	gemma-4-26B-A4B-it/*,gemma-4-31B-it/*	gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1,gemma-4-26B-A4B-it/rtx-1
+thinking-model-max-tokens	GLM-5.2-NVFP4/*,GLM-5.2-FP8/*,GLM-4.6-FP8/*,Kimi-K2.7-Code/*,Qwen3-235B-A22B/*,DeepSeek-V4-Pro/*,gemma-4-26B-A4B-it/*,gemma-4-31B-it/*,Kimi-K3/h200-4-nodes4-sglang	gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1,gemma-4-26B-A4B-it/rtx-1
 sglang-ungated	*-sglang	Kimi-K3/h200-4-nodes4-sglang
 sglang-weight-load-fails	*-sglang	Kimi-K3/h200-4-nodes4-sglang

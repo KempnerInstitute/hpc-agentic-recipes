@@ -18,14 +18,14 @@ they differ only in hardware, environment, and rate.
 | --- | --- | --- | --- | --- |
 | [`h200-1`](h200-1/README.md) | 1 H200, 143771 MiB | 250.5 tok/s | 10905 at c=1024, saturated | Validated |
 | [`h100-1`](h100-1/README.md) | 1 H100, 80 GB | 204.5 tok/s | 7165 at c=640, peak | Validated |
-| [`rtx-1`](rtx-1/README.md) | 1 RTX PRO 6000 Blackwell, 97887 MiB | 140.6 tok/s | 5972 at c=1024, rising | Validated |
+| [`rtx-1`](rtx-1/README.md) | 1 RTX PRO 6000 Blackwell, 97887 MiB | 141.1 tok/s | 5798 at c=1024, rising | Validated |
 
 Single stream is one request at a time, which is what interactive coding feels like. Saturated is total
 output across every concurrent stream at the stated concurrency, 35 to 45 times larger here, and it says
 nothing about how fast a single reply arrives. The labels differ by GPU: the H100 turned over at concurrency 640, so that is a measured `peak`; the H200
 is flat within 3.8 percent from 256 to 1024, so `saturated`; the RTX variant was still `rising` at 1024, so
 its figure is a floor. All three measured with bf16, protocol slope(128,1152) over output tokens only, 3
-repeats per level. `h100-1` and `h200-1` were measured at a 262144 context, `rtx-1` at 32768.
+repeats per level. All three were measured at a 262144 context.
 
 Pick by what you can get. The spread across GPU types is only 1.8x, because this model is host overhead
 bound rather than memory bandwidth bound, so an idle RTX GPU beats a queued H200.
@@ -39,7 +39,7 @@ bound rather than memory bandwidth bound, so an idle RTX GPU beats a queued H200
 | Documented path | `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/gemma-4-26B-A4B-it` |
 | Size on disk | 51.6 GB, bf16 |
 | Architecture | `Gemma4ForConditionalGeneration`, 128 experts with top-8 routing, multimodal |
-| Context | 262144 supported; served by default on `h100-1` and `h200-1`, 32768 on `rtx-1` |
+| Context | 262144 supported, and served by default on all three variants |
 | KV cache | 17.05 GiB available on one H100, holding 661,098 tokens at a 262144 ceiling |
 | Drafter | `gemma-4-26B-A4B-it-assistant`, under 1 GB, wired through `SPEC_DRAFT` and unusable on vLLM 0.25.1 and 0.26.0 |
 
