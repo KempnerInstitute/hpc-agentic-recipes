@@ -117,7 +117,7 @@ bash common/tools/stop.sh <node>       # direct path
 | `QUANT` | `fp8` | Set but empty for bf16. bf16 weights are 58.25 GiB and will not start at 262144, since one full-length request needs 27.04 GiB of KV; cap `MAX_MODEL_LEN` near 52000 for bf16 |
 | `KV_FP8` | unset | `--kv-cache-dtype fp8`; halves KV bytes |
 | `ENFORCE_EAGER` | unset | Skip torch.compile and CUDA graph capture, to debug a startup failure |
-| `SPEC_DRAFT` | unset | Path to the drafter checkpoint. Must stay unset on vLLM 0.25.1 and 0.26.0 |
+| `SPEC_DRAFT` | unset | Path to the drafter checkpoint, `$MODELS_DIR/gemma-4-31B-it-assistant`. Works on this engine and measured 2.7 times faster; see Benchmarking |
 | `SPEC_TOKENS` | 3 | Speculative tokens per step, read only when `SPEC_DRAFT` is set |
 | `EXTRA_ARGS` | unset | Extra flags appended to the `vllm serve` command line |
 | `TOOL_PARSER` | `gemma4` | Tool call parser. Not forwarded by `serve_ssh.sh`, so it only applies on the Slurm path |
@@ -164,6 +164,7 @@ Results:
 | Quote for one caller | 68.7 tok/s, from nine runs with no spread. The c=1 stage inside a sweep reads 67.4, 1.9 percent lower |
 | Quote for a shared endpoint | 2471.4 tok/s at concurrency 512 |
 | KV cache | 365,231 tokens from 37.68 GiB, 1.39 full-length requests at once |
+| Speculative decoding | `SPEC_DRAFT=$MODELS_DIR/gemma-4-31B-it-assistant` measured 187.3 tok/s single stream against 68.7, a 2.7 times gain. It costs 6.0 percent of the KV pool, which drops to 343,435 tokens |
 | Cost of the larger context | 0.2 percent. Concurrency 512 measures 2476.1 tok/s at 32768 against 2471.4 at 262144 |
 | Against the previously published figures | 5 to 8 percent lower from concurrency 128 to 512, and within 1 percent at 1, 64 and 1024. The context is not the cause: concurrency 512 measures 2476.1 at 32768. The previous page recorded 512 twice itself, at 2680.3 and 2491.0, and this branch measures 2471.4, so 2680.3 is the outlier of three |
 | Long prompt, cold | 30,048 tokens in 3.7 s, 120,049 in 26.6 s, 240,049 in 86.6 s |
@@ -181,5 +182,6 @@ KEY_NAME=gemma-4-31B-it-h100-1 bash common/tools/bench.sh --host <node> --model 
 
 ## Known limits
 
-- `SPEC_DRAFT` must stay unset. `gemma4_mtp` fails at the first request on vLLM 0.25.1 and 0.26.0.
+- The 26B drafter cannot be used here. It fails at engine startup with a shape mismatch, so only the 31B
+  drafter named in the tunables table works.
 - Anthropic's hosted tools return HTTP 400. Use [docs/web-search.md](../../../docs/web-search.md).
