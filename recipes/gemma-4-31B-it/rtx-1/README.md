@@ -171,7 +171,7 @@ Results:
 | Quote for one caller | 39.5 tok/s |
 | Quote for a shared endpoint | 2136.2 tok/s at concurrency 768 |
 | KV cache | 401,491 tokens from 50.99 GiB, 1.53 full-length requests at once. The pool varies about 0.15 percent between launches |
-| Speculative decoding | `SPEC_DRAFT=$MODELS_DIR/gemma-4-31B-it-assistant` measured 101.0 tok/s single stream against 39.5, a 2.6 times gain, with 64 percent of draft tokens accepted. Aggregate throughput with it is not measured |
+| Speculative decoding | `SPEC_DRAFT=$MODELS_DIR/gemma-4-31B-it-assistant` measured 101.0 tok/s single stream against 39.5, a 2.6 times gain, with 64 percent of draft tokens accepted. It costs 5.7 percent of the KV pool, which drops to 378,673 tokens. Aggregate throughput with it is not measured |
 | bf16 rate cost | bf16 measured 23.0 tok/s single stream against 39.5 for FP8, so bf16 costs about 42 percent |
 | Long prompt, cold | 30,048 tokens in 7.8 s, 120,049 in 76.2 s, 240,049 in 272 s |
 
