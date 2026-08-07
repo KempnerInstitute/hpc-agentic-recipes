@@ -31,11 +31,12 @@ Run on a compute node, not a login node. Needs `uv` and `mamba` on your PATH.
 bash recipes/gemma-4-31B-it/rtx-1/env/build.sh
 ```
 
-- About 7.8 GB for the venv, plus a conda CUDA 13 toolkit alongside it under `ENV_ROOT`.
+- About 7.8 GiB for the venv, plus a conda CUDA 13 toolkit alongside it under `ENV_ROOT`.
 - The toolkit is required: the FlashInfer sm_120 JIT needs a complete CUDA 13 install, which the pip
   wheels do not provide.
-- vLLM comes from the nightly cu130 index, because sm_120 needs a CUDA 13 build that ships nowhere
-  else. That index rotates, so a rebuild will install a different dev build than the one above.
+- vLLM comes from the nightly cu130 index, because sm_120 needs a CUDA 13 build that ships nowhere else.
+  Nothing in this environment is pinned: the index rotates, vLLM and torch carry no version constraint, and
+  FlashInfer resolved to 0.6.15.post1. A rebuild will not reproduce the versions above.
 
 ## 3. Launch
 
@@ -58,7 +59,7 @@ scontrol show job -d <jobid> | grep -oE 'IDX:[0-9]+' | cut -d: -f2
 GPU=<n> bash recipes/gemma-4-31B-it/rtx-1/serve_ssh.sh <node>
 ```
 
-- Startup is about 3 minutes, though a first launch on a node can be far slower.
+- Startup is about 2 minutes with a warm compile cache, though a first launch on a node can be far slower.
 - On the direct path the server log is node-local at `/tmp/$USER/vllm/`. Under Slurm it lands in the submit
   directory.
 
@@ -99,7 +100,7 @@ claude
   and assumes a 200k window, which client 2.1.223 enforces.
 - Use `ANTHROPIC_AUTH_TOKEN`. `ANTHROPIC_API_KEY` sends `x-api-key` and returns 401.
 - `client.env` also sets `ANTHROPIC_SMALL_FAST_MODEL`; without it the client reaches for a hosted Haiku.
-- OpenAI clients: base URL `http://<node>:8000/v1`, same key, model `gemma-4-31b`. See
+- OpenAI clients such as Codex: base URL `http://<node>:8000/v1`, same key, model `gemma-4-31b`. See
   [docs/clients.md](../../../docs/clients.md).
 
 ## 6. Stop it
@@ -121,7 +122,7 @@ bash common/tools/stop.sh <node>       # direct path
 | `QUANT` | `fp8` | Set but empty for bf16. bf16 will not start at 262144 on this card: it needs 33.29 GiB of KV against 23.57 available, and the engine reports a maximum length of 134624, so cap `MAX_MODEL_LEN` at 131072 for bf16 |
 | `KV_FP8` | unset | `--kv-cache-dtype fp8`; halves KV bytes |
 | `ENFORCE_EAGER` | unset | Skip torch.compile and CUDA graph capture, to debug a startup failure |
-| `SPEC_DRAFT` | unset | Path to the drafter checkpoint. Must stay unset; see Known limits |
+| `SPEC_DRAFT` | unset | Path to the drafter checkpoint, `$MODELS_DIR/gemma-4-31B-it-assistant`. Works on this build and measured 2.6 times faster; see Benchmarking |
 | `SPEC_TOKENS` | 3 | Speculative tokens per step, read only when `SPEC_DRAFT` is set |
 | `EXTRA_ARGS` | unset | Extra flags appended to the `vllm serve` command line |
 | `TOOL_PARSER` | `gemma4` | Tool call parser. Not forwarded by `serve_ssh.sh`, so it applies on the Slurm path |
@@ -147,7 +148,7 @@ Conditions:
 | Context | `MAX_MODEL_LEN=262144` |
 | Allocation | 1 GPU, 16 cores, 180 GB, `kempner_rtx` |
 | Sequence cap | `max_num_seqs` 1024, which equals the top sweep level |
-| Preemption | 118,116 across the sweep, so the KV cache saturates before the sequence cap |
+| Preemption | 118,116 across the sweep, so the KV cache saturates before the sequence cap. The previous page reported none at any level, which this contradicts |
 | Endpoint | idle, and the benchmark client ran on a separate CPU-only node |
 | Power | 600 W enforced, the card default, so not capped |
 
@@ -165,10 +166,12 @@ Results:
 
 | | |
 | --- | --- |
-| Label | saturated. It varies 0.23 percent from 768 to 1024, far under the 4 percent the rule uses, and the highest value is at 768 |
+| Label | saturated. It varies 1.89 percent across 512 to 1024, the window the rule uses, under its 4 percent threshold. The highest median is at 768 |
 | Quote for one caller | 39.5 tok/s |
 | Quote for a shared endpoint | 2136.2 tok/s at concurrency 768 |
-| KV cache | 400,876 tokens from 50.91 GiB, 1.53 full-length requests at once |
+| KV cache | 401,491 tokens from 50.99 GiB, 1.53 full-length requests at once. The pool varies about 0.15 percent between launches |
+| Speculative decoding | `SPEC_DRAFT=$MODELS_DIR/gemma-4-31B-it-assistant` measured 101.0 tok/s single stream against 39.5, a 2.6 times gain, with 64 percent of draft tokens accepted. Aggregate throughput with it is not measured |
+| bf16 rate cost | bf16 measured 23.0 tok/s single stream against 39.5 for FP8, so bf16 costs about 42 percent |
 | Long prompt, cold | 30,048 tokens in 7.8 s, 120,049 in 76.2 s, 240,049 in 272 s |
 
 Reproduce:
@@ -184,10 +187,9 @@ KEY_NAME=gemma-4-31B-it-rtx-1 bash common/tools/bench.sh --host <node> --model g
 
 ## Known limits
 
-- `SPEC_DRAFT` must stay unset. `gemma4_mtp` fails at the first request on the engine versions here.
-- FlashInfer must be 0.6.15 with its version check bypassed, which `env/build.sh` and `env/env.sh` handle.
-  The sm_120 backend passes an argument 0.6.13 rejects, and no matching cubin package exists, so kernels
-  compile from source on the first launch after a fresh environment.
-- Do not add the conda CUDA 13 toolkit to `LD_LIBRARY_PATH`. Its `libcudart` shadows torch's runtime. The
-  recipe exposes it through `CPATH` and `LIBRARY_PATH` for compilation only.
+- Nothing in the environment is pinned, so a rebuild installs different versions. There is no
+  `requirements.lock` or `env/WHEELS`.
+- Do not add the conda CUDA 13 toolkit to `LD_LIBRARY_PATH`. Its `libcudart` shadows torch's runtime, so the
+  recipe exposes it through `CPATH` and `LIBRARY_PATH` for compilation only. FlashInfer is pinned to 0.6.15
+  with its version check bypassed, and compiles kernels from source on the first launch.
 - Anthropic's hosted tools return HTTP 400. Use [docs/web-search.md](../../../docs/web-search.md).
