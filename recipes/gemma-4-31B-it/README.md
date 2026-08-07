@@ -45,7 +45,7 @@ bound, so unlike the 26B sibling it is worth queueing for the faster card.
 | Documented path | `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/gemma-4-31B-it` |
 | Size on disk | 62.6 GB, bf16, quantized to FP8 at load time rather than from a second checkpoint |
 | Architecture | `Gemma4ForConditionalGeneration`, dense, multimodal |
-| Context | 262144 supported, and served by default on all three variants |
+| Context | 262144 supported; served by default on `h100-1` and `rtx-1`, 32768 on `h200-1` |
 | KV cache | 160 KiB per block slot. On `h100-1` the pool is 37.68 GiB and one full-length request costs about 27 GiB, so 1.39 fit at once. Cost is not linear in context, because 50 of the 60 layers keep only a 1024-token sliding window |
 | Drafter | `gemma-4-31B-it-assistant`, under 1 GB, wired through `SPEC_DRAFT` and unusable on vLLM 0.25.1 and 0.26.0 |
 
