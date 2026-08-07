@@ -188,5 +188,6 @@ KEY_NAME=gemma-4-26B-A4B-it-rtx-1 bash common/tools/bench.sh --host <node> --mod
 
 ## Known limits
 
-- `SPEC_DRAFT` must stay unset. `gemma4_mtp` fails at the first request on vLLM 0.25.1 and 0.26.0.
+- `SPEC_DRAFT` must stay unset. `gemma4_mtp` fails at engine startup on vLLM 0.25.1 and 0.26.0, so the
+  server never comes up.
 - Anthropic's hosted tools return HTTP 400. Use [docs/web-search.md](../../../docs/web-search.md).
