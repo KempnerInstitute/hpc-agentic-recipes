@@ -36,8 +36,8 @@ bash recipes/gemma-4-31B-it/rtx-1/env/build.sh
   wheels do not provide.
 - vLLM comes from the nightly cu130 index, because sm_120 needs a CUDA 13 build that ships nowhere else.
   Nothing in this environment is version pinned: the index rotates, and vLLM and torch carry no constraint.
-  `env/build.sh` asks for FlashInfer 0.6.15 and got 0.6.15.post1. A rebuild will not reproduce the versions
-  in the facts table above.
+  `env/build.sh` asks for FlashInfer 0.6.15 and got 0.6.15.post1. The build in the table above is already
+  gone from the index, so a rebuild installs a newer one and its rates will differ.
 
 ## 3. Launch
 
@@ -149,7 +149,7 @@ Conditions:
 | Context | `MAX_MODEL_LEN=262144` |
 | Allocation | 1 GPU, 16 cores, 180 GB, `kempner_rtx` |
 | Sequence cap | `max_num_seqs` 1024, which equals the top sweep level |
-| Preemption | 118,116 across the sweep, so the KV cache saturates before the sequence cap. The previous page reported none at any level, which this contradicts |
+| Preemption | 118,116 requests across the sweep, so the KV cache saturates before the sequence cap does |
 | Endpoint | idle, and the benchmark client ran on a separate CPU-only node |
 | Power | 600 W enforced, the card default, so not capped |
 
