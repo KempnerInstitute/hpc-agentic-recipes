@@ -53,18 +53,16 @@ Pick what to copy from by toolchain, not by model similarity:
 ## Pin an environment
 
 Each recipe builds its own environment and shares with nobody, so a torch bump in one recipe cannot break
-another. Write `env/build.sh` with exact versions, then record what you actually got:
+another. Pin the versions that matter in `env/build.sh`, as a variable the tunables table documents:
+`VLLM_VERSION` for the engine, and `FLASHINFER_VERSION` where the recipe needs a specific build.
 
-```
-R=recipes/<Checkpoint-Name>/<hardware>
-bash $R/env/build.sh
-uv pip freeze --python "$ENV_ROOT/<Checkpoint-Name>/<hardware>/venv/bin/python" > $R/env/requirements.lock
-```
+A full `uv pip freeze` lock file is optional and most recipes do not carry one. It only rebuilds an
+environment if every non-PyPI artifact also has its resolved URL and sha256 in `env/WHEELS`, so add the pair
+or neither.
 
-If any artifact comes from somewhere other than PyPI, put its resolved URL and sha256 in `env/WHEELS`.
-Nightly wheel indexes rotate and delete builds, so an unpinned nightly install is not reproducible and a
-version pin alone may silently resolve to a different wheel from PyPI. This is the single most common way
-an environment stops rebuilding months later.
+Some builds cannot be pinned at all. The sm_120 RTX wheels exist only on a nightly index that deletes old
+builds within days, so a version there resolves to something else within a week. State the build the rates
+were measured on in the recipe instead, and say that a rebuild will differ.
 
 ## Write the flags
 
