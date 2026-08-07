@@ -11,9 +11,6 @@
 # Submit from the repo root, and pass your account:
 #   sbatch --account=<acct> recipes/gemma-4-31B-it/rtx-1/serve.sbatch
 #
-# One GPU with 16 CPUs and 180 GB is exactly the per-GPU allowance on kempner_rtx, so the request never trips the allocation limit and the node's other seven GPUs stay available to other jobs.
-# Slurm stages this script into its spool directory, so $0 does not point into the repo and the path
-# below is resolved against the submit directory instead. The log lands in the submit directory.
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 R=recipes/gemma-4-31B-it/rtx-1
