@@ -18,7 +18,7 @@ the same name, so they differ only in hardware, environment, and rate.
 | --- | --- | --- | --- | --- |
 | [`h200-1`](h200-1/README.md) | 1 H200, 143771 MiB | 85.0 tok/s | 3154 at c=768, saturated | Validated |
 | [`h100-1`](h100-1/README.md) | 1 H100, 81559 MiB | 68.7 tok/s | 2471 at c=512, saturated | Validated |
-| [`rtx-1`](rtx-1/README.md) | 1 RTX PRO 6000 Blackwell, 97887 MiB | 39.5 tok/s | 2139 at c=768, saturated | Validated |
+| [`rtx-1`](rtx-1/README.md) | 1 RTX PRO 6000 Blackwell, 97887 MiB | 39.5 tok/s | 2136 at c=768, saturated | Validated |
 
 Single stream is one request at a time, which is what interactive coding feels like. Saturated is total
 output across every concurrent stream, and it says nothing about how fast a single reply arrives.
@@ -45,8 +45,8 @@ bound, so unlike the 26B sibling it is worth queueing for the faster card.
 | Documented path | `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/gemma-4-31B-it` |
 | Size on disk | 62.6 GB, bf16, quantized to FP8 at load time rather than from a second checkpoint |
 | Architecture | `Gemma4ForConditionalGeneration`, dense, multimodal |
-| Context | 262144 supported; served by default on `h100-1` and `h200-1`, 32768 on `rtx-1` |
-| KV cache | measured per variant at 262144: `h100-1` 365,231 tokens and `h200-1` 894,418, giving 1.39 and 3.41 full-length requests. Cost is not linear in context, because 50 of the 60 layers keep only a 1024-token sliding window |
+| Context | 262144 supported, and served by default on all three variants |
+| KV cache | measured per variant at 262144: `h100-1` 365,231 tokens, `h200-1` 894,418 and `rtx-1` 401,491, giving 1.39, 3.41 and 1.53 full-length requests. Cost is not linear in context, because 50 of the 60 layers keep only a 1024-token sliding window |
 | Drafter | `gemma-4-31B-it-assistant`, under 1 GB, wired through `SPEC_DRAFT` and unusable on vLLM 0.25.1 and 0.26.0 |
 
 FP8 weights are the default everywhere, and this is the most interesting measured fact about the model:
