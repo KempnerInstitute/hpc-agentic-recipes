@@ -35,8 +35,9 @@ bash recipes/gemma-4-31B-it/rtx-1/env/build.sh
 - The toolkit is required: the FlashInfer sm_120 JIT needs a complete CUDA 13 install, which the pip
   wheels do not provide.
 - vLLM comes from the nightly cu130 index, because sm_120 needs a CUDA 13 build that ships nowhere else.
-  Nothing in this environment is pinned: the index rotates, vLLM and torch carry no version constraint, and
-  FlashInfer resolved to 0.6.15.post1. A rebuild will not reproduce the versions above.
+  Nothing in this environment is version pinned: the index rotates, and vLLM and torch carry no constraint.
+  `env/build.sh` asks for FlashInfer 0.6.15 and got 0.6.15.post1. `env/requirements.lock` records the 196
+  packages the rates below were measured with, so a rebuild can be compared against it.
 
 ## 3. Launch
 
@@ -120,7 +121,7 @@ bash common/tools/stop.sh <node>       # direct path
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
 | `TP` | 1 | Tensor parallel size |
 | `QUANT` | `fp8` | Set but empty for bf16. bf16 will not start at 262144 on this card: it needs 33.29 GiB of KV against 23.57 available, and the engine reports a maximum length of 134624, so cap `MAX_MODEL_LEN` at 131072 for bf16 |
-| `KV_FP8` | unset | `--kv-cache-dtype fp8`; halves KV bytes |
+| `KV_FP8` | unset | `--kv-cache-dtype fp8`; halves KV bytes, and measured no change in rate |
 | `ENFORCE_EAGER` | unset | Skip torch.compile and CUDA graph capture, to debug a startup failure |
 | `SPEC_DRAFT` | unset | Path to the drafter checkpoint, `$MODELS_DIR/gemma-4-31B-it-assistant`. Works on this build and measured 2.6 times faster; see Benchmarking |
 | `SPEC_TOKENS` | 3 | Speculative tokens per step, read only when `SPEC_DRAFT` is set |
@@ -187,9 +188,9 @@ KEY_NAME=gemma-4-31B-it-rtx-1 bash common/tools/bench.sh --host <node> --model g
 
 ## Known limits
 
-- Nothing in the environment is pinned, so a rebuild installs different versions. There is no
-  `requirements.lock` or `env/WHEELS`.
+- Nothing in the environment is version pinned, so a rebuild installs different versions than
+  `env/requirements.lock` records.
 - Do not add the conda CUDA 13 toolkit to `LD_LIBRARY_PATH`. Its `libcudart` shadows torch's runtime, so the
-  recipe exposes it through `CPATH` and `LIBRARY_PATH` for compilation only. FlashInfer is pinned to 0.6.15
-  with its version check bypassed, and compiles kernels from source on the first launch.
+  recipe exposes it through `CPATH` and `LIBRARY_PATH` for compilation only. FlashInfer runs with its version
+  check bypassed and compiles kernels from source on the first launch.
 - Anthropic's hosted tools return HTTP 400. Use [docs/web-search.md](../../../docs/web-search.md).
