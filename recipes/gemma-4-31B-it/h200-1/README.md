@@ -96,7 +96,7 @@ claude
   and assumes a 200k window, which client 2.1.223 enforces.
 - Use `ANTHROPIC_AUTH_TOKEN`. `ANTHROPIC_API_KEY` sends `x-api-key` and returns 401.
 - `client.env` also sets `ANTHROPIC_SMALL_FAST_MODEL`; without it the client reaches for a hosted Haiku.
-- OpenAI clients: base URL `http://<node>:8000/v1`, same key, model `gemma-4-31b`. See
+- OpenAI clients such as Codex: base URL `http://<node>:8000/v1`, same key, model `gemma-4-31b`. See
   [docs/clients.md](../../../docs/clients.md).
 
 ## 6. Stop it
@@ -118,7 +118,7 @@ bash common/tools/stop.sh <node>       # direct path
 | `QUANT` | `fp8` | Set but empty for bf16. bf16 starts at 262144 on this card, with 629,860 tokens of KV and 2.40 full-length requests |
 | `KV_FP8` | unset | `--kv-cache-dtype fp8`; halves KV bytes |
 | `ENFORCE_EAGER` | unset | Skip torch.compile and CUDA graph capture, to debug a startup failure |
-| `SPEC_DRAFT` | unset | Path to the drafter checkpoint. Must stay unset; see Known limits |
+| `SPEC_DRAFT` | unset | Path to the drafter checkpoint, `$MODELS_DIR/gemma-4-31B-it-assistant`. Works on this build and measured 2.7 times faster; see Benchmarking |
 | `SPEC_TOKENS` | 3 | Speculative tokens per step, read only when `SPEC_DRAFT` is set |
 | `EXTRA_ARGS` | unset | Extra flags appended to the `vllm serve` command line |
 | `TOOL_PARSER` | `gemma4` | Tool call parser. Not forwarded by `serve_ssh.sh`, so it applies on the Slurm path |
@@ -142,9 +142,9 @@ Conditions:
 | Input length | ISL 19 tokens. Rates at a long input are not measured; use `--prompt-tokens` |
 | Output length | OSL 1152 tokens, output only, `ignore_eos` |
 | Context | `MAX_MODEL_LEN=262144` |
-| Allocation | 1 GPU, 16 cores, 360 GB, `kempner_eng` |
+| Allocation for the measurement | 1 GPU, 16 cores, 360 GB |
 | Sequence cap | `max_num_seqs` 1024, which equals the top sweep level |
-| Preemption | 124,318 across the sweep, so the KV cache saturates before the sequence cap |
+| Preemption | 124,318 across the sweep. Peak demand first exceeds the 894,418-token pool at concurrency 1024, which needs 1,199,104 slots, so the cache binds there rather than the sequence cap. The previous page reported no preemptions at any level, which this contradicts |
 | Endpoint | idle, and the benchmark client ran on a separate CPU-only node |
 | Power | 700 W enforced, the card default, so not capped |
 
@@ -162,10 +162,12 @@ Results:
 
 | | |
 | --- | --- |
-| Label | saturated. It varies 0.03 percent from 768 to 1024, far under the 4 percent the rule uses, and the highest value is at 768 |
+| Label | saturated. It varies 1.32 percent across 512 to 1024, the window the rule uses, under its 4 percent threshold. The highest median is at 768, though the spreads at 768 and 1024 overlap |
 | Quote for one caller | 85.0 tok/s |
 | Quote for a shared endpoint | 3154.3 tok/s at concurrency 768 |
 | KV cache | 894,418 tokens from 92.27 GiB, 3.41 full-length requests at once |
+| Against the previously published figures | 0.5 to 0.8 percent higher at every level from 64 upward, outside the spreads the old page recorded, and 0.12 percent lower at concurrency 1. No cause is established |
+| Speculative decoding | `SPEC_DRAFT=$MODELS_DIR/gemma-4-31B-it-assistant` measured 233.1 tok/s single stream against 85.0, a 2.7 times gain. Aggregate throughput with it is not measured |
 | Long prompt, cold | 30,047 tokens in 3.2 s, 120,048 in 23.4 s, 240,048 in 76.8 s |
 
 Reproduce:
@@ -181,7 +183,6 @@ KEY_NAME=gemma-4-31B-it-h200-1 bash common/tools/bench.sh --host <node> --model 
 
 ## Known limits
 
-- `SPEC_DRAFT` must stay unset. `gemma4_mtp` fails at the first request on the engine versions here.
 - Leave `VLLM_USE_DEEP_GEMM` at 0, which `env/env.sh` sets. The DeepGEMM MoE path takes an illegal memory
   access on H200, reproduced independently for two other models, so it is load bearing on this hardware.
 - Anthropic's hosted tools return HTTP 400. Use [docs/web-search.md](../../../docs/web-search.md).

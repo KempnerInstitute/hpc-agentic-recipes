@@ -50,7 +50,7 @@ bound, so unlike the 26B sibling it is worth queueing for the faster card.
 | Drafter | `gemma-4-31B-it-assistant`, under 1 GB, wired through `SPEC_DRAFT` and unusable on vLLM 0.25.1 and 0.26.0 |
 
 FP8 weights are the default everywhere, and this is the most interesting measured fact about the model:
-they are worth 74 percent on RTX, 69 percent on H100, and 52 percent on H200, because a dense model
+they are worth 72 percent on RTX, 69 percent on H100, and 51 percent on H200, because a dense model
 reads all of its weights for every token and halving the bytes per weight buys most of a proportional
 speedup. The `gemma-4-26B-A4B-it` sibling is the opposite case, where the same flag measured no change at
 all. FP8 also decides the usable context on the smaller cards. Each variant page carries the numbers and

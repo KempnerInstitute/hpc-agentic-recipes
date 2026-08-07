@@ -136,7 +136,7 @@ Conditions:
 | Input length | ISL 19 tokens. Rates at a long input are not measured; use `--prompt-tokens` |
 | Output length | OSL 1152 tokens, output only, `ignore_eos` |
 | Context | `MAX_MODEL_LEN=262144` |
-| Allocation | 1 GPU, 24 cores, 180 GB, `kempner_h100` |
+| Allocation for the measurement | 1 GPU, 24 cores, 180 GB |
 | Sequence cap | `max_num_seqs` 1024, which equals the top sweep level |
 | Endpoint | idle, no other traffic |
 | Power cap | these H100s are capped to 550 W of a 700 W default, unlike the H200 and RTX cards. At concurrency 640 the device sat at that limit for 132 of 150 samples with clocks between 1545 and 1980 MHz. At concurrency 1 it peaked at 345 W and never reached the limit |
