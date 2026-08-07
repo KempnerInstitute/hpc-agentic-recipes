@@ -8,7 +8,7 @@ Anthropic-compatible API as `glm-4.6`, so Claude Code connects with no proxy.
 
 | Variant | Shape | Single stream | Aggregate |
 | --- | --- | --- | --- |
-| [`h200-4`](h200-4/README.md) | 1 H200 node, 4 GPUs, TP4 | 19.2 tok/s | 8130 at c=1024, rising |
+| [`h200-4`](h200-4/README.md) | 1 H200 node, 4 GPUs, TP4 | 19.1 tok/s | 8127 at c=1024, rising |
 
 FP8 weights are what let this model fit one node, which matters for more than memory: staying
 single-node means no pipeline parallelism, and vLLM rejects a speculative config whenever pipeline
@@ -16,8 +16,8 @@ parallelism is active. The checkpoint ships a speculative head, `num_nextn_predi
 is one of the few recipes here that actually gets MTP speculative decoding.
 
 The aggregate figure is `rising`, meaning throughput was still climbing at concurrency 1024, the top of
-the sweep, so 8130 tok/s is a floor rather than a ceiling. Measured with protocol slope(128,1152) over
-output tokens only, 3 repeats per level.
+the sweep, so 8127 tok/s is a floor rather than a ceiling. Measured with protocol slope(128,1152) over
+output tokens only, 3 repeats per level. MTP accepted 89.2 percent of its draft tokens across that sweep.
 
 ## Checkpoint provenance
 
@@ -28,5 +28,6 @@ output tokens only, 3 repeats per level.
 - License: MIT
 - Architecture: `Glm4MoeForCausalLM`, native to vLLM
 
-The checkpoint's `max_position_embeddings` is 202752. The recipe serves 131072 by default, and raising
-it costs KV cache memory.
+The checkpoint's `max_position_embeddings` is 202752, which the recipe serves in full. The KV pool is
+395,392 tokens either way, so the context costs concurrent capacity rather than pool: 1.95 full-length
+requests at 202752 against 3.02 at 131072.

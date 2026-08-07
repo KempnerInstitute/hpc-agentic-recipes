@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bring up GLM-4.6-FP8 over SSH on a node you already hold. Secondary path: prefer serve.sbatch.
+# Bring up GLM-4.6-FP8 over SSH on a node you already hold.
 #   bash recipes/GLM-4.6-FP8/h200-4/serve_ssh.sh <node>
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
