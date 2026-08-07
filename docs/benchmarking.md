@@ -40,7 +40,7 @@ percent for Kimi-K2.7-Code across two H200 nodes, where the sequence cap alone i
 
 Preemption depends on the recipe, and the gemma recipes now preempt heavily at a 262144 context. The 31B on
 H100 reached 110,565 preemptions across one sweep, with the cache at 100 percent from concurrency 256 upward,
-and the 26B on RTX 11,070 in a single run at concurrency 1024. Where that happens the sequence cap is not
+the 31B on H200 124,318, and the 26B on RTX 11,070 in a single run at concurrency 1024. Where that happens the sequence cap is not
 what bounds the top of the curve.
 
 ## Prompt length is a third axis
@@ -90,6 +90,8 @@ prompt, both protocols agree closely, and the gap shrinks as the generation leng
 | --- | --- | --- | --- | --- |
 | gemma-4-26B-A4B | 236.4 tok/s | 233.1 | 235.4 | 236.3 |
 | gemma-4-31B | 85.1 tok/s | 85.2 | 85.4 | 85.4 |
+
+Those two rows were measured at a 32768 context, before both recipes moved to 262144.
 
 The largest gap is 1.4 percent, on the faster model at the shortest generation, where fixed cost weighs
 most. Prefer the slope method anyway: it removes that cost by construction, so you do not have to know

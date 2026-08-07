@@ -136,6 +136,7 @@ Conditions:
 | Input length | ISL 19 tokens. Rates at a long input are not measured; use `--prompt-tokens` |
 | Output length | OSL 1152 tokens, output only, `ignore_eos` |
 | Context | `MAX_MODEL_LEN=262144` |
+| Allocation for the measurement | 1 GPU, 24 cores, 180 GB |
 | Sequence cap | `max_num_seqs` 1024, which equals the top sweep level |
 | Endpoint | idle, no other traffic |
 | Power cap | these H100s are capped to 550 W of a 700 W default, unlike the H200 and RTX cards. At concurrency 640 the device sat at that limit for 132 of 150 samples with clocks between 1545 and 1980 MHz. At concurrency 1 it peaked at 345 W and never reached the limit |
@@ -153,7 +154,7 @@ Results:
 | | |
 | --- | --- |
 | Label | peak. Throughput turns over at 640; 1024 is 0.25 percent lower |
-| Cross-run spread | concurrency 640 measured 6998.8 to 7164.7 tok/s across four runs, 2.4 percent, tracking how hard the node's other GPUs were working |
+| Cross-run spread | concurrency 640 measured 6998.8 to 7164.7 tok/s across four runs, 2.4 percent, with no cause established |
 | Concurrency 1 across restarts | 204.5 to 213.8 tok/s. Both values are reproducible in triplicate within a launch and neither is power limited; the cause is not identified |
 | Quote for one caller | 204.5 tok/s |
 | Quote for a shared endpoint | 7164.7 tok/s at concurrency 640 |

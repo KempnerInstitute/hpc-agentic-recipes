@@ -137,6 +137,7 @@ Conditions:
 | Input length | ISL 19 tokens. Rates at a long input are not measured; use `--prompt-tokens` |
 | Output length | OSL 1152 tokens, output only, `ignore_eos` |
 | Context | `MAX_MODEL_LEN=262144` |
+| Allocation for the measurement | 1 GPU, 16 cores, 360 GB |
 | Sequence cap | `max_num_seqs` 1024, which equals the top sweep level |
 | Endpoint | idle, no other traffic |
 

@@ -24,7 +24,7 @@ generated from that source rather than written by hand, so they cannot drift apa
 | Expert parallelism makes throughput worse rather than better | All-to-all traffic added on top of an interconnect that is already the limit | every full-RTX-node recipe |
 | First inference request fails on a `kv_scale_format` argument | flashinfer-python 0.6.13 does not accept it; 0.6.15 is required | every RTX recipe |
 | `import torch` fails after adding the CUDA toolkit to the library path | The toolkit's `libcudart` shadows torch's runtime | every RTX recipe |
-| `a and b must have same reduction dim, but got [s47, 3840] X [5632, 1024]` | `gemma4_mtp` is broken in vLLM 0.25.1 and 0.26.0 | both Gemma models with `SPEC_DRAFT` |
+| `a and b must have same reduction dim, but got [s47, 3840] X [5632, 1024]` | `gemma4_mtp` failed with the 26B drafter on vLLM 0.25.1 and 0.26.0; the 31B drafter works and is 2.6 to 2.7 times faster | Gemma 4 26B with `SPEC_DRAFT` |
 | HTTP 400 mentioning `input_schema` and `web_search_20250305` | Anthropic hosted tools carry no input schema and vLLM rejects them | every vLLM recipe |
 | The model answers without searching and reports no error | SGLang accepts the hosted search tool with 200 and drops it | Kimi-K3 |
 | Raw channel markers such as `<\|open\|>think<\|sep\|` appear in the visible reply | The container's parser ends the reasoning channel only on the tool marker, so a reply opening the response channel is never closed | Kimi-K3, set `K3_PARSER_PATCH=1` |
