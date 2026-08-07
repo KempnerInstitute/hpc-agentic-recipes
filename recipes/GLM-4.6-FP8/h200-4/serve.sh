@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 # Serve GLM-4.6-FP8 on one H200 node: TP4, eager, with MTP speculative decoding.
-# CUDA graphs and torch.compile crash during capture on this vLLM and this hardware, so eager is the
-# default and MTP provides the decode speedup instead. PERF=1 retries the compile path after an
-# engine upgrade; NO_MTP=1 disables speculative decoding.
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/env/env.sh"
@@ -24,7 +21,7 @@ exec vllm serve "$MODEL" \
   --disable-custom-all-reduce \
   --trust-remote-code \
   --host 0.0.0.0 --port "${API_PORT:-8000}" \
-  --max-model-len "${MAX_MODEL_LEN:-131072}" \
+  --max-model-len "${MAX_MODEL_LEN:-202752}" \
   --gpu-memory-utilization "${GPU_UTIL:-0.90}" \
   --enable-auto-tool-choice \
   --tool-call-parser "${TOOL_PARSER:-glm45}" \
