@@ -172,7 +172,8 @@ KEY_NAME=gemma-4-26B-A4B-it-h200-1 bash common/tools/bench.sh --host <node> --mo
 
 ## Known limits
 
-- `SPEC_DRAFT` must stay unset. `gemma4_mtp` fails at the first request on vLLM 0.25.1 and 0.26.0.
+- `SPEC_DRAFT` must stay unset. `gemma4_mtp` fails at engine startup on vLLM 0.25.1 and 0.26.0, so the
+  server never comes up. Retested on 0.25.1 with the same shape mismatch.
 - Leave `VLLM_USE_DEEP_GEMM` at 0, which `env/env.sh` sets. The DeepGEMM MoE path takes an illegal memory
   access on H200, reproduced independently for two other models, so it is load bearing on this hardware.
 - Anthropic's hosted tools return HTTP 400. Use [docs/web-search.md](../../../docs/web-search.md).
