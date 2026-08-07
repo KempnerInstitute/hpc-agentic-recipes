@@ -167,7 +167,7 @@ Results:
 | Quote for a shared endpoint | 3154.3 tok/s at concurrency 768 |
 | KV cache | 894,418 tokens from 92.27 GiB, 3.41 full-length requests at once |
 | Against the previously published figures | 0.5 to 0.8 percent higher at every level from 64 upward, outside the spreads the old page recorded, and 0.12 percent lower at concurrency 1. No cause is established |
-| Speculative decoding | `SPEC_DRAFT=$MODELS_DIR/gemma-4-31B-it-assistant` measured 233.1 tok/s single stream against 85.0, a 2.7 times gain. Aggregate throughput with it is not measured |
+| Speculative decoding | `SPEC_DRAFT=$MODELS_DIR/gemma-4-31B-it-assistant` measured 233.1 tok/s single stream against 85.0, a 2.7 times gain. It costs 2.5 percent of the KV pool, which drops to 872,503 tokens. Aggregate throughput with it is not measured |
 | Long prompt, cold | 30,047 tokens in 3.2 s, 120,048 in 23.4 s, 240,048 in 76.8 s |
 
 Reproduce:
