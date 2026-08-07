@@ -36,8 +36,8 @@ bash recipes/gemma-4-31B-it/rtx-1/env/build.sh
   wheels do not provide.
 - vLLM comes from the nightly cu130 index, because sm_120 needs a CUDA 13 build that ships nowhere else.
   Nothing in this environment is version pinned: the index rotates, and vLLM and torch carry no constraint.
-  `env/build.sh` asks for FlashInfer 0.6.15 and got 0.6.15.post1. `env/requirements.lock` records the 196
-  packages the rates below were measured with, so a rebuild can be compared against it.
+  `env/build.sh` asks for FlashInfer 0.6.15 and got 0.6.15.post1. A rebuild will not reproduce the versions
+  in the facts table above.
 
 ## 3. Launch
 
@@ -188,8 +188,8 @@ KEY_NAME=gemma-4-31B-it-rtx-1 bash common/tools/bench.sh --host <node> --model g
 
 ## Known limits
 
-- Nothing in the environment is version pinned, so a rebuild installs different versions than
-  `env/requirements.lock` records.
+- Nothing in the environment is version pinned, so a rebuild installs different versions than the ones
+  measured here.
 - Do not add the conda CUDA 13 toolkit to `LD_LIBRARY_PATH`. Its `libcudart` shadows torch's runtime, so the
   recipe exposes it through `CPATH` and `LIBRARY_PATH` for compilation only. FlashInfer runs with its version
   check bypassed and compiles kernels from source on the first launch.
