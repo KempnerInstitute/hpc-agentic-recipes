@@ -12,14 +12,14 @@ fact decides the hardware: only Blackwell executes FP4 natively.
 
 | Variant | Shape | Single stream | Aggregate | Status |
 | --- | --- | --- | --- | --- |
-| [`rtx-8-nodes2`](rtx-8-nodes2/README.md) | 2 RTX PRO 6000 nodes, 8 GPUs each, TP8 x PP2 | 18.6 tok/s | 3582 at c=1024, rising | Validated |
+| [`rtx-8-nodes2`](rtx-8-nodes2/README.md) | 2 RTX PRO 6000 nodes, 8 GPUs each, TP8 x PP2 | 18.7 tok/s | 3003 at c=1024, rising | Validated |
 
 There is no Hopper variant. The same checkpoint was run end to end on two H200 nodes and fails during
 engine initialization, inside the CUTLASS w8a8 kernel dispatch, because Hopper has no FP4 tensor cores
 for the expert layers.
 
 The RTX figure is `rising`, meaning throughput was still climbing at concurrency 1024, the top of the
-sweep, so 3582 tok/s is a floor rather than a ceiling. Measured with protocol slope(128,1152) over
+sweep, so 3003 tok/s is a floor rather than a ceiling. Measured with protocol slope(128,1152) over
 output tokens only, 3 repeats per level.
 
 ## Checkpoint provenance
