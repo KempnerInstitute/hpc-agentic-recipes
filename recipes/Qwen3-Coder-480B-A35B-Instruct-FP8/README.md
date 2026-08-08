@@ -12,14 +12,12 @@ proxy. It is the largest coding model in this repo that fits a single node.
 | Variant | Shape | Single stream | Aggregate |
 | --- | --- | --- | --- |
 | [`rtx-8`](rtx-8/README.md) | 1 RTX PRO 6000 node, 8 GPUs, TP4 x PP2 | 67.7 tok/s | 3238 at c=768, peak |
-| [`h200-4`](h200-4/README.md) | 4 H200 GPUs, TP4 | blocked, 22.2 tok/s eager only | not measurable |
 
-Serve this checkpoint on RTX. Two constraints shape both variants. TP8 is impossible: the
-`moe_intermediate_size` is 2560 against an FP8 quantization block of 128, so a 320-column shard is not
-a multiple of the block and vLLM refuses to start, which is why the RTX node runs TP4 x PP2 rather than
-TP8. And on H200 every CUDA graph capture attempt failed in the CUTLASS w8a8 FP8 GEMM path, leaving
-only an eager fallback that costs roughly 3x, which is why the Hopper variant exists to record the
-failure rather than to be used.
+Serve this checkpoint on RTX. Two constraints shape it. TP8 is impossible: the `moe_intermediate_size`
+is 2560 against an FP8 quantization block of 128, so a 320-column shard is not a multiple of the block
+and vLLM refuses to start, which is why the RTX node runs TP4 x PP2 rather than TP8. There is no Hopper
+variant: on H200 every CUDA graph capture attempt failed in the CUTLASS w8a8 FP8 GEMM path, leaving
+only an eager fallback that costs roughly 3x.
 
 ## Checkpoint provenance
 
