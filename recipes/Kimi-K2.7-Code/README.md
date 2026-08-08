@@ -14,7 +14,7 @@ expert, the dense layers, `lm_head` and the vision tower stay bf16.
 
 | Variant | Shape | Single stream | Aggregate |
 | --- | --- | --- | --- |
-| [`rtx-8`](rtx-8/README.md) | 1 RTX PRO 6000 node, 8 GPUs, TP8 | 20.7 tok/s | 1839 at c=896, saturated |
+| [`rtx-8`](rtx-8/README.md) | 1 RTX PRO 6000 node, 8 GPUs, TP8 | 20.6 tok/s | 1833 at c=896, saturated |
 | [`h200-4-nodes2`](h200-4-nodes2/README.md) | 2 H200 nodes, 4 GPUs each, TP4 x PP2 | 30.4 tok/s | 7140 at c=1024, rising |
 
 Measured with protocol slope(128,1152) over output tokens only, 3 repeats per level, concurrency
