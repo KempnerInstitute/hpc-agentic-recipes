@@ -1,13 +1,18 @@
 # Kimi-K2.7-Code on one RTX PRO 6000 node
 
-Status: Validated - vLLM 0.25.1, protocol: slope(128,1152) swept at concurrency 1 through 1024
+Status: Validated - vLLM 0.25.1, protocol: slope(128,1152) at concurrency 1, 8, 32, 64, 128, 256, 512, 640, 768, 896 and 1024
 
-Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
+| | |
+| --- | --- |
+| Served name | `kimi-k2.7-code` |
+| Checkpoint | `Kimi-K2.7-Code`, Hugging Face `moonshotai/Kimi-K2.7-Code` |
+| On disk | 555 GB, INT4, `DeepseekV3ForCausalLM`, multimodal |
+| Served precision | INT4 pack-quantized at group size 32, 72.03 GiB of weights per GPU |
+| Context | 131072. The checkpoint declares 262144, which does not fit; see Known limits |
+| Hardware | 1 RTX PRO 6000 Blackwell node, 8 GPUs, 97887 MiB each, TP8 over PCIe with no NVLink |
+| Engine | vLLM 0.25.1, eager, no speculative decoding |
 
-## Configure once
-
-Create the API key. The endpoint refuses requests without it, and the key reaches the engine through
-the environment rather than as an argument, so it does not appear in `ps` output.
+## 1. Create the API key
 
 ```
 mkdir -p secrets
@@ -15,151 +20,53 @@ printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/Kimi-K2.7-Code-rtx-8.ke
 chmod 600 secrets/Kimi-K2.7-Code-rtx-8.key
 ```
 
-That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup made
-before per-recipe keys keeps working. When neither exists but `secrets/` holds exactly one key, that one is
-used, which is how `bench.sh` authenticates without being told which recipe you mean.
+- `secrets/vllm_api_key` is read when this file is absent.
+- To rotate, replace the file and relaunch; the engine reads it once at launch.
 
-Nothing else is required. Cluster paths come from `common/defaults.sh`, which is tracked with working
-defaults, so a fresh clone runs as is. Four optional overrides, either exported or set in
-`common/site.conf`:
+## 2. Build the environment
 
-| Variable | Default | Why you might change it |
-| --- | --- | --- |
-| `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
-| `KIMI_RTX_NODE` | unset | A node you already hold, for the SSH path |
-| `MODELS_DIR` | shared repository path | Point at your own faster copy of the checkpoint |
-| `ENV_ROOT` | scratch | Where this recipe builds its environment |
-
-## Status
-
-Validated. The environment was built from `env/build.sh`, the endpoint was
-launched with `serve_ssh.sh` on one RTX PRO 6000 Blackwell node, and throughput was measured with `common/tools/bench.sh`
-across concurrency 1, 8, 32, 64, 128, 256, 512, 640, 768, 896 and 1024. Ready 5 minutes 28 seconds after launch. The endpoint was still answering after the sweep finished.
-
-A single timed generation of this endpoint gives about 21 tok/s, because that protocol counts prefill
-and fixed per-request cost as decode time. The 20.7 tok/s here is slope-measured and
-the two agree closely, because at this rate a 1152-token generation runs long enough that fixed cost
-is a small fraction of it.
-
-Single stream and saturated throughput are different measurements and neither substitutes for
-the other. See Measured performance below for the full curve and the disclosure block.
-
-## What this is
-
-Kimi-K2.7-Code, a 1T-parameter mixture-of-experts coding model with 32B parameters active per token
-(384 experts, 8 routed per token, 61 layers), MLA attention, and a MoonViT vision tower, so it accepts
-images as well as text. It is thinking-mode only: it always emits reasoning before its answer. The
-checkpoint is natively INT4 quantization-aware trained, not post-quantized. It exposes vLLM's
-Anthropic-compatible API, so Claude Code connects to it directly with no proxy.
-
-- Checkpoint directory: `Kimi-K2.7-Code`
-- Hugging Face repo: `moonshotai/Kimi-K2.7-Code`
-- Documented path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/Kimi-K2.7-Code`
-
-The shared repository path works out of the box. Copying the checkpoint into your own scratch space loads
-faster, because scratch outperforms Lustre for this workload, and the directory names are identical in
-both locations so only `MODELS_DIR` changes. Scratch has a 90-day retention policy, so treat it as a
-fast cache and keep the shared repository as the permanent copy.
-
-vLLM 0.25.1 has native `KimiK25ForConditionalGeneration` support, so no out-of-tree model code is
-needed. `--trust-remote-code` is still passed, because the checkpoint ships its own configuration and
-processor modules.
-
-## Hardware
-
-| Requirement | Value |
-| --- | --- |
-| GPU | RTX PRO 6000 Blackwell, 8 per node, 97887 MiB each |
-| Architecture | sm_120, CUDA 13 |
-| Interconnect | PCIe, no NVLink |
-| Nodes | 1 |
-| Parallelism | TP8 |
-| Partition | `kempner_rtx` |
-| Per-GPU allocation limit | 16 CPUs, about 189 GiB host memory |
-| Maximum wall time | 2 days |
-
-All RTX PRO 6000 nodes on this cluster share one hardware specification, so any node in the partition
-works. The checkpoint is about 595 GB across 64 shards, which the engine reports as about
-88 GB per GPU in use, so a whole node is required and nothing smaller will fit. `serve.sbatch` requests
-96 CPUs and 500 GB, both inside the per-GPU limits for a whole node.
-
-## Environment build
-
-This recipe builds its own environment, shared with no other recipe: about 9.0 GB for the Python
-environment plus 2.9 GB for a private CUDA 13.0 toolkit. Both land under `ENV_ROOT` on scratch
-rather than in the repo, because startup is dominated by page faulting the torch shared objects and
-stat-ing tens of thousands of small package files: measured on GPU nodes, the interval from process start to the first vLLM log line was about 14
-minutes from Lustre and 58 seconds from scratch. A bare torch and vLLM import from scratch is 9.2
-seconds, so most of that 58 seconds is engine startup rather than filesystem cost.
+Run on a compute node, not a login node. Needs `uv` and `mamba` on your PATH.
 
 ```
+module load Mambaforge
 bash recipes/Kimi-K2.7-Code/rtx-8/env/build.sh
 ```
 
-That is the only supported build path, because the install needs uv flags a requirements file cannot
-express and a conda step no Python environment can carry. What it does, and why:
+- About 9.2 GB for the venv, plus a conda CUDA 13.0 toolkit alongside it under `ENV_ROOT`, default scratch.
+- The toolkit is required: the FlashInfer sm_120 JIT needs a complete CUDA 13 install, which the node's
+  runtime-only `/usr/local/cuda-13` and the fragmented pip nvcc wheels do not provide.
+- FlashInfer is pinned to 0.6.15. vLLM 0.25.1 pins 0.6.13, which rejects the `kv_scale_format` argument the
+  sm_120 backend passes and fails at the first request. No matching cubin package exists at 0.6.15, so
+  `env/env.sh` bypasses the version check and kernels compile from source on the first launch.
 
-<!-- issue:cuda13-toolkit begin -->
-**The sm_120 JIT needs a complete CUDA 13.0 toolkit, and it must not reach `LD_LIBRARY_PATH`.** The
-node's `/usr/local/cuda-13` is runtime-only, and the fragmented pip nvcc wheels mix 13.0 and 13.2
-between `nvcc`, `cicc`, and `ptxas`, which breaks the JIT. The recipe installs a consistent toolkit
-via conda. `env/env.sh` points `CUDA_HOME` at it and exposes its headers through `CPATH` and
-`LIBRARY_PATH` for compilation only. Do **not** add its libraries to `LD_LIBRARY_PATH`: its
-`libcudart` shadows torch's CUDA 13 runtime and pulls in a `libcupti.so.13` that is not present,
-which breaks import entirely.
-<!-- issue:cuda13-toolkit end -->
+## 3. Launch
 
-<!-- issue:flashinfer-cubin-skew begin -->
-**FlashInfer must be 0.6.15, and its version check must be bypassed.** vLLM 0.25.1 pins
-flashinfer-python 0.6.13, but the sm_120 attention backend passes a `kv_scale_format` argument that
-0.6.13 does not accept, which fails at the first inference request. Install 0.6.15 with `--no-deps`
-so torch is left untouched. No matching 0.6.15 cubin package exists, so `flashinfer-cubin` stays at
-0.6.13 and `env/env.sh` sets `FLASHINFER_DISABLE_VERSION_CHECK=1`; kernels are then compiled from
-source on first launch, which is why the first request after a fresh environment is slow.
-<!-- issue:flashinfer-cubin-skew end -->
-
-The vLLM wheel comes from `https://wheels.vllm.ai/nightly/cu130`, not from PyPI, because sm_120 needs
-the CUDA 13 build and uv's `--torch-backend` maxes out at cu129. `build.sh` pins `vllm==0.25.1`
-explicitly rather than leaving the version to resolve: the installed metadata reads a plain `0.25.1`
-with no local version tag, so an unpinned install silently drifts, either to whatever the nightly
-index holds that day or to the PyPI CUDA 13 wheel, and neither is the build these numbers were
-measured on. Nightly wheels also rotate and are deleted, so a much later rebuild can fail outright
-instead of drifting quietly.
-
-Scratch expires after 90 days, so this environment is disposable. Rebuild it with the same command,
-or `--force` to replace an existing one. Record the exact resolution in `env/requirements.lock` after a build, which is what makes a drifted
-rebuild visible.
-
-## Launch
-
-Slurm path, submitted from the repo root:
+Slurm, from the repo root:
 
 ```
 sbatch --account=<your-account> recipes/Kimi-K2.7-Code/rtx-8/serve.sbatch
-```
-
-Find the host once it starts, then use that node name with the client:
-
-```
-squeue --me                       # NODELIST column
+squeue --me                                  # NODELIST gives the host
 tail -f kimi-rtx-<jobid>.log
 ```
 
-Direct path, for a node you already hold. Use the Slurm submission above unless you already have
-the node, or you are deploying an endpoint on behalf of others:
+Direct, on a node you already hold. This recipe uses all eight GPUs, so there is no device to pin:
 
 ```
 bash recipes/Kimi-K2.7-Code/rtx-8/serve_ssh.sh <node>
 ```
 
-Submit from the repo root either way. Slurm stages the batch script into its own spool directory, so
-the script cannot locate the repo from its own path and resolves paths against the submit directory
-instead.
+| Stage | Measured |
+| --- | --- |
+| Launch to serving, first time on a node | 19 min 55 s |
+| Launch to serving, caches warm | 7 min |
+| Weight load, 64 shards across 8 ranks | 989 s |
 
-Over bare SSH `nproc` reports 1 on these nodes while `Cpus_allowed_list` is the full set, so the
-server is not actually CPU limited on that path even though it looks like it.
+- The first launch on any node compiles the sm_120 attention kernels from source, because no matching
+  FlashInfer cubin package exists. That cache is node-local, so a different node pays it again.
+- On the direct path the server log is node-local at `/tmp/$USER/vllm/`. Under Slurm it lands in the submit
+  directory.
 
-## Verify
+## 4. Verify
 
 ```
 KEY=$(cat secrets/Kimi-K2.7-Code-rtx-8.key 2>/dev/null || cat secrets/vllm_api_key)
@@ -167,27 +74,23 @@ NODE=<the node serving it>
 
 curl -s -H "Authorization: Bearer $KEY" http://$NODE:8000/v1/models
 
-curl -s -o /dev/null -w '%{http_code}\n' http://$NODE:8000/v1/models          # must print 401
+curl -s -o /dev/null -w '%{http_code}\n' http://$NODE:8000/v1/models
 
 curl -s -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
   http://$NODE:8000/v1/chat/completions \
   -d '{"model":"kimi-k2.7-code","messages":[{"role":"user","content":"What is 2+2? Answer briefly."}],"max_tokens":400}'
 ```
 
-A keyless request returning 401 is the expected, correct behavior.
+| Command | Expected |
+| --- | --- |
+| `/v1/models` with the key | `"id": "kimi-k2.7-code"`, `"max_model_len": 131072` |
+| `/v1/models` without a key | `401` |
+| chat completion | `content` holds the answer, `finish_reason: stop` |
 
-<!-- issue:thinking-model-max-tokens begin -->
-**Give thinking models room, or `content` comes back empty.** This model emits reasoning before its
-answer, and vLLM returns that in a separate `reasoning` field, not `reasoning_content`. With a small
-budget the whole allowance is spent reasoning, `finish_reason` is `length`, and `content` is empty,
-which looks like a broken endpoint but is not. Use at least 400 output tokens for a smoke test, and 800
-or more for a model that reasons at length. If `content` is empty, raise the budget before suspecting
-the endpoint.
-<!-- issue:thinking-model-max-tokens end -->
+- 400 output tokens is enough: three smoke tests used 31 to 37 tokens.
+- Image input is untested. This recipe is validated for text.
 
-This model is thinking-mode only, so that applies to every request, not just complex ones.
-
-## Connect a client
+## 5. Connect a client
 
 ```
 export NODE=<the node serving it>
@@ -195,206 +98,108 @@ source recipes/Kimi-K2.7-Code/rtx-8/client.env
 claude
 ```
 
-No output-token cap is needed. Claude Code asks for 32000 output tokens by default and sends about 21K of
-its own prompt, which the 131072-token context holds with room to spare. Lowering `MAX_MODEL_LEN` below
-about 56000 brings the cap back, because those two together stop fitting.
+- `client.env` sets `CLAUDE_CODE_MAX_CONTEXT_TOKENS=131072`. Claude Code assumes a 200k window for a served
+  name it does not recognize, which is **above** what this endpoint serves, so without the pin it overflows
+  the context and requests fail with `maximum context length is 131072` rather than compacting.
+- Use `ANTHROPIC_AUTH_TOKEN`. `ANTHROPIC_API_KEY` sends `x-api-key` and returns 401.
+- `client.env` also sets `ANTHROPIC_SMALL_FAST_MODEL`; without it the client reaches for a hosted Haiku.
+- OpenAI clients such as Codex: base URL `http://<node>:8000/v1`, same key, model `kimi-k2.7-code`. See
+  [docs/clients.md](../../../docs/clients.md).
 
-<!-- issue:anthropic-auth-token begin -->
-**Use `ANTHROPIC_AUTH_TOKEN`, never `ANTHROPIC_API_KEY`.** Both engines accept only
-`Authorization: Bearer <key>`. Setting `ANTHROPIC_API_KEY` makes Claude Code send an `x-api-key`
-header instead, which the engine ignores, and every request returns HTTP 401. Also set
-`ANTHROPIC_SMALL_FAST_MODEL` to this same served model, or the client reaches for a hosted Haiku that
-this endpoint does not serve.
-<!-- issue:anthropic-auth-token end -->
+## 6. Stop it
 
-For an OpenAI-compatible client instead (Cline, Aider, Continue, OpenHands), use base URL
-`http://<node>:8000/v1`, the same key, and model name `kimi-k2.7-code`.
+```
+scancel <jobid>                        # Slurm path
+bash common/tools/stop.sh <node>       # direct path
+```
 
 ## Tunable inputs
-
-Every variable this recipe honors, with its default and effect.
 
 | Variable | Default | Effect |
 | --- | --- | --- |
 | `MODEL` | `$MODELS_DIR/Kimi-K2.7-Code` | Serve a different copy of the checkpoint |
 | `API_PORT` | 8000 | Listening port |
-| `MAX_MODEL_LEN` | 131072 | Context window. The KV cache holds 137,664 tokens, so this is near the
-ceiling; the checkpoint's own limit is 262144, which does not fit |
+| `MAX_MODEL_LEN` | 131072 | Context window. The KV pool holds 137,664 tokens, so this is 5 percent below the hardware ceiling |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
-| `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is `~/.cache/vllm`, which is a small quota here |
-| `TP` | 8 | Tensor parallel size; 8 is the node's GPU count |
-| `ENFORCE_EAGER` | 1 | Set to empty to try CUDA graph capture, which is untested here |
-| `ATTN_BACKEND` | unset | Override vLLM's attention backend selection |
+| `TP` | 8 | Tensor parallel size, and the node's GPU count |
+| `ENFORCE_EAGER` | 1 | Eager is the default and is what the rates below were measured with. Pass an explicitly empty value to try CUDA graphs |
+| `EXTRA_ARGS` | unset | Extra flags appended to the `vllm serve` command line. Unlike the two-node variant, this one appends rather than replaces |
 | `TOOL_PARSER` | `kimi_k2` | Tool call parser |
 | `REASONING_PARSER` | `kimi_k2` | Reasoning parser |
+| `TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC` | 3600 | Raised from 480 so a storage stall that resolves is survivable |
 | `LOG_DIR` | `/tmp/$USER/vllm` | Where the SSH path writes the server log |
 | `VENV_DIR` | under `ENV_ROOT` | Use an environment built elsewhere |
 | `CUDA13_DIR` | under `ENV_ROOT` | Use a CUDA 13.0 toolkit built elsewhere |
 | `VLLM_VERSION` | 0.25.1 | Engine version `env/build.sh` installs |
 | `FLASHINFER_VERSION` | 0.6.15 | FlashInfer version `env/build.sh` installs |
+| `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is a small quota here |
+| `KEY_NAME`, `KEY_FILE`, `VLLM_API_KEY` | this recipe's key | Which key `common/lib/api_key.sh` resolves; an exported `VLLM_API_KEY` wins |
+| `NODE`, `KIMI_RTX_NODE` | unset | The node to launch on or connect to; set either, or pass the node as an argument |
+| `ACCOUNT` | unset | Read by `common/defaults.sh`; `serve.sbatch` has no account directive, so pass `--account` at submit time |
+| `MODELS_DIR`, `ENV_ROOT` | `common/defaults.sh` | Override there or in `common/site.conf` |
 
-## Web search
+## Benchmarking
 
-<!-- issue:anthropic-hosted-tools-400 begin -->
-**Anthropic's hosted tools do not work against a local endpoint.** Server-side tools such as
-`web_search_20250305`, `web_fetch_20250910` and `code_execution_20250522` are executed by Anthropic's own
-API rather than by the model, so no endpoint here can run them. What you see differs by engine, measured
-on both.
+Conditions:
 
-vLLM rejects all three with HTTP 400, because their definitions carry no `input_schema`:
-
-```
-1 validation error:
-  {'type': 'missing', 'loc': ('body', 'tools', 0, 'input_schema'), 'msg': 'Field required',
-   'input': {'type': 'web_search_20250305', 'name': 'web_search'}}
-```
-
-SGLang is harder to diagnose. It accepts `web_search_20250305` with HTTP 200 and drops the tool, logging
-that it has no native support, so the model answers without searching and nothing in the reply says why.
-It rejects `web_fetch_20250910` and `code_execution_20250522` with HTTP 400.
-
-Client-side tools (file edits, shell, and anything you define) work normally on both. For web access,
-install the repo's keyless search tool and skill, from the repo root:
-
-```
-mkdir -p ~/.local/bin ~/.claude/skills
-ln -sf "$PWD/common/tools/search.sh" ~/.local/bin/search.sh
-cp -r common/skills/local-search ~/.claude/skills/
-```
-
-Check it with `search.sh wiki "tensor parallelism" 1`, and add `~/.local/bin` to your `PATH` if the
-command is not found. The model then searches through `search.sh` (web, arxiv, crossref, pubmed,
-openalex, wiki, fetch) instead of the hosted tool. Full details in
-[docs/web-search.md](../../docs/web-search.md).
-<!-- issue:anthropic-hosted-tools-400 end -->
-
-## Measured performance
-
-| Configuration | Aggregate rate | Per stream | Latency |
-| --- | --- | --- | --- |
-| Single stream, concurrency 1 | 20.7 tok/s | 20.7 tok/s | TTFT median 140 ms, n=3 spanning 20.7 to 20.9 |
-| Concurrency 8 | 163.4 tok/s | 20.4 tok/s | TTFT median 155 ms, p90 163 ms, n=3 spanning 163.0 to 163.6 |
-| Concurrency 32 | 647.4 tok/s | 20.2 tok/s | TTFT median 212 ms, p90 218 ms, n=3 spanning 646.6 to 647.6 |
-| Concurrency 64 | 1094.3 tok/s | 17.1 tok/s | TTFT median 262 ms, p90 316 ms, n=3 spanning 1093.6 to 1097.5 |
-| Concurrency 128 | 1327.5 tok/s | 10.4 tok/s | TTFT median 324 ms, p90 507 ms, n=3 spanning 1325.8 to 1329.4 |
-| Concurrency 256 | 1637.9 tok/s | 6.4 tok/s | TTFT median 625 ms, p90 850 ms, n=3 spanning 1634.4 to 1639.6 |
-| Concurrency 512 | 1819.1 tok/s | 3.6 tok/s | TTFT median 1046 ms, p90 1566 ms, n=3 spanning 1816.8 to 1822.4 |
-| Concurrency 640 | 1775.8 tok/s | 2.8 tok/s | TTFT median 1196 ms, p90 1847 ms, n=3 spanning 1774.8 to 1777.0 |
-| Concurrency 768 | 1793.5 tok/s | 2.3 tok/s | TTFT median 1604 ms, p90 2108 ms, n=3 spanning 1787.2 to 1797.4 |
-| Concurrency 896 (saturated) | 1839.4 tok/s | 2.1 tok/s | TTFT median 1810 ms, p90 2593 ms, n=3 spanning 1835.6 to 1842.6 |
-| Concurrency 1024 | 1817.1 tok/s | 1.8 tok/s | TTFT median 1921 ms, p90 2874 ms, n=3 spanning 1817.0 to 1821.0 |
-
-Measured with `common/tools/bench.sh`, endpoint ready 5m 28s after launch. Full disclosure, without which a tokens
-per second figure cannot be compared against anything:
-
-| Parameter | Value |
+| | |
 | --- | --- |
-| ISL, input tokens | 15 |
-| OSL, output tokens | 1152, as the slope between 128 and 1152 |
-| Counted | output tokens only, never input plus output |
-| Concurrency levels | 1,8,32,64,128,256,512,640,768,896,1024 |
 | Protocol | slope(128,1152), 3 repeats per level, median reported |
-| `max_num_seqs` | engine default, 1024 on this hardware |
-| Hardware | one RTX PRO 6000 Blackwell node, 8 GPUs |
+| Input length | ISL 21 tokens. Rates at a long input are not measured; use `--prompt-tokens` |
+| Output length | OSL 1152 tokens, output only, `ignore_eos` |
+| Context | `MAX_MODEL_LEN=131072` |
+| Allocation for the measurement | 8 GPUs, 128 cores, 1440 GB, `kempner_rtx` |
+| Sequence cap | `max_num_seqs` 1024, the engine default, which equals the top sweep level |
+| Preemption | 28,600 across the sweep. The pool is 137,664 tokens and concurrency 1024 at this output length needs far more, so the KV cache is what binds |
+| Endpoint | idle, and the benchmark client ran on a separate CPU-only node |
+| Power | 600 W enforced, the card default, so not capped. Median 272 W across 18200 samples and a 307 W peak, with nothing at or above 590 |
 
-Quote 20.7 tok/s for interactive coding, where one person waits on one
-response. Quote 1839.4 tok/s at concurrency 896 for a shared endpoint under load.
-The two measure different things and neither substitutes for the other.
+Results:
 
-Throughput is **saturated**: the extended levels are flat to within 3.5 percent from concurrency 512 to 1024, so more
-concurrency buys no additional throughput, only queueing delay. The highest value measured is
-1839.4 tok/s at concurrency 896.
+| Concurrency | Aggregate | Per stream | Spread over 3 runs | TTFT median |
+| --- | --- | --- | --- | --- |
+| 1 | 20.6 tok/s | 20.6 tok/s | 20.5 to 20.6 | 141 ms |
+| 8 | 164.0 tok/s | 20.5 tok/s | 163.5 to 164.7 | 156 ms |
+| 32 | 643.7 tok/s | 20.1 tok/s | 642.6 to 644.3 | 213 ms |
+| 64 | 1101.7 tok/s | 17.2 tok/s | 1095.0 to 1104.0 | 307 ms |
+| 128 | 1330.1 tok/s | 10.4 tok/s | 1329.8 to 1332.0 | 345 ms |
+| 256 | 1633.8 tok/s | 6.4 tok/s | 1629.4 to 1638.7 | 597 ms |
+| 512 | 1819.2 tok/s | 3.6 tok/s | 1818.7 to 1822.7 | 1029 ms |
+| 640 | 1773.1 tok/s | 2.8 tok/s | 1766.0 to 1774.8 | 1294 ms |
+| 768 | 1786.3 tok/s | 2.3 tok/s | 1781.8 to 1787.4 | 1458 ms |
+| 896 | 1832.6 tok/s | 2.0 tok/s | 1831.2 to 1842.5 | 1652 ms |
+| 1024 | 1817.9 tok/s | 1.8 tok/s | 1809.8 to 1821.8 | 1763 ms |
 
-Concurrency 512 was measured in both runs, at 1819.1 and 1824.2 tok/s, a +0.3 percent
-difference. That is the check that the two halves of this curve are comparable.
+| | |
+| --- | --- |
+| Label | saturated. It varies 3.25 percent across 512 to 1024, under the 4 percent the rule uses, and the highest value is at 896 |
+| Quote for one caller | 20.6 tok/s |
+| Quote for a shared endpoint | 1832.6 tok/s at concurrency 896 |
+| KV cache | 137,664 tokens from 9.01 GiB per GPU, 1.05 full-length requests at once |
+| Long prompt | 123,863 tokens in 33 s cold; 1.4 s when the prefix is already cached |
+| Against the two-node H200 variant | the same weights leave 9.01 GiB of KV per GPU here against 52.16 there, so the pool is 137,664 tokens against 1,555,488, which is why that variant serves 262144 and this one cannot |
 
-Scheduler counters over the extended levels: KV cache usage reached 100 percent, the running
-batch reached 1024 requests, and there were no preemptions at any level.
-
-The input sequence here is short, which is the best case for decode. Measure with
-`--prompt-tokens` at your working context before quoting a number for long-context work.
-
-## Parallelism and quantization
-
-TP8 spans all eight GPUs of one node, which is also the topology Moonshot documents for single-node
-serving. Every all-reduce crosses PCIe rather than NVLink, which is the ceiling on this configuration,
-so nothing that adds cross-GPU traffic is worth enabling here.
-
-The quantization is native INT4 quantization-aware training, not a post-hoc conversion: the routed
-experts are compressed-tensors pack-quantized W4A16 at group size 32, while attention, the shared
-expert, the dense layers, `lm_head` and the vision tower stay bf16. Those INT4 compressed-tensors
-Marlin kernels do run on sm_120, which is the thing that had to be established before this
-configuration was usable at all. Without the INT4 experts a 1T-parameter model does not fit eight
-96 GB cards.
-
-Pipeline parallelism is not used and not needed on one node, which also means speculative decoding is
-not ruled out here; this checkpoint simply ships no draft head to use.
-
-The vision tower is placed with `--mm-encoder-tp-mode data`, so the encoder runs data parallel across
-the tensor-parallel ranks rather than being sharded across them.
-
-## Gotchas
-
-<!-- issue:rtx-no-nvlink begin -->
-**RTX PRO 6000 nodes have no NVLink, so peer-to-peer must be disabled.** `env/env.sh` sets
-`NCCL_P2P_DISABLE=1`. Without it, NCCL initialization hangs on any multi-GPU job, with no error, and
-the server never becomes ready.
-<!-- issue:rtx-no-nvlink end -->
-
-<!-- issue:rtx-comms-bound begin -->
-**Decode on a full RTX node is limited by cross-GPU communication, not memory bandwidth.** All-reduce
-traffic crosses PCIe rather than NVLink. Two consequences, both measured: do not enable
-`--enable-expert-parallel`, which added all-to-all traffic and measured about 9 percent slower, and
-FP8 weights bought nothing on Qwen3-235B because weight bandwidth was not the bottleneck.
-<!-- issue:rtx-comms-bound end -->
-
-<!-- issue:lustre-watchdog begin -->
-**A storage stall can kill the endpoint even after the storage recovers.** PyTorch kills the process
-when the NCCL watchdog thread stops sending heartbeats, on the assumption that a collective hung. A
-stalled network filesystem freezes every rank the same way, so at the 480 second default a transient
-storage outage takes the endpoint down permanently rather than pausing it. The signature is every rank
-reporting `Last enqueued NCCL work: -1`, meaning no collective was ever in flight, so the process was
-frozen rather than genuinely hung on communication. `env/env.sh` sets
-`TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC=3600` so a stall that resolves within an hour is survivable.
-<!-- issue:lustre-watchdog end -->
-
-<!-- issue:engine-ready-timeout begin -->
-**Startup exceeds vLLM's default readiness timeout.** Weight load plus torch.compile plus CUDA graph
-capture routinely takes longer than the 600 second default, so `env/env.sh` sets
-`VLLM_ENGINE_READY_TIMEOUT_S=3600`. A first launch that looks hung is usually still loading; check
-the log before killing it.
-<!-- issue:engine-ready-timeout end -->
-
-<!-- issue:node-local-logs begin -->
-**Logs are written to node-local `/tmp`, not to the repo.** Every rank writes stderr for the life of
-the endpoint, so a log on a network filesystem puts a blocking write on the critical path. During a
-filesystem stall that write hangs, which freezes the server. `LOG_DIR` defaults to
-`/tmp/$USER/vllm`, so read logs over SSH on the node that runs the server.
-<!-- issue:node-local-logs end -->
-
-## Stop the endpoint
-
-If you launched with Slurm, which is the default path, `scancel <jobid>` is all you need: Slurm terminates the job step and reclaims the node. The tool below is only for the direct SSH path, which has no scheduler to clean up after it.
+Reproduce:
 
 ```
-bash common/tools/stop.sh <node>
+KEY_NAME=Kimi-K2.7-Code-rtx-8 bash common/tools/bench.sh --host <node> --model kimi-k2.7-code
+KEY_NAME=Kimi-K2.7-Code-rtx-8 bash common/tools/bench.sh --host <node> --model kimi-k2.7-code \
+  --sweep 1,8,32,64,128,256,512,640,768,896,1024
 ```
 
-That kills the server processes and waits for GPU memory to be released. Confirm with
-`ssh <node> nvidia-smi --query-gpu=memory.used --format=csv,noheader`, which should read 0 MiB on all
-eight GPUs before you relaunch, or the next start will fail on memory.
+- `KEY_NAME` is required once `secrets/` holds more than one key, otherwise `bench.sh` resolves the shared
+  key and every request returns 401.
 
-## Expected startup time
+## Known limits
 
-| Stage | Cold | Warm |
-| --- | --- | --- |
-| Environment build, one time | to be measured | skipped |
-| First-time FlashInfer JIT | to be measured | skipped, cached under `/tmp/$USER/flashinfer` |
-| Weight load | to be measured | to be measured |
-| Total, launch to serving | 5 min 28 s | 5 min 28 s |
-
-Expect this one to be slow: 64 shards of weights, and on a cold node the sm_120 attention kernels are
-compiled from source once because no matching cubin package exists. Both caches are node-local, so a
-different node pays the JIT cost again. A launch that looks hung during this window is usually still
-loading. Check the log before killing it. These numbers will be filled in when this recipe is
-validated on hardware.
+- The checkpoint declares 262144 and the engine refuses it: one request that long needs 17.16 GiB of KV
+  against 9.01 GiB available, and vLLM reports an estimated maximum of 137664. That is the pool itself, so
+  serving it would leave exactly one full-length request and no headroom; 131072 keeps 1.05.
+- Do not add the conda CUDA 13 toolkit to `LD_LIBRARY_PATH`. Its `libcudart` shadows torch's runtime and
+  pulls in a missing `libcupti.so.13`, which breaks import; the recipe exposes it through `CPATH` and
+  `LIBRARY_PATH` for compilation only.
+- No NVLink on these nodes, so `env/env.sh` sets `NCCL_P2P_DISABLE=1`. Without it NCCL initialization hangs
+  with no error and the server never becomes ready.
+- Do not enable `--enable-expert-parallel`. All-reduce already crosses PCIe rather than NVLink, and the
+  added all-to-all traffic measured about 9 percent slower on this hardware.
+- Anthropic's hosted tools return HTTP 400. Use [docs/web-search.md](../../../docs/web-search.md).

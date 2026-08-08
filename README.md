@@ -81,7 +81,7 @@ checkpoint supports, which each recipe states.
 | **GLM-5.2** | NVFP4 | [1 RTX node, 8 GPUs](recipes/GLM-5.2-NVFP4/rtx-8) | TP8 | 91.1 tok/s | 1375 at c=256, peak | 212K | Validated |
 | | FP8 | [2 H200 nodes](recipes/GLM-5.2-FP8/h200-4-nodes2) | TP4 x PP2 | 12.9 tok/s | 5392 at c=512, peak | 626K | Validated |
 | **GLM-4.6** | FP8 | [1 H200 node, 4 GPUs](recipes/GLM-4.6-FP8/h200-4) | TP4 | 19.1 tok/s | 8127 at c=1024, rising | 198K | Validated |
-| **Kimi-K2.7-Code** | INT4 | [1 RTX node, 8 GPUs](recipes/Kimi-K2.7-Code/rtx-8) | TP8 | 20.7 tok/s | 1839 at c=896, saturated | 128K | Validated |
+| **Kimi-K2.7-Code** | INT4 | [1 RTX node, 8 GPUs](recipes/Kimi-K2.7-Code/rtx-8) | TP8 | 20.6 tok/s | 1833 at c=896, saturated | 128K | Validated |
 | | INT4 | [2 H200 nodes](recipes/Kimi-K2.7-Code/h200-4-nodes2) | TP4 x PP2 | 30.2 tok/s | 7094 at c=1024, rising | 256K | Validated |
 | **Kimi-K3** | MXFP4, QAT | [4 H200 nodes, 16 GPUs, SGLang](recipes/Kimi-K3/h200-4-nodes4-sglang) | TP16 x EP16 | 40.2 tok/s | 1069 at c=64, capped | 256K | Validated |
 | **Qwen3-235B-A22B** | bf16 | [1 RTX node, 8 GPUs](recipes/Qwen3-235B-A22B/rtx-8) | TP8 | 63.3 tok/s | 3984 at c=512, peak | 40K | Validated |

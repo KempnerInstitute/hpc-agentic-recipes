@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# Bring up Kimi-K2.7-Code over SSH on an RTX node you already hold. Secondary path: prefer
-# serve.sbatch.
+# Bring up Kimi-K2.7-Code over SSH on a node you already hold.
 #   bash recipes/Kimi-K2.7-Code/rtx-8/serve_ssh.sh <node>
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
