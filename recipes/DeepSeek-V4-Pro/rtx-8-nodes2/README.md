@@ -35,9 +35,9 @@ Validated. The environment was built from `env/build.sh`, the endpoint was
 launched with `serve_ssh.sh` on two RTX PRO 6000 Blackwell nodes, 16 GPUs via Ray, and throughput was measured with `common/tools/bench.sh`
 across concurrency 1, 8, 32, 64, 128, 256, 512, 640, 768, 896 and 1024. Ready 20 minutes 8 seconds after launch. The endpoint was still answering after the sweep finished.
 
-This recipe settles the FP4 hardware question. The same checkpoint fails on H200 inside the CUTLASS w8a8 kernel dispatch, documented in the
-`h200-4-nodes2` sibling. Here it loaded, served a full sweep, and was still healthy afterward, which
-confirms the cause is Blackwell's native FP4 path rather than anything configurable.
+This recipe settles the FP4 hardware question. The same checkpoint fails on H200 inside the CUTLASS w8a8
+kernel dispatch. Here it loaded, served a full sweep, and was still healthy afterward, which confirms
+the cause is Blackwell's native FP4 path rather than anything configurable.
 
 Single stream and saturated throughput are different measurements and neither substitutes for
 the other. See Measured performance below for the full curve and the disclosure block.
@@ -107,8 +107,7 @@ the constraint either way: 16 GPUs at 97887 MiB is about 1530 GiB, and at
 570 GiB for KV cache and activations. This model is unusually cheap in KV for its context length,
 because the hybrid compressed attention is designed to be.
 
-An H200 sibling exists at `recipes/DeepSeek-V4-Pro/h200-4-nodes2`, where the same checkpoint does not
-run. This is the variant to use.
+There is no H200 variant: the same checkpoint does not run there. This is the variant to use.
 
 ## Environment build
 

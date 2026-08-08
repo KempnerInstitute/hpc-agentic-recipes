@@ -86,10 +86,8 @@ checkpoint supports, which each recipe states.
 | **Kimi-K3** | MXFP4, QAT | [4 H200 nodes, 16 GPUs, SGLang](recipes/Kimi-K3/h200-4-nodes4-sglang) | TP16 x EP16 | 40.2 tok/s | 1069 at c=64, capped | 256K | Validated |
 | **Qwen3-235B-A22B** | bf16 | [1 RTX node, 8 GPUs](recipes/Qwen3-235B-A22B/rtx-8) | TP8 | 63.3 tok/s | 3984 at c=512, peak | 40K | Validated |
 | **Qwen3-Coder-480B** | FP8 | [1 RTX node, 8 GPUs](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8) | TP4 x PP2 | 67.7 tok/s | 3238 at c=768, peak | 128K | Validated |
-| | FP8 | [1 H200 node, 4 GPUs](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/h200-4) | TP4 | 22.2 tok/s eager only | n/a | n/a | Blocked, serve on RTX |
 | | bf16 | [2 to 4 H200 nodes](recipes/Qwen3-Coder-480B-A35B-Instruct) | TP4 x PP | not measured | n/a | n/a | Untested |
 | **DeepSeek-V4-Pro** | FP8 with FP4 experts | [2 RTX nodes](recipes/DeepSeek-V4-Pro/rtx-8-nodes2) | TP8 x PP2 | 18.6 tok/s | 3582 at c=1024, rising | 128K | Validated |
-| | FP8 with FP4 experts | [2 H200 nodes](recipes/DeepSeek-V4-Pro/h200-4-nodes2) | TP4 x PP2 | does not run | n/a | n/a | Blocked, serve on RTX |
 | **Gemma-4-26B-A4B** | bf16 | [1 H200 GPU](recipes/gemma-4-26B-A4B-it/h200-1) | TP1 | 250.5 tok/s | 10905 at c=1024, saturated | 256K | Validated |
 | | bf16 | [1 H100 GPU](recipes/gemma-4-26B-A4B-it/h100-1) | TP1 | 204.5 tok/s | 7165 at c=640, peak | 256K | Validated |
 | | bf16 | [1 RTX GPU](recipes/gemma-4-26B-A4B-it/rtx-1) | TP1 | 141.1 tok/s | 5798 at c=1024, rising | 256K | Validated |
