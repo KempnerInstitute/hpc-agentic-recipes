@@ -20,9 +20,9 @@ parser. Without one, tool calls arrive as raw text the client cannot execute.
 
 SGLang is also the only way to combine speculative decoding with a model that must span nodes. vLLM rejects
 a speculative config whenever pipeline parallelism is in use, so a checkpoint needing PP to fit loses its MTP
-or draft-model speedup. SGLang can run TP8 across two nodes with EAGLE speculative decoding instead. The
-GLM-5.2 SGLang recipe here attempts exactly that and is marked Blocked: every rank raises a shape assertion
-inside the DeepSeek weight loader, and the recipe records the traceback.
+or draft-model speedup. SGLang can run TP8 across two nodes with EAGLE speculative decoding instead, which is why GLM-5.2-FP8 on
+two H200 nodes serves without speculative decoding under vLLM even though its checkpoint ships an MTP
+head.
 
 The two coexist. Each recipe builds its own environment, so an SGLang environment never disturbs a vLLM one.
 

@@ -13,10 +13,6 @@
 Qwen3-Coder-480B-A35B-Instruct-FP8/h200-4
 
 # Blocked: every rank fails a shape assertion in SGLang's DeepSeek weight loader, so this engine has
-# never loaded the checkpoint. Kept because SGLang is the only engine that could use GLM-5.2's MTP head
-# at TP8 across two nodes; vLLM cannot, because that needs PP and PP forbids speculative decoding.
-GLM-5.2-FP8/h200-4-nodes2-sglang
-
 # The two entries below name model directories that hold a README.md and no hardware subdirectory.
 # The checks glob recipes/*/*/ and therefore do not enumerate them at all, so these lines
 # are documentation of intent rather than something the audit consults today. They are listed so that
