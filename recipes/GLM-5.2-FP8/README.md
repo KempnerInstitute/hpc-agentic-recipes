@@ -16,11 +16,10 @@ is the slowest configuration in this repo.
 | Variant | Engine | Shape | Single stream | Aggregate | Status |
 | --- | --- | --- | --- | --- | --- |
 | [`h200-4-nodes2`](h200-4-nodes2/README.md) | vLLM | 2 H200 nodes, 4 GPUs each, TP4 x PP2 | 12.9 tok/s | 5392 at c=512, peak | Validated |
-| [`h200-4-nodes2-sglang`](h200-4-nodes2-sglang/README.md) | SGLang | 2 H200 nodes, TP8, no PP, EAGLE | never measured | n/a | Blocked |
 
-Use the vLLM variant. The SGLang variant is documentation only: it has never successfully loaded
-weights, and it is kept because it is the one configuration that could use this checkpoint's MTP
-speculative head, which vLLM cannot reach here.
+The checkpoint ships an MTP speculative head, `num_nextn_predict_layers` 1, which this configuration
+cannot use: vLLM rejects a speculative config whenever pipeline parallelism is active, and 704 GiB of
+weights needs two nodes.
 
 The checkpoint declares a 1048576 context. It does not fit: one request that long needs 45.42 GiB of
 KV against 26.33 available on the binding pipeline stage. The vLLM recipe serves 641664, which is the
@@ -28,27 +27,21 @@ fixed point of the engine's own estimate, from a 659,584-token pool.
 
 There is no single-node H200 variant, and there cannot be one: 756 GB of weights does not fit a 4-GPU
 node, which holds 562 GiB. If you want GLM-5.2 on one node, use the separately quantized NVFP4
-checkpoint on an RTX node, which measured 93.4 tok/s single stream and serves a 128K context. If you want a smaller model
+checkpoint on an RTX node, which measured 91.1 tok/s single stream and serves a 212K context. If you want a smaller model
 with the same tool calling and reasoning parsers on a single H200 node, use GLM-4.6-FP8.
 
 ## Checkpoint provenance
 
 - Checkpoint directory: `GLM-5.2-FP8`
-- Hugging Face repo: `zai-org/GLM-5.2-FP8`, **unverified**
+- Hugging Face repo: `zai-org/GLM-5.2-FP8`
 - Documented path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/GLM-5.2-FP8`
 - Size: about 756 GB across 141 shards, 704 GiB
 - License: MIT
 - Architecture: `GlmMoeDsaForCausalLM`, `model_type` `glm_moe_dsa`, native to vLLM 0.25.1
-
-The repo id is the one unverified fact here. The checkpoint was staged from a local path with no Hub
-id recorded alongside it. The id above is inferred from the sibling checkpoints,
-`zai-org/GLM-4.6-FP8` and `zai-org/GLM-5.2`, and has not been confirmed against the Hub. Confirm it
-before using it in a download command.
 
 Read from the checkpoint: 78 layers, 256 routed experts plus 1 shared with 8 routed per
 token, `moe_intermediate_size` 2048, `hidden_size` 6144, 64 attention heads, and a sparse attention
 indexer with `index_n_heads` 32, `index_head_dim` 128, and `index_topk` 2048. Quantization is FP8
 `e4m3` with dynamic activations and `weight_block_size` [128, 128], which is what constrains legal
 tensor-parallel sizes. `num_nextn_predict_layers` is 1, so an MTP speculative head ships with the
-weights; whether it can be used depends entirely on the engine and the parallelism shape, and each
-variant's README says which.
+weights; whether it can be used depends on the engine and the parallelism shape.

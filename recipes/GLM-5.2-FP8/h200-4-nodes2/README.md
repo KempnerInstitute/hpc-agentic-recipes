@@ -212,7 +212,6 @@ KEY_NAME=GLM-5.2-FP8-h200-4-nodes2 bash common/tools/bench.sh --host <head_node>
   sparse-attention workspace scales with the declared window.
 - No speculative decoding. The checkpoint ships an MTP head, `num_nextn_predict_layers` 1, but vLLM rejects
   a speculative config whenever pipeline parallelism is active, and 704 GiB of weights needs two nodes.
-  That is why `h200-4-nodes2-sglang` exists as a documented negative result.
 - Keep tensor parallelism inside a node. TP8 across two nodes is legal by the FP8 block constraint, since
   `moe_intermediate_size` 2048 shards to 256, but it hangs at NCCL initialization.
 - Eager only. CUDA graph capture takes an illegal memory access on vLLM 0.25.1, so `serve.sh` passes
