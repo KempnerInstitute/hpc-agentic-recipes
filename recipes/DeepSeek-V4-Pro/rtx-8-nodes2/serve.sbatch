@@ -13,8 +13,6 @@
 # Submit from the repo root, and pass your account:
 #   sbatch --account=<acct> recipes/DeepSeek-V4-Pro/rtx-8-nodes2/serve.sbatch
 #
-# Slurm stages this script into its spool directory, so $0 does not point into the repo and the path
-# below is resolved against the submit directory instead. The log lands in the submit directory.
 # The endpoint runs on the FIRST allocated node; find it with `squeue --me`.
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
@@ -24,8 +22,6 @@ RAY_PORT="${RAY_PORT:-6379}"
 mapfile -t nodes < <(scontrol show hostnames "$SLURM_JOB_NODELIST")
 HEAD="${nodes[0]}"
 WORKER="${nodes[1]}"
-# Address of the cross-node fabric interface, InfiniBand when the node has it and the primary
-# interface otherwise. Ray needs a routable address, not a hostname, for both ranks.
 ipof () {
   srun --nodes=1 --ntasks=1 -w "$1" --overlap bash -c \
     'ip -br -4 addr show ib0 2>/dev/null | awk "{print \$3}" | cut -d/ -f1 | grep . || hostname -i | awk "{print \$1}"'
@@ -35,8 +31,6 @@ WORKER_IP="$(ipof "$WORKER")"
 echo "head=$HEAD ($HEAD_IP)  worker=$WORKER ($WORKER_IP)"
 echo "serving deepseek-v4-pro: http://$HEAD:${API_PORT:-8000}/v1"
 
-# Each RTX node contributes 8 GPUs to the Ray cluster. RAY_BLOCK keeps the srun step alive so Slurm
-# does not tear the node down while vLLM is using it.
 srun --export=ALL --nodes=1 --ntasks=1 -w "$HEAD" --overlap bash -c \
   "source $R/env/env.sh; ray stop >/dev/null 2>&1 || true; ray start --head --node-ip-address=$HEAD_IP --port=$RAY_PORT --num-gpus=8 --disable-usage-stats --block" &
 sleep 15
