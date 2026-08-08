@@ -17,7 +17,7 @@ faster than the much smaller Qwen3-235B on the same hardware.
 
 **Highest published coding scores:** Kimi-K3, a 2.8T MoE in MXFP4, which needs 4 H200 nodes and runs only
 under SGLang. Kimi-K2.7-Code, 1T in INT4, is the largest coding-specialized checkpoint and fits a single
-RTX node. Both trade a lot of latency for that quality: 40.2 and 20.7 tok/s.
+RTX node. Both trade a lot of latency for that quality: 40.2 and 20.6 tok/s.
 
 **Longest context:** GLM-5.2-FP8 across two H200 nodes and Kimi-K3 both support 1M tokens. The recipes
 serve less by default and raising it costs decode rate.
