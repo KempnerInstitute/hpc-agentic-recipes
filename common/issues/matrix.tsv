@@ -14,12 +14,12 @@
 # thinking-model warning.
 #
 # slug	include	exclude
-node-local-logs	*/*,Kimi-K3/h200-4-nodes4-sglang	gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1,gemma-4-26B-A4B-it/rtx-1,gemma-4-31B-it/h100-1,gemma-4-31B-it/h200-1,gemma-4-31B-it/rtx-1,GLM-4.6-FP8/h200-4,GLM-5.2-NVFP4/rtx-8,GLM-5.2-FP8/h200-4-nodes2,Kimi-K2.7-Code/rtx-8,Kimi-K2.7-Code/h200-4-nodes2
+node-local-logs	*/*,Kimi-K3/h200-4-nodes4-sglang	gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1,gemma-4-26B-A4B-it/rtx-1,gemma-4-31B-it/h100-1,gemma-4-31B-it/h200-1,gemma-4-31B-it/rtx-1,GLM-4.6-FP8/h200-4,GLM-5.2-NVFP4/rtx-8,GLM-5.2-FP8/h200-4-nodes2,Kimi-K2.7-Code/rtx-8,Kimi-K2.7-Code/h200-4-nodes2,Kimi-K3/h200-4-nodes4-sglang
 engine-ready-timeout	*/*	*-sglang,gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1,gemma-4-26B-A4B-it/rtx-1,gemma-4-31B-it/h100-1,gemma-4-31B-it/h200-1,gemma-4-31B-it/rtx-1,GLM-4.6-FP8/h200-4,GLM-5.2-NVFP4/rtx-8,GLM-5.2-FP8/h200-4-nodes2,Kimi-K2.7-Code/rtx-8,Kimi-K2.7-Code/h200-4-nodes2
-anthropic-hosted-tools-400	*/*,Kimi-K3/h200-4-nodes4-sglang	gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1,gemma-4-26B-A4B-it/rtx-1,gemma-4-31B-it/h100-1,gemma-4-31B-it/h200-1,gemma-4-31B-it/rtx-1,GLM-4.6-FP8/h200-4,GLM-5.2-NVFP4/rtx-8,GLM-5.2-FP8/h200-4-nodes2,Kimi-K2.7-Code/rtx-8,Kimi-K2.7-Code/h200-4-nodes2
-anthropic-auth-token	*/*	gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1,gemma-4-26B-A4B-it/rtx-1,gemma-4-31B-it/h100-1,gemma-4-31B-it/h200-1,gemma-4-31B-it/rtx-1,GLM-4.6-FP8/h200-4,GLM-5.2-NVFP4/rtx-8,GLM-5.2-FP8/h200-4-nodes2,Kimi-K2.7-Code/rtx-8,Kimi-K2.7-Code/h200-4-nodes2
-lustre-watchdog	*/rtx-8*,*/h200-4*,*/h100-4*,Kimi-K3/h200-4-nodes4-sglang	-,GLM-4.6-FP8/h200-4,GLM-5.2-NVFP4/rtx-8,GLM-5.2-FP8/h200-4-nodes2,Kimi-K2.7-Code/rtx-8,Kimi-K2.7-Code/h200-4-nodes2
-jit-cache-node-local	*/*-nodes2*,Kimi-K3/h200-4-nodes4-sglang	-,GLM-5.2-FP8/h200-4-nodes2,Kimi-K2.7-Code/h200-4-nodes2
+anthropic-hosted-tools-400	*/*,Kimi-K3/h200-4-nodes4-sglang	gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1,gemma-4-26B-A4B-it/rtx-1,gemma-4-31B-it/h100-1,gemma-4-31B-it/h200-1,gemma-4-31B-it/rtx-1,GLM-4.6-FP8/h200-4,GLM-5.2-NVFP4/rtx-8,GLM-5.2-FP8/h200-4-nodes2,Kimi-K2.7-Code/rtx-8,Kimi-K2.7-Code/h200-4-nodes2,Kimi-K3/h200-4-nodes4-sglang
+anthropic-auth-token	*/*	gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1,gemma-4-26B-A4B-it/rtx-1,gemma-4-31B-it/h100-1,gemma-4-31B-it/h200-1,gemma-4-31B-it/rtx-1,GLM-4.6-FP8/h200-4,GLM-5.2-NVFP4/rtx-8,GLM-5.2-FP8/h200-4-nodes2,Kimi-K2.7-Code/rtx-8,Kimi-K2.7-Code/h200-4-nodes2,Kimi-K3/h200-4-nodes4-sglang
+lustre-watchdog	*/rtx-8*,*/h200-4*,*/h100-4*,Kimi-K3/h200-4-nodes4-sglang	-,GLM-4.6-FP8/h200-4,GLM-5.2-NVFP4/rtx-8,GLM-5.2-FP8/h200-4-nodes2,Kimi-K2.7-Code/rtx-8,Kimi-K2.7-Code/h200-4-nodes2,Kimi-K3/h200-4-nodes4-sglang
+jit-cache-node-local	*/*-nodes2*,Kimi-K3/h200-4-nodes4-sglang	-,GLM-5.2-FP8/h200-4-nodes2,Kimi-K2.7-Code/h200-4-nodes2,Kimi-K3/h200-4-nodes4-sglang
 cross-node-tp-hangs	*/*-nodes2*	-,GLM-5.2-FP8/h200-4-nodes2,Kimi-K2.7-Code/h200-4-nodes2
 pp-forbids-spec-decode	*/*-nodes2*,Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8	-,GLM-5.2-FP8/h200-4-nodes2,Kimi-K2.7-Code/h200-4-nodes2
 rtx-no-nvlink	*/rtx-8*	-,GLM-5.2-NVFP4/rtx-8,Kimi-K2.7-Code/rtx-8
@@ -33,5 +33,5 @@ multimodal-mm-profiling	Kimi-K2.7-Code/h200-4-nodes2	-,Kimi-K2.7-Code/h200-4-nod
 coder480-tp8-divisibility	Qwen3-Coder-480B-A35B-Instruct-FP8/*	-
 coder480-h200-cutlass	Qwen3-Coder-480B-A35B-Instruct-FP8/*	-
 gemma4-mtp-broken	gemma-4-26B-A4B-it/*,gemma-4-31B-it/*	gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1,gemma-4-26B-A4B-it/rtx-1,gemma-4-31B-it/h100-1,gemma-4-31B-it/h200-1,gemma-4-31B-it/rtx-1
-thinking-model-max-tokens	GLM-5.2-NVFP4/*,GLM-5.2-FP8/*,GLM-4.6-FP8/*,Kimi-K2.7-Code/*,Qwen3-235B-A22B/*,DeepSeek-V4-Pro/*,gemma-4-26B-A4B-it/*,gemma-4-31B-it/*,Kimi-K3/h200-4-nodes4-sglang	gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1,gemma-4-26B-A4B-it/rtx-1,gemma-4-31B-it/h100-1,gemma-4-31B-it/h200-1,gemma-4-31B-it/rtx-1,GLM-4.6-FP8/h200-4,GLM-5.2-NVFP4/rtx-8,GLM-5.2-FP8/h200-4-nodes2,Kimi-K2.7-Code/rtx-8,Kimi-K2.7-Code/h200-4-nodes2
+thinking-model-max-tokens	GLM-5.2-NVFP4/*,GLM-5.2-FP8/*,GLM-4.6-FP8/*,Kimi-K2.7-Code/*,Qwen3-235B-A22B/*,DeepSeek-V4-Pro/*,gemma-4-26B-A4B-it/*,gemma-4-31B-it/*,Kimi-K3/h200-4-nodes4-sglang	gemma-4-26B-A4B-it/h100-1,gemma-4-26B-A4B-it/h200-1,gemma-4-26B-A4B-it/rtx-1,gemma-4-31B-it/h100-1,gemma-4-31B-it/h200-1,gemma-4-31B-it/rtx-1,GLM-4.6-FP8/h200-4,GLM-5.2-NVFP4/rtx-8,GLM-5.2-FP8/h200-4-nodes2,Kimi-K2.7-Code/rtx-8,Kimi-K2.7-Code/h200-4-nodes2,Kimi-K3/h200-4-nodes4-sglang
 sglang-ungated	*-sglang	Kimi-K3/h200-4-nodes4-sglang
