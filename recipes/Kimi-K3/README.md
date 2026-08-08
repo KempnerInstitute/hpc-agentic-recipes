@@ -6,30 +6,31 @@ Status: see the recipe below. No vLLM release checked here implements `KimiK3For
 
 | Variant | Shape | Single stream | Aggregate | Status |
 | --- | --- | --- | --- | --- |
-| [`h200-4-nodes4-sglang`](h200-4-nodes4-sglang/README.md) | 4 H200 nodes, 16 GPUs, TP16 x EP16 | 40.2 tok/s | 1069 at c=64 | Validated |
+| [`h200-4-nodes4-sglang`](h200-4-nodes4-sglang/README.md) | 4 H200 nodes, 16 GPUs, TP16 x EP16 | 40.3 tok/s | 1067 at c=64 | Validated |
 
-The engine is SGLang in a container rather than vLLM in a virtual environment, and it serves an
-OpenAI-compatible API only, so Claude Code needs a client from [clients.md](../../docs/clients.md)
-rather than the native `/v1/messages` endpoint the vLLM recipes provide.
+The engine is SGLang in a container rather than vLLM in a virtual environment. It serves both an
+Anthropic-compatible `/v1/messages` and an OpenAI-compatible `/v1`, so Claude Code connects directly,
+the same as the vLLM recipes.
 
 It does run, though, and the numbers are worth knowing before anyone plans around this model. On 4 H200
 nodes at TP16 with EP16 through Marlin W4A16, using `lmsysorg/sglang:kimi-k3-cu12`:
 
 | | |
 | --- | --- |
-| Single stream | 40.2 tok/s at the defaults, 94.1 with speculation and the wide pool, protocol `slope(128,1152)` |
+| Single stream | 40.3 tok/s at the defaults, 94.1 with speculation and the wide pool, protocol `slope(128,1152)` |
 | Aggregate | 1442.6 tok/s at concurrency 156 under `WIDE=1`, its highest measured |
 | Concurrency limit | 67 requests at the defaults, 156 under `WIDE=1`, set by the KDA state pool |
 | Long context | 38.9 tok/s at an input of 115292 tokens, 3.2 percent below its short-prompt rate |
 | Weights | 102.75 GB per GPU |
-| Startup | 14 to 16 minutes, dominated by reading 1.5 TiB of weights |
+| Startup | 8 to 16 minutes across six launches, dominated by reading 1.5 TiB of weights |
 
-Speculation is not a uniform win. It raises single stream from 40.2 to 94.1 tok/s when combined with the
+Speculation is not a uniform win. It raises single stream from 40.3 to 94.1 tok/s when combined with the
 wide pool, but it takes its state slots from the same budget as the KV cache, so it lowers the concurrency
 cap, and it loses its whole advantage at long context. The recipe has the four measured configurations.
 
-This page records what the checkpoint is, what vLLM is still missing, what hardware would be needed, and
-what to re-check when a newer vLLM lands.
+The checkpoint declares a 1048576 context. The engine accepts 383,217, which is its token pool, and the
+recipe serves 383216. Setting the checkpoint maximum makes the endpoint advertise a million tokens and
+then reject anything larger than the pool.
 
 ## What is staged
 

@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
-# Bring up Kimi-K3 over SSH on four H200 nodes you already hold. Secondary path: prefer serve.sbatch.
+# Bring up Kimi-K3 over SSH on four nodes you already hold.
 #   bash recipes/Kimi-K3/h200-4-nodes4-sglang/serve_ssh.sh <node0> <node1> <node2> <node3>
-#
-# node0 is the head: every rank dials its InfiniBand address to form the 16-rank group, so that
-# address is read from the node rather than assumed.
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/env/env.sh"

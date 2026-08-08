@@ -1,13 +1,5 @@
 #!/usr/bin/env bash
-# Make the SGLang container available for this recipe. Idempotent; --force re-pulls.
-#
-# This recipe has no virtual environment. The engine is a container, so "building the environment"
-# means having the image, and the image is already staged beside the weights in the shared repository.
-# The normal path therefore costs nothing: it verifies the staged copy and stops.
-#
-# The pull exists only for a site that has no staged copy. It took 2 hours 6 minutes when it was done
-# here, and it resolves a moving tag, so a rebuilt image is not guaranteed to match the one these
-# numbers were measured on. Prefer the staged copy.
+# Verify the staged Kimi-K3 container and report its SGLang version. Pulls only if the image is missing.
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/../../../../common/lib/repo_root.sh"
@@ -32,8 +24,6 @@ DEST="$(dirname "$SIF")"
 [ -d "$DEST" ] || { echo "destination does not exist: $DEST" >&2; exit 1; }
 [ -w "$DEST" ] || { echo "destination is not writable by $USER: $DEST" >&2; exit 1; }
 
-# Keep the conversion scratch beside the target rather than in the home directory, which is too small
-# for a 16 GB image and its intermediate layers.
 export SINGULARITY_CACHEDIR="$DEST/.singularity-cache"
 export SINGULARITY_TMPDIR="$DEST/.singularity-tmp"
 mkdir -p "$SINGULARITY_CACHEDIR" "$SINGULARITY_TMPDIR"
