@@ -1,13 +1,18 @@
 # GLM-5.2-NVFP4 on one RTX PRO 6000 node
 
-Status: Validated - vLLM 0.25.1, protocol: slope(128,1152) swept at concurrency 1 through 512
+Status: Validated - vLLM 0.25.1, protocol: slope(128,1152) at concurrency 1, 8, 32, 64, 128, 256 and 512
 
-Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
+| | |
+| --- | --- |
+| Served name | `glm-5.2` |
+| Checkpoint | `GLM-5.2-NVFP4`, Hugging Face `nvidia/GLM-5.2-NVFP4`, quantized from `zai-org/GLM-5.2` |
+| On disk | 432.90 GiB across 47 shards, NVFP4, `GlmMoeDsaForCausalLM` |
+| Served precision | NVFP4 weights and activations, 57.48 GiB per GPU, KV cache FP8 in sparse-MLA layout |
+| Context | 217344. The checkpoint declares 1048576, which does not fit this hardware; see Known limits |
+| Hardware | 1 RTX PRO 6000 Blackwell node, 8 GPUs, 97887 MiB each, TP8 over PCIe with no NVLink |
+| Engine | vLLM 0.25.1, CUDA graphs, MTP speculative decoding at 3 draft tokens |
 
-## Configure once
-
-Create the API key. The endpoint refuses requests without it, and the key reaches the engine through
-the environment rather than as an argument, so it does not appear in `ps` output.
+## 1. Create the API key
 
 ```
 mkdir -p secrets
@@ -15,148 +20,58 @@ printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/GLM-5.2-NVFP4-rtx-8.key
 chmod 600 secrets/GLM-5.2-NVFP4-rtx-8.key
 ```
 
-That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup made
-before per-recipe keys keeps working. When neither exists but `secrets/` holds exactly one key, that one is
-used, which is how `bench.sh` authenticates without being told which recipe you mean.
+- `secrets/vllm_api_key` is read when this file is absent.
+- To rotate, replace the file and relaunch; the engine reads it once at launch.
 
-Nothing else is required. Cluster paths come from `common/defaults.sh`, which is tracked with working
-defaults, so a fresh clone runs as is. Four optional overrides, either exported or set in
-`common/site.conf`:
+## 2. Build the environment
 
-| Variable | Default | Why you might change it |
-| --- | --- | --- |
-| `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
-| `GLM52_NVFP4_NODE` | unset | A node you already hold, for the SSH path |
-| `MODELS_DIR` | shared repository path | Point at your own faster copy of the checkpoint |
-| `ENV_ROOT` | scratch | Where this recipe builds its environment |
-
-## Status
-
-Validated. The environment was built from `env/build.sh`, the endpoint was
-launched with `serve_ssh.sh` on one RTX PRO 6000 Blackwell node, and throughput was measured with `common/tools/bench.sh`
-across concurrency 1, 8, 32, 64, 128, 256 and 512. Ready 18 minutes 1 second after launch. The endpoint was still answering after the sweep finished.
-
-This run measured 93.4 tok/s single stream; another run of this recipe measured 101.6. Both used the
-slope method, so the protocol is not the difference. This recipe serves with MTP speculative decoding
-at 3 draft tokens, and speculative gain depends on how predictable the generated text is, so its
-single stream rate is less reproducible run to run than a non-speculative model's. Treat roughly 93
-to 102 tok/s as the observed range rather than either endpoint as exact. Set `NO_MTP=1` to measure
-the model without speculation if you need a stable baseline.
-
-Single stream and saturated throughput are different measurements and neither substitutes for
-the other. See Measured performance below for the full curve and the disclosure block.
-
-## What this is
-
-GLM-5.2 quantized to NVFP4 by NVIDIA Model Optimizer: a 753B-parameter mixture-of-experts, 40B activated per token, reasoning
-and coding model that uses DeepSeek-style sparse attention for long context, at near-FP8 quality. It
-exposes vLLM's Anthropic-compatible API, so Claude Code connects to it directly with no proxy. This is
-the fastest large model in this repo; the small Gemma models are faster outright.
-
-- Checkpoint directory: `GLM-5.2-NVFP4`
-- Hugging Face repo: `nvidia/GLM-5.2-NVFP4`, quantized from `zai-org/GLM-5.2`
-- Documented path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/GLM-5.2-NVFP4`
-
-The shared repository path works out of the box. Copying the checkpoint into your own scratch space loads
-faster, because scratch outperforms Lustre for this workload, and the directory names are identical in
-both locations so only `MODELS_DIR` changes. Scratch has a 90-day retention policy, so treat it as a
-fast cache and keep the shared repository as the permanent copy.
-
-## Hardware
-
-| Requirement | Value |
-| --- | --- |
-| GPU | RTX PRO 6000 Blackwell, 8 per node, 97887 MiB each |
-| Architecture | sm_120, CUDA 13 |
-| Interconnect | PCIe, no NVLink |
-| Nodes | 1 |
-| Parallelism | TP8 |
-| Partition | `kempner_rtx` |
-| Per-GPU allocation limit | 16 CPUs, about 189 GiB host memory |
-| Maximum wall time | 2 days |
-
-All RTX PRO 6000 nodes on this cluster share one hardware specification, so any node in the partition
-works. The checkpoint is about 465 GB across 47 shards, which fits the node's VRAM with room for a
-128K-token KV cache. `serve.sbatch` requests 96 CPUs and 500 GB, both inside the per-GPU limits for a
-whole node.
-
-## Environment build
-
-This recipe builds its own environment, shared with no other recipe: about 9.0 GB for the Python
-environment plus 2.9 GB for a private CUDA 13.0 toolkit. Both land under `ENV_ROOT` on scratch
-rather than in the repo, because startup is dominated by page faulting the torch shared objects and
-stat-ing tens of thousands of small package files: measured on GPU nodes, the interval from process start to the first vLLM log line was about 14
-minutes from Lustre and 58 seconds from scratch. A bare torch and vLLM import from scratch is 9.2
-seconds, so most of that 58 seconds is engine startup rather than filesystem cost.
+Run on a compute node, not a login node. Needs `uv` and `mamba` on your PATH.
 
 ```
+module load Mambaforge
 bash recipes/GLM-5.2-NVFP4/rtx-8/env/build.sh
 ```
 
-That is the only supported build path, because the install needs uv flags a requirements file cannot
-express and a conda step no Python environment can carry. What it does, and why:
+- About 9.2 GB for the venv and 195 packages, plus a 2.9 GB conda CUDA 13.0 toolkit alongside it under
+  `ENV_ROOT`, default scratch.
+- The toolkit is required: the FlashInfer sm_120 JIT needs a complete CUDA 13 install, which the node's
+  runtime-only `/usr/local/cuda-13` and the fragmented pip nvcc wheels do not provide.
+- vLLM comes from the nightly cu130 index, because sm_120 needs a CUDA 13 build and uv's `--torch-backend`
+  stops at cu129. `build.sh` pins `vllm==0.25.1` explicitly, because the installed metadata carries no local
+  version tag and an unpinned install drifts silently.
+- FlashInfer is pinned to 0.6.15 and installed with `--no-deps`. vLLM 0.25.1 pins 0.6.13, which rejects the
+  `kv_scale_format` argument the sm_120 backend passes and fails at the first request.
 
-<!-- issue:cuda13-toolkit begin -->
-**The sm_120 JIT needs a complete CUDA 13.0 toolkit, and it must not reach `LD_LIBRARY_PATH`.** The
-node's `/usr/local/cuda-13` is runtime-only, and the fragmented pip nvcc wheels mix 13.0 and 13.2
-between `nvcc`, `cicc`, and `ptxas`, which breaks the JIT. The recipe installs a consistent toolkit
-via conda. `env/env.sh` points `CUDA_HOME` at it and exposes its headers through `CPATH` and
-`LIBRARY_PATH` for compilation only. Do **not** add its libraries to `LD_LIBRARY_PATH`: its
-`libcudart` shadows torch's CUDA 13 runtime and pulls in a `libcupti.so.13` that is not present,
-which breaks import entirely.
-<!-- issue:cuda13-toolkit end -->
+## 3. Launch
 
-<!-- issue:flashinfer-cubin-skew begin -->
-**FlashInfer must be 0.6.15, and its version check must be bypassed.** vLLM 0.25.1 pins
-flashinfer-python 0.6.13, but the sm_120 attention backend passes a `kv_scale_format` argument that
-0.6.13 does not accept, which fails at the first inference request. Install 0.6.15 with `--no-deps`
-so torch is left untouched. No matching 0.6.15 cubin package exists, so `flashinfer-cubin` stays at
-0.6.13 and `env/env.sh` sets `FLASHINFER_DISABLE_VERSION_CHECK=1`; kernels are then compiled from
-source on first launch, which is why the first request after a fresh environment is slow.
-<!-- issue:flashinfer-cubin-skew end -->
-
-The vLLM wheel comes from `https://wheels.vllm.ai/nightly/cu130`, not from PyPI, because sm_120 needs
-the CUDA 13 build and uv's `--torch-backend` maxes out at cu129. `build.sh` pins `vllm==0.25.1`
-explicitly rather than leaving the version to resolve: the installed metadata reads a plain `0.25.1`
-with no local version tag, so an unpinned install silently drifts, either to whatever the nightly
-index holds that day or to the PyPI CUDA 13 wheel, and neither is the build these numbers were
-measured on. Nightly wheels also rotate and are deleted, so a much later rebuild can fail outright
-instead of drifting quietly.
-
-Scratch expires after 90 days, so this environment is disposable. Rebuild it with the same command,
-or `--force` to replace an existing one. `env/requirements.lock` records the exact resolution that was
-tested, which is what makes a drifted rebuild visible.
-
-## Launch
-
-Slurm path, submitted from the repo root:
+Slurm, from the repo root:
 
 ```
 sbatch --account=<your-account> recipes/GLM-5.2-NVFP4/rtx-8/serve.sbatch
-```
-
-Find the host once it starts, then use that node name with the client:
-
-```
-squeue --me                       # NODELIST column
+squeue --me                                  # NODELIST gives the host
 tail -f glm52-nvfp4-<jobid>.log
 ```
 
-Direct path, for a node you already hold. Use the Slurm submission above unless you already have
-the node, or you are deploying an endpoint on behalf of others:
+Direct, on a node you already hold. This recipe uses all eight GPUs, so there is no device to pin:
 
 ```
 bash recipes/GLM-5.2-NVFP4/rtx-8/serve_ssh.sh <node>
 ```
 
-Submit from the repo root either way. Slurm stages the batch script into its own spool directory, so
-the script cannot locate the repo from its own path and resolves paths against the submit directory
-instead.
+| Stage | Measured |
+| --- | --- |
+| Launch to serving, first time on a node | 12 min 27 s |
+| Launch to serving, caches warm | 5 min 31 s |
+| Weight load alone | 118 to 135 s |
 
-Over bare SSH `nproc` reports 1 on these nodes while `Cpus_allowed_list` is the full set, so the
-server is not actually CPU limited on that path even though it looks like it.
+- The first launch on any node compiles the sm_120 attention kernels from source, because no matching
+  FlashInfer cubin package exists. That cache is node-local, so a different node pays it again.
+- On the direct path the server log is node-local at `/tmp/$USER/vllm/`. Under Slurm it lands in the submit
+  directory.
+- Over bare SSH `nproc` reports 1 while `Cpus_allowed_list` is the full set, so the server is not CPU limited
+  on that path even though it looks like it.
 
-## Verify
+## 4. Verify
 
 ```
 KEY=$(cat secrets/GLM-5.2-NVFP4-rtx-8.key 2>/dev/null || cat secrets/vllm_api_key)
@@ -164,25 +79,23 @@ NODE=<the node serving it>
 
 curl -s -H "Authorization: Bearer $KEY" http://$NODE:8000/v1/models
 
-curl -s -o /dev/null -w '%{http_code}\n' http://$NODE:8000/v1/models          # must print 401
+curl -s -o /dev/null -w '%{http_code}\n' http://$NODE:8000/v1/models
 
 curl -s -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
   http://$NODE:8000/v1/chat/completions \
   -d '{"model":"glm-5.2","messages":[{"role":"user","content":"What is 17*23? Answer briefly."}],"max_tokens":400}'
 ```
 
-A keyless request returning 401 is the expected, correct behavior.
+| Command | Expected |
+| --- | --- |
+| `/v1/models` with the key | `"id": "glm-5.2"`, `"max_model_len": 217344` |
+| `/v1/models` without a key | `401` |
+| chat completion | `content` holds 391, `finish_reason: stop` |
 
-<!-- issue:thinking-model-max-tokens begin -->
-**Give thinking models room, or `content` comes back empty.** This model emits reasoning before its
-answer, and vLLM returns that in a separate `reasoning` field, not `reasoning_content`. With a small
-budget the whole allowance is spent reasoning, `finish_reason` is `length`, and `content` is empty,
-which looks like a broken endpoint but is not. Use at least 400 output tokens for a smoke test, and 800
-or more for a model that reasons at length. If `content` is empty, raise the budget before suspecting
-the endpoint.
-<!-- issue:thinking-model-max-tokens end -->
+- 400 output tokens is enough here: three smoke tests used 94, 128 and 156 tokens. Reasoning arrives in a
+  separate `reasoning` field, so a much smaller budget can end with empty `content`.
 
-## Connect a client
+## 5. Connect a client
 
 ```
 export NODE=<the node serving it>
@@ -190,186 +103,106 @@ source recipes/GLM-5.2-NVFP4/rtx-8/client.env
 claude
 ```
 
-<!-- issue:anthropic-auth-token begin -->
-**Use `ANTHROPIC_AUTH_TOKEN`, never `ANTHROPIC_API_KEY`.** Both engines accept only
-`Authorization: Bearer <key>`. Setting `ANTHROPIC_API_KEY` makes Claude Code send an `x-api-key`
-header instead, which the engine ignores, and every request returns HTTP 401. Also set
-`ANTHROPIC_SMALL_FAST_MODEL` to this same served model, or the client reaches for a hosted Haiku that
-this endpoint does not serve.
-<!-- issue:anthropic-auth-token end -->
+- `client.env` sets `CLAUDE_CODE_MAX_CONTEXT_TOKENS=217344`. Claude Code assumes and enforces a 200k window
+  for a served name it does not recognize, which is below what this endpoint serves.
+- Use `ANTHROPIC_AUTH_TOKEN`. `ANTHROPIC_API_KEY` sends `x-api-key` and returns 401.
+- `client.env` also sets `ANTHROPIC_SMALL_FAST_MODEL`; without it the client reaches for a hosted Haiku.
+- OpenAI clients such as Codex: base URL `http://<node>:8000/v1`, same key, model `glm-5.2`. See
+  [docs/clients.md](../../../docs/clients.md).
 
-For an OpenAI-compatible client instead (Cline, Aider, Continue, OpenHands), use base URL
-`http://<node>:8000/v1`, the same key, and model name `glm-5.2`.
+## 6. Stop it
+
+```
+scancel <jobid>                        # Slurm path
+bash common/tools/stop.sh <node>       # direct path
+```
 
 ## Tunable inputs
-
-Every variable this recipe honors, with its default and effect.
 
 | Variable | Default | Effect |
 | --- | --- | --- |
 | `MODEL` | `$MODELS_DIR/GLM-5.2-NVFP4` | Serve a different copy of the checkpoint |
 | `API_PORT` | 8000 | Listening port |
-| `MAX_MODEL_LEN` | 131072 | Context window; larger costs KV cache memory |
+| `MAX_MODEL_LEN` | 217344 | Context window, the ceiling this hardware allows |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
-| `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is `~/.cache/vllm`, which is a small quota here |
-| `TP` | 8 | Tensor parallel size; 8 is the node's GPU count |
+| `TP` | 8 | Tensor parallel size, and the node's GPU count |
 | `MTP_TOKENS` | 3 | Speculative tokens per step |
-| `NO_MTP` | unset | Set to disable speculative decoding |
+| `NO_MTP` | unset | Set to disable speculative decoding, for a stable single stream baseline |
 | `ATTN_BACKEND` | unset | Override vLLM's attention backend selection |
+| `EXTRA_ARGS` | unset | Extra flags appended to the `vllm serve` command line |
 | `TOOL_PARSER` | `glm45` | Tool call parser |
 | `REASONING_PARSER` | `glm45` | Reasoning parser |
+| `TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC` | 3600 | Raised from 480 so a storage stall that resolves is survivable |
 | `LOG_DIR` | `/tmp/$USER/vllm` | Where the SSH path writes the server log |
 | `VENV_DIR` | under `ENV_ROOT` | Use an environment built elsewhere |
 | `CUDA13_DIR` | under `ENV_ROOT` | Use a CUDA 13.0 toolkit built elsewhere |
 | `VLLM_VERSION` | 0.25.1 | Engine version `env/build.sh` installs |
 | `FLASHINFER_VERSION` | 0.6.15 | FlashInfer version `env/build.sh` installs |
+| `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is a small quota here |
+| `KEY_NAME`, `KEY_FILE`, `VLLM_API_KEY` | this recipe's key | Which key `common/lib/api_key.sh` resolves; an exported `VLLM_API_KEY` wins |
+| `NODE`, `GLM52_NVFP4_NODE` | unset | The node to launch on or connect to; set either, or pass the node as an argument |
+| `ACCOUNT` | unset | Read by `common/defaults.sh`; `serve.sbatch` has no account directive, so pass `--account` at submit time |
+| `MODELS_DIR`, `ENV_ROOT` | `common/defaults.sh` | Override there or in `common/site.conf` |
 
-## Web search
+## Benchmarking
 
-<!-- issue:anthropic-hosted-tools-400 begin -->
-**Anthropic's hosted tools do not work against a local endpoint.** Server-side tools such as
-`web_search_20250305`, `web_fetch_20250910` and `code_execution_20250522` are executed by Anthropic's own
-API rather than by the model, so no endpoint here can run them. What you see differs by engine, measured
-on both.
+Conditions:
 
-vLLM rejects all three with HTTP 400, because their definitions carry no `input_schema`:
-
-```
-1 validation error:
-  {'type': 'missing', 'loc': ('body', 'tools', 0, 'input_schema'), 'msg': 'Field required',
-   'input': {'type': 'web_search_20250305', 'name': 'web_search'}}
-```
-
-SGLang is harder to diagnose. It accepts `web_search_20250305` with HTTP 200 and drops the tool, logging
-that it has no native support, so the model answers without searching and nothing in the reply says why.
-It rejects `web_fetch_20250910` and `code_execution_20250522` with HTTP 400.
-
-Client-side tools (file edits, shell, and anything you define) work normally on both. For web access,
-install the repo's keyless search tool and skill, from the repo root:
-
-```
-mkdir -p ~/.local/bin ~/.claude/skills
-ln -sf "$PWD/common/tools/search.sh" ~/.local/bin/search.sh
-cp -r common/skills/local-search ~/.claude/skills/
-```
-
-Check it with `search.sh wiki "tensor parallelism" 1`, and add `~/.local/bin` to your `PATH` if the
-command is not found. The model then searches through `search.sh` (web, arxiv, crossref, pubmed,
-openalex, wiki, fetch) instead of the hosted tool. Full details in
-[docs/web-search.md](../../docs/web-search.md).
-<!-- issue:anthropic-hosted-tools-400 end -->
-
-## Measured performance
-
-| Configuration | Aggregate rate | Per stream | Latency |
-| --- | --- | --- | --- |
-| Single stream, concurrency 1 | 93.4 tok/s | 93.4 tok/s | TTFT median 121 ms, n=3 spanning 90.7 to 93.7 |
-| Concurrency 8 | 368.3 tok/s | 46.0 tok/s | TTFT median 235 ms, p90 236 ms, n=3 spanning 361.3 to 378.9 |
-| Concurrency 32 | 682.6 tok/s | 21.3 tok/s | TTFT median 628 ms, p90 638 ms, n=3 spanning 669.2 to 688.5 |
-| Concurrency 64 | 1049.0 tok/s | 16.4 tok/s | TTFT median 1038 ms, p90 1068 ms, n=3 spanning 1047.0 to 1050.7 |
-| Concurrency 128 | 1266.6 tok/s | 9.9 tok/s | TTFT median 1826 ms, p90 2035 ms, n=3 spanning 1266.0 to 1271.9 |
-| Concurrency 256 (peak) | 1389.1 tok/s | 5.4 tok/s | TTFT median 3478 ms, p90 3533 ms, n=3 spanning 1357.6 to 1405.3 |
-| Concurrency 512 | 1239.8 tok/s | 2.4 tok/s | TTFT median 5473 ms, p90 7606 ms, n=3 spanning 1179.5 to 1240.4 |
-
-Measured with `common/tools/bench.sh`, endpoint ready 18m 1s after launch. Full disclosure, without which a tokens
-per second figure cannot be compared against anything:
-
-| Parameter | Value |
+| | |
 | --- | --- |
-| ISL, input tokens | 21 |
-| OSL, output tokens | 1152, as the slope between 128 and 1152 |
-| Counted | output tokens only, never input plus output |
-| Concurrency levels | 1,8,32,64,128,256,512 |
 | Protocol | slope(128,1152), 3 repeats per level, median reported |
-| `max_num_seqs` | engine default, 1024 on this hardware |
-| Hardware | one RTX PRO 6000 Blackwell node, 8 GPUs |
+| Input length | ISL 21 tokens. Rates at a long input are not measured; use `--prompt-tokens` |
+| Output length | OSL 1152 tokens, output only, `ignore_eos` |
+| Context | `MAX_MODEL_LEN=217344` |
+| Allocation for the measurement | 8 GPUs, 128 cores, 1440 GB, `kempner_rtx` |
+| Sequence cap | `max_num_seqs` 1024, the engine default, above the top sweep level |
+| Preemption | 617 across the sweep |
+| Endpoint | idle, and the benchmark client ran on a separate CPU-only node |
+| Power | 600 W enforced, the card default, so not capped. Median 209 W across 8784 samples and a 251 W peak, with no sample above 590 W, so throughput here is not power bound |
 
-Quote 93.4 tok/s for interactive coding, where one person waits on one
-response. Quote 1389.1 tok/s at concurrency 256 for a shared endpoint under load.
-The two measure different things and neither substitutes for the other.
+Results:
 
-Throughput **peaks at concurrency 256** and falls to 1240 tok/s by concurrency 512, so 1389.1 tok/s is a
-measured ceiling for this recipe rather than the edge of the sweep.
+| Concurrency | Aggregate | Per stream | Spread over 3 runs | TTFT median |
+| --- | --- | --- | --- | --- |
+| 1 | 91.1 tok/s | 91.1 tok/s | 90.4 to 94.5 | 121 ms |
+| 8 | 378.3 tok/s | 47.3 tok/s | 377.2 to 382.5 | 234 ms |
+| 32 | 673.8 tok/s | 21.1 tok/s | 535.1 to 681.1 | 605 ms |
+| 64 | 1047.7 tok/s | 16.4 tok/s | 1046.6 to 1052.9 | 997 ms |
+| 128 | 1263.6 tok/s | 9.9 tok/s | 1260.9 to 1266.6 | 1799 ms |
+| 256 | 1374.5 tok/s | 5.4 tok/s | 1360.0 to 1401.5 | 3505 ms |
+| 512 | 1209.6 tok/s | 2.4 tok/s | 1166.5 to 1213.3 | 5602 ms |
 
-The input sequence here is short, which is the best case for decode. Measure with
-`--prompt-tokens` at your working context before quoting a number for long-context work.
+| | |
+| --- | --- |
+| Label | peak. Throughput turns over at 256 and falls 12 percent by 512, so 1374.5 tok/s is a measured ceiling rather than the edge of the sweep |
+| Single stream range | 90.4 to 94.5 across three runs, and values as high as 101.6 have been recorded. MTP gain depends on how predictable the generated text is, so single stream is less reproducible than a non-speculative model's. `NO_MTP=1` gives a stable baseline |
+| Widest spread | concurrency 32 measured 535.1 to 681.1, 27 percent. Every other level held within 4 percent |
+| Quote for one caller | 91.1 tok/s |
+| Quote for a shared endpoint | 1374.5 tok/s at concurrency 256 |
+| KV cache | 349,888 tokens from 17.84 GiB per GPU, 1.61 full-length requests at once |
+| Speculative decoding | MTP accepted 65.9 percent of draft tokens across the sweep, 2,638,177 of 4,003,386 |
+| Long prompt | 207,523 tokens in 64 s cold; 0.5 s when the prefix is already cached |
 
-## Parallelism and quantization
-
-TP8 spans all eight GPUs of one node. Every all-reduce crosses PCIe rather than NVLink, which is the
-ceiling on this configuration, so nothing that adds cross-GPU traffic is worth enabling here.
-
-NVFP4 is what makes a 753B-parameter model fit one node: 4-bit weights and 4-bit input activations at
-group size 16. The `ignore` list in `quantization_config` keeps `lm_head`, `model.embed_tokens`, the
-first three layers and the last, and every other layer's attention and shared experts, at full precision. The KV cache is
-FP8 in DeepSeek's sparse-MLA layout (`--kv-cache-dtype fp8_ds_mla`), which is the format vLLM's sm_120
-sparse-MLA backend reads, and it is what leaves room for a 128K context.
-
-Pipeline parallelism is not used and not needed here, which matters because vLLM rejects speculative
-decoding when pipeline parallelism is active. Staying single-node is what makes MTP available.
-
-## Gotchas
-
-<!-- issue:rtx-no-nvlink begin -->
-**RTX PRO 6000 nodes have no NVLink, so peer-to-peer must be disabled.** `env/env.sh` sets
-`NCCL_P2P_DISABLE=1`. Without it, NCCL initialization hangs on any multi-GPU job, with no error, and
-the server never becomes ready.
-<!-- issue:rtx-no-nvlink end -->
-
-<!-- issue:rtx-comms-bound begin -->
-**Decode on a full RTX node is limited by cross-GPU communication, not memory bandwidth.** All-reduce
-traffic crosses PCIe rather than NVLink. Two consequences, both measured: do not enable
-`--enable-expert-parallel`, which added all-to-all traffic and measured about 9 percent slower, and
-FP8 weights bought nothing on Qwen3-235B because weight bandwidth was not the bottleneck.
-<!-- issue:rtx-comms-bound end -->
-
-<!-- issue:lustre-watchdog begin -->
-**A storage stall can kill the endpoint even after the storage recovers.** PyTorch kills the process
-when the NCCL watchdog thread stops sending heartbeats, on the assumption that a collective hung. A
-stalled network filesystem freezes every rank the same way, so at the 480 second default a transient
-storage outage takes the endpoint down permanently rather than pausing it. The signature is every rank
-reporting `Last enqueued NCCL work: -1`, meaning no collective was ever in flight, so the process was
-frozen rather than genuinely hung on communication. `env/env.sh` sets
-`TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC=3600` so a stall that resolves within an hour is survivable.
-<!-- issue:lustre-watchdog end -->
-
-<!-- issue:engine-ready-timeout begin -->
-**Startup exceeds vLLM's default readiness timeout.** Weight load plus torch.compile plus CUDA graph
-capture routinely takes longer than the 600 second default, so `env/env.sh` sets
-`VLLM_ENGINE_READY_TIMEOUT_S=3600`. A first launch that looks hung is usually still loading; check
-the log before killing it.
-<!-- issue:engine-ready-timeout end -->
-
-<!-- issue:node-local-logs begin -->
-**Logs are written to node-local `/tmp`, not to the repo.** Every rank writes stderr for the life of
-the endpoint, so a log on a network filesystem puts a blocking write on the critical path. During a
-filesystem stall that write hangs, which freezes the server. `LOG_DIR` defaults to
-`/tmp/$USER/vllm`, so read logs over SSH on the node that runs the server.
-<!-- issue:node-local-logs end -->
-
-## Stop the endpoint
-
-If you launched with Slurm, which is the default path, `scancel <jobid>` is all you need: Slurm terminates the job step and reclaims the node. The tool below is only for the direct SSH path, which has no scheduler to clean up after it.
+Reproduce:
 
 ```
-bash common/tools/stop.sh <node>
+KEY_NAME=GLM-5.2-NVFP4-rtx-8 bash common/tools/bench.sh --host <node> --model glm-5.2
+KEY_NAME=GLM-5.2-NVFP4-rtx-8 bash common/tools/bench.sh --host <node> --model glm-5.2 \
+  --sweep 1,8,32,64,128,256,512
 ```
 
-That kills the server processes and waits for GPU memory to be released. Confirm with
-`ssh <node> nvidia-smi --query-gpu=memory.used --format=csv,noheader`, which should read 0 MiB on all
-eight GPUs before you relaunch, or the next start will fail on memory.
+- `KEY_NAME` is required once `secrets/` holds more than one key, otherwise `bench.sh` resolves the shared
+  key and every request returns 401.
 
-## Expected startup time
+## Known limits
 
-| Stage | Cold | Warm |
-| --- | --- | --- |
-| Environment build, one time | to be measured | skipped |
-| First-time FlashInfer JIT | to be measured | skipped, cached under `/tmp/$USER/flashinfer` |
-| Weight load | to be measured | to be measured |
-| Total, launch to serving | 18 min 1 s | 18 min 1 s |
-
-First launch on a fresh node is slower than later ones: page cache is cold, and the sm_120 attention
-kernels are compiled from source once because no matching cubin package exists. Both caches are
-node-local, so a different node pays the JIT cost again. A launch that looks hung during this window
-is usually still loading. Check the log before killing it. These numbers will be filled in when this
-recipe is validated on hardware.
+- The checkpoint declares 1048576 but the engine refuses it: one request at that length needs 53.45 GiB of
+  KV against 11.08 GiB available, and vLLM reports an estimated maximum of 217344, which is what this recipe
+  serves. Context also shrinks the pool, since the sparse-attention workspace scales with the declared
+  window: 19.04 GiB of KV at 131072 against 17.84 at 217344.
+- Do not add the conda CUDA 13 toolkit to `LD_LIBRARY_PATH`. Its `libcudart` shadows torch's runtime and
+  pulls in a missing `libcupti.so.13`, which breaks import; the recipe exposes it through `CPATH` and
+  `LIBRARY_PATH` for compilation only.
+- Do not enable `--enable-expert-parallel`. All-reduce already crosses PCIe rather than NVLink, and the
+  added all-to-all traffic measured about 9 percent slower.
+- Anthropic's hosted tools return HTTP 400. Use [docs/web-search.md](../../../docs/web-search.md).

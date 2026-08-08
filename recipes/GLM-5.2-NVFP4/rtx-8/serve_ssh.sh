@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bring up GLM-5.2-NVFP4 over SSH on a node you already hold. Secondary path: prefer serve.sbatch.
+# Bring up GLM-5.2-NVFP4 over SSH on a node you already hold.
 #   bash recipes/GLM-5.2-NVFP4/rtx-8/serve_ssh.sh <node>
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
