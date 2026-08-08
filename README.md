@@ -79,7 +79,7 @@ checkpoint supports, which each recipe states.
 | Model | Precision | Hardware | Parallelism | Single stream | Aggregate | Context | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | **GLM-5.2** | NVFP4 | [1 RTX node, 8 GPUs](recipes/GLM-5.2-NVFP4/rtx-8) | TP8 | 91.1 tok/s | 1375 at c=256, peak | 212K | Validated |
-| | FP8 | [2 H200 nodes](recipes/GLM-5.2-FP8/h200-4-nodes2) | TP4 x PP2 | 13.0 tok/s | 5421 at c=640, peak | 128K | Validated |
+| | FP8 | [2 H200 nodes](recipes/GLM-5.2-FP8/h200-4-nodes2) | TP4 x PP2 | 12.9 tok/s | 5392 at c=512, peak | 626K | Validated |
 | | FP8 | [2 H200 nodes, SGLang](recipes/GLM-5.2-FP8/h200-4-nodes2-sglang) | TP8, no PP | never loaded weights | n/a | n/a | Blocked |
 | **GLM-4.6** | FP8 | [1 H200 node, 4 GPUs](recipes/GLM-4.6-FP8/h200-4) | TP4 | 19.1 tok/s | 8127 at c=1024, rising | 198K | Validated |
 | **Kimi-K2.7-Code** | INT4 | [1 RTX node, 8 GPUs](recipes/Kimi-K2.7-Code/rtx-8) | TP8 | 20.7 tok/s | 1839 at c=896, saturated | 128K | Validated |

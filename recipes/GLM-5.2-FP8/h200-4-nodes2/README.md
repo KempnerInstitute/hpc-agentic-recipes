@@ -1,13 +1,18 @@
 # GLM-5.2-FP8 on two H200 nodes
 
-Status: Validated - vLLM 0.25.1+cu129, protocol: slope(128,1152) swept at concurrency 1 through 1024
+Status: Validated - vLLM 0.25.1+cu129, protocol: slope(128,1152) at concurrency 1, 8, 32, 64, 128, 256, 512, 640, 768, 896 and 1024
 
-Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
+| | |
+| --- | --- |
+| Served name | `glm-5.2` |
+| Checkpoint | `GLM-5.2-FP8`, Hugging Face `zai-org/GLM-5.2-FP8` |
+| On disk | 704 GiB across 141 shards, FP8 e4m3, `GlmMoeDsaForCausalLM` |
+| Served precision | FP8 with dynamic activations, `weight_block_size` [128, 128] |
+| Context | 641664. The checkpoint declares 1048576, which does not fit; see Known limits |
+| Hardware | 2 H200 nodes, 8 GPUs, 143771 MiB each, TP4 inside a node and PP2 between over Ray |
+| Engine | vLLM 0.25.1+cu129, eager, no speculative decoding |
 
-## Configure once
-
-Create the API key. The endpoint refuses requests without it, and the key reaches the engine through
-the environment rather than as an argument, so it does not appear in `ps` output.
+## 1. Create the API key
 
 ```
 mkdir -p secrets
@@ -15,474 +20,205 @@ printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/GLM-5.2-FP8-h200-4-node
 chmod 600 secrets/GLM-5.2-FP8-h200-4-nodes2.key
 ```
 
-That key gates this recipe alone. When it is absent `secrets/vllm_api_key` is read instead, so a setup made
-before per-recipe keys keeps working. When neither exists but `secrets/` holds exactly one key, that one is
-used, which is how `bench.sh` authenticates without being told which recipe you mean.
+- `secrets/vllm_api_key` is read when this file is absent.
+- To rotate, replace the file and relaunch; the engine reads it once at launch.
 
-Nothing else is required. Cluster paths come from `common/defaults.sh`, which is tracked with working
-defaults, so a fresh clone runs as is. Optional overrides, either exported or set in
-`common/site.conf`:
+## 2. Build the environment
 
-| Variable | Default | Why you might change it |
-| --- | --- | --- |
-| `ACCOUNT` | unset | Your Slurm account, or pass `--account` at submit time |
-| `GLM52_HEAD`, `GLM52_WORKER` | unset | Two nodes you already hold, for the SSH path |
-| `MODELS_DIR` | shared repository path | Point at your own faster copy of the checkpoint |
-| `ENV_ROOT` | scratch | Where this recipe builds its environment |
-
-One constraint is specific to a two-node recipe: `ENV_ROOT` and `MODELS_DIR` must both resolve to the
-same content on both nodes. The Ray worker imports vLLM from `ENV_ROOT` and reads weights from
-`MODELS_DIR` itself, so a path that exists only on the head node fails after the cluster has already
-formed, which reads as an engine problem rather than a path problem.
-
-## Status
-
-Validated. The environment was built from `env/build.sh`, the endpoint was
-launched with `serve_ssh.sh` on two H200 nodes, 8 GPUs via Ray, and throughput was measured with `common/tools/bench.sh`
-across concurrency 1, 8, 32, 64, 128, 256, 512, 640, 768, 896 and 1024. Ready 16 minutes 23 seconds after launch. The endpoint was still answering after the sweep finished.
-
-Single stream and saturated throughput are different measurements and neither substitutes for
-the other. See Measured performance below for the full curve and the disclosure block.
-
-## What this is
-
-GLM-5.2, FP8 quantized: a 753B-parameter mixture-of-experts, 40B activated per token, reasoning and coding model that uses
-DeepSeek-style sparse attention for long context. It is a thinking model with native tool calling, and
-it exposes vLLM's Anthropic-compatible API, so Claude Code connects to it directly with no proxy. Its
-reason to exist in this repo is context length: this is a vLLM endpoint whose checkpoint reaches
-a million tokens.
-
-- Checkpoint directory: `GLM-5.2-FP8`
-- Hugging Face repo: `zai-org/GLM-5.2-FP8`, unverified, see below
-- Documented path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/GLM-5.2-FP8`
-
-The repo id is the one place on this page that is not sourced from a measurement or a file. The
-checkpoint was staged from a local path with no Hugging Face id recorded alongside it. `zai-org/GLM-5.2-FP8` is the id implied by the sibling checkpoints, since the FP8 build
-of GLM-4.6 in this repo is `zai-org/GLM-4.6-FP8` and the NVFP4 build of this same base model was
-quantized from `zai-org/GLM-5.2`, but it has not been confirmed against the Hub. Verify before relying
-on it for a download.
-
-Read from the checkpoint:
-
-| Property | Value |
-| --- | --- |
-| Architecture | `GlmMoeDsaForCausalLM`, `model_type` `glm_moe_dsa`, native to vLLM 0.25.1 |
-| On disk | about 756 GB across 141 shards, 704 GiB |
-| Layers | 78 |
-| Experts | 256 routed plus 1 shared, 8 routed per token, `moe_intermediate_size` 2048 |
-| Attention | 64 heads, `hidden_size` 6144, sparse indexer with `index_n_heads` 32, `index_head_dim` 128, `index_topk` 2048 |
-| Context | `max_position_embeddings` 1048576 |
-| Quantization | `quant_method` `fp8`, `fmt` `e4m3`, `weight_block_size` [128, 128], dynamic activations |
-| Speculative head | `num_nextn_predict_layers` 1, so an MTP head ships in the checkpoint |
-| License | MIT |
-
-The MTP head cannot be used in this configuration, and the reason is structural rather than a missing
-flag. See "Parallelism and quantization".
-
-The shared repository path works out of the box. Copying the checkpoint into your own scratch space loads
-faster, because scratch outperforms Lustre for this workload, and the directory names are identical in both
-locations so only `MODELS_DIR` changes. Scratch has a 90-day retention policy, so treat it as a fast
-cache and keep the shared repository as the permanent copy.
-
-## Hardware
-
-| Requirement | Value |
-| --- | --- |
-| GPU | H200, 4 per node, 143771 MiB each |
-| Nodes | 2, so 8 GPUs and about 1123 GiB of VRAM |
-| Parallelism | TP4 inside each node, PP2 between them, over Ray |
-| Interconnect | NVLink within a node, InfiniBand between nodes |
-| Partition | `kempner_h200` |
-| Per-GPU allocation limit | 16 CPUs, about 378 GiB host memory |
-| Maximum wall time | 2 days |
-
-All H200 nodes on this cluster share one hardware specification, so any two nodes in the partition
-work. About 756 GB of weights, 704 GiB, does not fit one node's four cards at 143771 MiB each, which is
-562 GiB, and that is what forces two nodes and therefore pipeline parallelism. `serve.sbatch` requests
-48 CPUs and 500 GB per node, both inside the per-GPU limits for four GPUs.
-
-The two nodes are not symmetric in what they hold. Each rank of the head stage loaded
-91.31 GiB of weights and had 38.25 GiB left for KV cache, while each rank of the worker stage loaded
-84.71 GiB and had 29.99 GiB, because pipeline parallelism splits layers between stages and the stages are
-not identical in weight footprint. That is expected, not a misconfiguration.
-
-## Environment build
-
-This recipe builds its own environment, shared with no other recipe. Roughly 13 GB, and it lands under
-`ENV_ROOT` on scratch rather than in the repo, because startup is dominated by page faulting the
-torch shared objects and stat-ing tens of thousands of small package files: measured on GPU nodes, the interval from
-process start to the first vLLM log line was about 14 minutes from Lustre and 58 seconds from scratch.
-A bare torch and vLLM import from scratch is 9.2 seconds, so most of that 58 seconds is engine
-startup rather than filesystem cost.
+Run on a compute node, not a login node. Build once: `ENV_ROOT` is shared scratch, so both nodes activate
+the same environment.
 
 ```
 bash recipes/GLM-5.2-FP8/h200-4-nodes2/env/build.sh
 ```
 
-That is the only supported build path, because the install needs uv flags a requirements file cannot
-express. Build it once, from a login node or either compute node: `ENV_ROOT` is shared scratch, so both
-nodes then activate the same environment. `ray[default]` is installed alongside vLLM, because this
-recipe spans two nodes through the Ray executor and `ray start` needs those extras. What else it does,
-and why:
+- About 13 GB under `ENV_ROOT`, default scratch. Set `ENV_ROOT` in `common/site.conf` to move it.
+- Installs the cu129 wheel. These nodes run driver 575, CUDA 12.9, and vLLM's default wheel is CUDA 13.
+- Installs `ray[default]` alongside vLLM, because this recipe spans two nodes through the Ray executor.
+- `ENV_ROOT` and `MODELS_DIR` must resolve to the same content on both nodes. The Ray worker imports vLLM
+  and reads weights itself, so a path that exists only on the head fails after the cluster has formed,
+  which reads as an engine fault rather than a path fault.
 
-<!-- issue:hopper-cu129-wheel begin -->
-**Hopper nodes need the cu129 wheel, not vLLM's default.** These nodes run NVIDIA driver 575
-(CUDA 12.9), which cannot run vLLM's default CUDA 13 PyPI wheel. The recipe installs the cu129
-release wheel from the vLLM GitHub release with `--torch-backend=cu129`.
-<!-- issue:hopper-cu129-wheel end -->
+## 3. Launch
 
-`build.sh` treats an existing directory as suspect rather than as success: it checks for the installed
-`vllm` dist-info and rebuilds anything less, because an interrupted install leaves a venv skeleton
-behind that would otherwise be served from silently.
-
-Scratch expires after 90 days, so this environment is disposable. Rebuild it with the same command, or
-`--force` to replace an existing one. Record the exact resolution in `env/requirements.lock` after a build, which is what makes a
-drifted rebuild visible.
-
-## Launch
-
-Slurm path, submitted from the repo root:
+Slurm, from the repo root. The batch script takes both nodes, starts a Ray head on the first and a worker
+on the second, then runs the engine on the head:
 
 ```
 sbatch --account=<your-account> recipes/GLM-5.2-FP8/h200-4-nodes2/serve.sbatch
-```
-
-The batch script allocates two nodes, reads each one's ib0 address, starts a Ray head on the first and a
-worker on the second, then runs the engine on the head. The endpoint is on the **first** allocated
-node:
-
-```
-squeue --me                       # NODELIST column, first name
+squeue --me                                  # NODELIST, the FIRST name serves
 tail -f glm52-fp8-<jobid>.log
 ```
 
-Direct path, for two nodes you already hold. Use the Slurm submission above unless you already have
-the nodes, or you are deploying an endpoint on behalf of others:
+Direct, on two nodes you already hold:
 
 ```
 bash recipes/GLM-5.2-FP8/h200-4-nodes2/serve_ssh.sh <head_node> <worker_node>
 ```
 
-That path prints the cluster's GPU count before it loads any weights. It should say 8. If it says 4 the
-worker did not join, and stopping there is much cheaper than discovering it 15 minutes into a weight
-load.
+| Stage | Measured |
+| --- | --- |
+| Launcher to serving, first time on a node pair | 13 min 49 s |
+| Launcher to serving, caches warm | 5 min 22 s |
+| Weight load, 141 shards across 8 ranks | 342 s worker stage, 373 s head stage |
 
-Submit from the repo root either way. Slurm stages the batch script into its own spool directory, so
-the script cannot locate the repo from its own path and resolves paths against the submit directory
-instead.
+- The launcher prints `cluster GPUs: 8.0` before loading any weights. If it says 4, the worker did not
+  join; stop there rather than discovering it minutes into a weight load.
+- The endpoint is on the head node only. The worker holds half the layers and refuses HTTP.
+- On the direct path the server log is node-local at `/tmp/$USER/vllm/`. Under Slurm it lands in the submit
+  directory.
 
-`ray_head.sh` and `ray_worker.sh` in this directory are the Ray bring-up, and both launch paths call
-them rather than duplicating the commands. They take their GPU count from `GPUS_PER_NODE`, then
-`SLURM_GPUS_ON_NODE`, then 4, so a node with a different GPU count is not mis-advertised to Ray.
-
-## Verify
+## 4. Verify
 
 ```
 KEY=$(cat secrets/GLM-5.2-FP8-h200-4-nodes2.key 2>/dev/null || cat secrets/vllm_api_key)
-NODE=<the head node serving it>
+NODE=<the head node>
 
 curl -s -H "Authorization: Bearer $KEY" http://$NODE:8000/v1/models
 
-curl -s -o /dev/null -w '%{http_code}\n' http://$NODE:8000/v1/models          # must print 401
+curl -s -o /dev/null -w '%{http_code}\n' http://$NODE:8000/v1/models
 
 curl -s -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
   http://$NODE:8000/v1/chat/completions \
   -d '{"model":"glm-5.2","messages":[{"role":"user","content":"What is 2+2? Answer briefly."}],"max_tokens":400}'
 ```
 
-A keyless request returning 401 is the expected, correct behavior, and it was confirmed on both
-runs.
+| Command | Expected |
+| --- | --- |
+| `/v1/models` with the key | `"id": "glm-5.2"`, `"max_model_len": 641664` |
+| `/v1/models` without a key | `401` |
+| chat completion | `content` holds the answer, `finish_reason: stop` |
 
-<!-- issue:thinking-model-max-tokens begin -->
-**Give thinking models room, or `content` comes back empty.** This model emits reasoning before its
-answer, and vLLM returns that in a separate `reasoning` field, not `reasoning_content`. With a small
-budget the whole allowance is spent reasoning, `finish_reason` is `length`, and `content` is empty,
-which looks like a broken endpoint but is not. Use at least 400 output tokens for a smoke test, and 800
-or more for a model that reasons at length. If `content` is empty, raise the budget before suspecting
-the endpoint.
-<!-- issue:thinking-model-max-tokens end -->
+- 400 output tokens is enough: three smoke tests used 86 to 88 tokens. Reasoning arrives in a separate
+  `reasoning` field, so a smaller budget can end with empty `content`.
 
-## Connect a client
+## 5. Connect a client
 
 ```
-export NODE=<the head node serving it>
+export NODE=<the head node>
 source recipes/GLM-5.2-FP8/h200-4-nodes2/client.env
 claude
 ```
 
-<!-- issue:anthropic-auth-token begin -->
-**Use `ANTHROPIC_AUTH_TOKEN`, never `ANTHROPIC_API_KEY`.** Both engines accept only
-`Authorization: Bearer <key>`. Setting `ANTHROPIC_API_KEY` makes Claude Code send an `x-api-key`
-header instead, which the engine ignores, and every request returns HTTP 401. Also set
-`ANTHROPIC_SMALL_FAST_MODEL` to this same served model, or the client reaches for a hosted Haiku that
-this endpoint does not serve.
-<!-- issue:anthropic-auth-token end -->
+- `client.env` sets `CLAUDE_CODE_MAX_CONTEXT_TOKENS=641664`. Claude Code assumes and enforces a 200k window
+  for a served name it does not recognize, far below what this endpoint serves.
+- Use `ANTHROPIC_AUTH_TOKEN`. `ANTHROPIC_API_KEY` sends `x-api-key` and returns 401.
+- `client.env` also sets `ANTHROPIC_SMALL_FAST_MODEL`; without it the client reaches for a hosted Haiku.
+- OpenAI clients such as Codex: base URL `http://<head-node>:8000/v1`, same key, model `glm-5.2`. See
+  [docs/clients.md](../../../docs/clients.md).
 
-Point the client at the head node. The worker node runs Ray and holds half the layers, but it serves no
-HTTP endpoint and will refuse the connection.
+## 6. Stop it
 
-For an OpenAI-compatible client instead (Cline, Aider, Continue, OpenHands), use base URL
-`http://<head-node>:8000/v1`, the same key, and model name `glm-5.2`.
+```
+scancel <jobid>                                        # Slurm path, owns both nodes
+bash common/tools/stop.sh <head_node> <worker_node>    # direct path, name both
+```
+
+- The direct path has no scheduler to clean up, so both nodes must be named. `stop.sh` stops Ray as well as
+  the server.
+- Do not run `ssh <node> ray stop` by hand. `ray` lives in the recipe venv and is not on `PATH` in a
+  non-interactive shell, so it silently does nothing.
+- Both nodes must be clean before a relaunch. A surviving Ray cluster is the most common cause of a launch
+  that never becomes ready, and it fails on resources rather than memory, which reads like a different
+  problem. Ray also holds host RAM while showing no GPU memory.
 
 ## Tunable inputs
-
-Every variable this recipe honors, with its default and effect.
 
 | Variable | Default | Effect |
 | --- | --- | --- |
 | `MODEL` | `$MODELS_DIR/GLM-5.2-FP8` | Serve a different copy of the checkpoint |
 | `API_PORT` | 8000 | Listening port |
-| `MAX_MODEL_LEN` | 131072 | Context window; the checkpoint supports 1048576, at a KV cache cost |
+| `MAX_MODEL_LEN` | 641664 | Context window, the ceiling this hardware allows |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
-| `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is `~/.cache/vllm`, which is a small quota here |
 | `TP` | 4 | Tensor parallel size; 4 is one node's GPU count and must stay inside a node |
 | `PP` | 2 | Pipeline parallel size; 2 is the node count |
-| `PERF` | unset | Retry CUDA graph capture instead of eager; currently crashes |
+| `PERF` | unset | Retry CUDA graph capture instead of eager; crashes on 0.25.1 |
 | `CUDAGRAPH_MODE` | `NONE` | Graph mode passed through when `PERF` is set |
-| `EXTRA_ARGS` | unset | Extra `vllm serve` flags, for experiments |
+| `EXTRA_ARGS` | unset | Extra flags appended to the `vllm serve` command line |
 | `TOOL_PARSER` | `glm45` | Tool call parser |
 | `REASONING_PARSER` | `glm45` | Reasoning parser |
 | `RAY_PORT` | 6379 | Ray head port |
 | `RAY_HEAD_IP` | unset | Head address, when calling `serve.sh` directly |
 | `GPUS_PER_NODE` | `SLURM_GPUS_ON_NODE`, then 4 | GPUs each Ray node advertises |
-| `RAY_BLOCK` | unset in the SSH path, 1 under Slurm | Keep `ray start` in the foreground |
-| `GLM52_HEAD`, `GLM52_WORKER` | unset | Default nodes for the SSH path |
+| `RAY_BLOCK` | unset on the SSH path, 1 under Slurm | Keep `ray start` in the foreground |
+| `TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC` | 3600 | Raised from 480 so a storage stall that resolves is survivable |
+| `NCCL_DEBUG` | `WARN` | NCCL log level; raise to `INFO` to debug a cross-node hang |
+| `VLLM_VERSION` | 0.25.1 | Release wheel version `env/build.sh` installs |
 | `LOG_DIR` | `/tmp/$USER/vllm` | Where the SSH path writes the server log |
 | `VENV_DIR` | under `ENV_ROOT` | Use an environment built elsewhere |
+| `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is a small quota here |
+| `KEY_NAME`, `KEY_FILE`, `VLLM_API_KEY` | this recipe's key | Which key `common/lib/api_key.sh` resolves; an exported `VLLM_API_KEY` wins |
+| `NODE`, `GLM52_HEAD`, `GLM52_WORKER` | unset | Nodes for the SSH path; pass them as arguments instead |
+| `ACCOUNT` | unset | Read by `common/defaults.sh`; `serve.sbatch` has no account directive, so pass `--account` at submit time |
+| `MODELS_DIR`, `ENV_ROOT` | `common/defaults.sh` | Override there or in `common/site.conf` |
 
-There is deliberately no `NO_MTP` switch, unlike the single-node GLM-4.6 recipe. The earlier
-launcher forwarded one, but nothing consumed it, because speculative decoding is unavailable here for
-the reason in the next section but one.
+## Benchmarking
 
-## Web search
+Conditions:
 
-<!-- issue:anthropic-hosted-tools-400 begin -->
-**Anthropic's hosted tools do not work against a local endpoint.** Server-side tools such as
-`web_search_20250305`, `web_fetch_20250910` and `code_execution_20250522` are executed by Anthropic's own
-API rather than by the model, so no endpoint here can run them. What you see differs by engine, measured
-on both.
-
-vLLM rejects all three with HTTP 400, because their definitions carry no `input_schema`:
-
-```
-1 validation error:
-  {'type': 'missing', 'loc': ('body', 'tools', 0, 'input_schema'), 'msg': 'Field required',
-   'input': {'type': 'web_search_20250305', 'name': 'web_search'}}
-```
-
-SGLang is harder to diagnose. It accepts `web_search_20250305` with HTTP 200 and drops the tool, logging
-that it has no native support, so the model answers without searching and nothing in the reply says why.
-It rejects `web_fetch_20250910` and `code_execution_20250522` with HTTP 400.
-
-Client-side tools (file edits, shell, and anything you define) work normally on both. For web access,
-install the repo's keyless search tool and skill, from the repo root:
-
-```
-mkdir -p ~/.local/bin ~/.claude/skills
-ln -sf "$PWD/common/tools/search.sh" ~/.local/bin/search.sh
-cp -r common/skills/local-search ~/.claude/skills/
-```
-
-Check it with `search.sh wiki "tensor parallelism" 1`, and add `~/.local/bin` to your `PATH` if the
-command is not found. The model then searches through `search.sh` (web, arxiv, crossref, pubmed,
-openalex, wiki, fetch) instead of the hosted tool. Full details in
-[docs/web-search.md](../../docs/web-search.md).
-<!-- issue:anthropic-hosted-tools-400 end -->
-
-## Measured performance
-
-| Configuration | Aggregate rate | Per stream | Latency |
-| --- | --- | --- | --- |
-| Single stream, concurrency 1 | 13.0 tok/s | 13.0 tok/s | TTFT median 235 ms, n=3 spanning 12.9 to 13.0 |
-| Concurrency 8 | 101.0 tok/s | 12.6 tok/s | TTFT median 239 ms, p90 295 ms, n=3 spanning 100.9 to 101.5 |
-| Concurrency 32 | 393.1 tok/s | 12.3 tok/s | TTFT median 239 ms, p90 313 ms, n=3 spanning 393.0 to 396.9 |
-| Concurrency 64 | 786.3 tok/s | 12.3 tok/s | TTFT median 384 ms, p90 1050 ms, n=3 spanning 785.4 to 797.8 |
-| Concurrency 128 | 1575.3 tok/s | 12.3 tok/s | TTFT median 407 ms, p90 561 ms, n=3 spanning 1565.5 to 1591.0 |
-| Concurrency 256 | 3066.0 tok/s | 12.0 tok/s | TTFT median 559 ms, p90 794 ms, n=3 spanning 3028.5 to 3079.8 |
-| Concurrency 512 | 5404.6 tok/s | 10.6 tok/s | TTFT median 820 ms, p90 1252 ms, n=3 spanning 5391.0 to 5475.6 |
-| Concurrency 640 (peak) | 5420.7 tok/s | 8.5 tok/s | TTFT median 938 ms, p90 1522 ms, n=3 spanning 5259.4 to 5425.6 |
-| Concurrency 768 | 5034.0 tok/s | 6.6 tok/s | TTFT median 1189 ms, p90 1753 ms, n=3 spanning 4995.6 to 5034.5 |
-| Concurrency 896 | 4942.5 tok/s | 5.5 tok/s | TTFT median 1222 ms, p90 1920 ms, n=3 spanning 4901.8 to 4953.4 |
-| Concurrency 1024 | 5049.3 tok/s | 4.9 tok/s | TTFT median 1325 ms, p90 2092 ms, n=3 spanning 5032.8 to 5056.3 |
-
-Measured with `common/tools/bench.sh`, endpoint ready 16m 23s after launch. Full disclosure, without which a tokens
-per second figure cannot be compared against anything:
-
-| Parameter | Value |
+| | |
 | --- | --- |
-| ISL, input tokens | 21 |
-| OSL, output tokens | 1152, as the slope between 128 and 1152 |
-| Counted | output tokens only, never input plus output |
-| Concurrency levels | 1,8,32,64,128,256,512,640,768,896,1024 |
 | Protocol | slope(128,1152), 3 repeats per level, median reported |
-| `max_num_seqs` | engine default, 1024 on this hardware |
-| Hardware | two H200 nodes, 8 GPUs |
+| Input length | ISL 21 tokens. Rates at a long input are not measured; use `--prompt-tokens` |
+| Output length | OSL 1152 tokens, output only, `ignore_eos` |
+| Context | `MAX_MODEL_LEN=641664` |
+| Allocation for the measurement | 2 nodes, 4 GPUs each, 64 cores and 1440 GB per node, `kempner_eng` |
+| Sequence cap | `max_num_seqs` 1024, the engine default, which equals the top sweep level |
+| Preemption | 3,500 across the sweep |
+| Endpoint | idle, and the benchmark client ran on a separate CPU-only node |
+| Power | 700 W enforced, the card default, so not capped. Median 352 and 367 W on the two nodes, peaks of 507 and 513 W, nothing at or above 690 |
 
-Quote 13.0 tok/s for interactive coding, where one person waits on one
-response. Quote 5420.7 tok/s at concurrency 640 for a shared endpoint under load.
-The two measure different things and neither substitutes for the other.
+Results:
 
-Throughput **peaks at concurrency 640** and falls to 5049 tok/s by concurrency 1024, so 5420.7 tok/s is a
-measured ceiling for this recipe rather than the edge of the sweep.
+| Concurrency | Aggregate | Per stream | Spread over 3 runs | TTFT median |
+| --- | --- | --- | --- | --- |
+| 1 | 12.9 tok/s | 12.9 tok/s | 12.9 to 12.9 | 236 ms |
+| 8 | 100.9 tok/s | 12.6 tok/s | 99.6 to 101.6 | 240 ms |
+| 32 | 396.7 tok/s | 12.4 tok/s | 392.1 to 396.8 | 242 ms |
+| 64 | 789.4 tok/s | 12.3 tok/s | 788.6 to 790.9 | 429 ms |
+| 128 | 1572.1 tok/s | 12.3 tok/s | 1566.6 to 1575.8 | 414 ms |
+| 256 | 3066.3 tok/s | 12.0 tok/s | 3043.2 to 3097.8 | 596 ms |
+| 512 | 5392.0 tok/s | 10.5 tok/s | 5379.9 to 5392.7 | 843 ms |
+| 640 | 5118.7 tok/s | 8.0 tok/s | 5116.9 to 5123.6 | 980 ms |
+| 768 | 4853.2 tok/s | 6.3 tok/s | 4852.5 to 4879.0 | 1110 ms |
+| 896 | 4669.6 tok/s | 5.2 tok/s | 4613.8 to 4862.4 | 1257 ms |
+| 1024 | 5162.8 tok/s | 5.0 tok/s | 5118.2 to 5168.8 | 1350 ms |
 
-Concurrency 512 was measured in both runs, at 5404.6 and 5416.6 tok/s, a +0.2 percent
-difference. That is the check that the two halves of this curve are comparable.
+| | |
+| --- | --- |
+| Label | peak. Throughput turns over at 512 and varies 13.4 percent across 512 to 1024, well past the 4 percent that would make it saturated. The curve is not monotonic above the peak: 1024 recovers to 5162.8, above 768 and 896 |
+| Quote for one caller | 12.9 tok/s |
+| Quote for a shared endpoint | 5392.0 tok/s at concurrency 512 |
+| KV cache | 659,584 tokens, 1.03 full-length requests at once. Split unevenly by stage: the head rank has 36.59 GiB and the worker rank less, and the worker is what binds |
+| Cost of the context | measured against 131072 on the same nodes: pool falls 5.5 percent from 698,176, peak aggregate falls 0.6 percent from 5422.1, and the peak moves from concurrency 640 to 512. At 640 itself the larger window measures 5.6 percent lower |
+| Long prompt | 612,672 tokens in 74 s cold; 3.5 s when the prefix is already cached |
 
-Scheduler counters over the extended levels: KV cache usage reached 100 percent, the running
-batch reached 1024 requests, and there were no preemptions at any level.
-
-The input sequence here is short, which is the best case for decode. Measure with
-`--prompt-tokens` at your working context before quoting a number for long-context work.
-
-## Parallelism and quantization
-
-The shape is TP4 inside each node and PP2 between the two nodes, over Ray. It is the only shape that
-works: 756 GB of weights needs both nodes, tensor parallelism cannot cross the node boundary without
-hanging, so what crosses is pipeline parallelism.
-
-TP4 satisfies the FP8 block constraint. The weights are block quantized with `weight_block_size`
-[128, 128], so every tensor-parallel shard of a quantized dimension must be a multiple of 128, and
-`moe_intermediate_size` is 2048:
-
-| Tensor parallel size | Shard of 2048 | Multiple of 128 | Verdict |
-| --- | --- | --- | --- |
-| 4 | 512 | yes, 4 x 128 | legal, and what this recipe uses |
-| 8 | 256 | yes, 2 x 128 | legal on paper, but cross-node TP hangs at NCCL init |
-
-So divisibility is not what rules out TP8 across both nodes; the fabric is. That distinction matters
-because the SGLang variant of this recipe does attempt TP8 across two nodes, and its problem is
-elsewhere entirely.
-
-FP8 with dynamic activations is what makes 753B parameters fit eight H200 GPUs at all, at
-`--gpu-memory-utilization 0.90`. `--disable-custom-all-reduce` is passed because vLLM's custom
-all-reduce kernel is a single-node optimization and this engine spans two.
-
-**The checkpoint's MTP head is dead weight in this configuration.** `num_nextn_predict_layers` is 1, so
-a speculative head ships with the weights, and vLLM 0.25.1 can drive it: the sibling GLM-4.6 recipe
-gets its decode speedup exactly that way. It is unusable here because a speculative config and
-pipeline parallelism are mutually exclusive in vLLM, and pipeline parallelism is not optional at this
-model size on this hardware. The one engine that can use the head at TP8 across two nodes is SGLang,
-which is why `recipes/GLM-5.2-FP8/h200-4-nodes2-sglang` exists as a documented negative result rather
-than being deleted.
-
-## Gotchas
-
-<!-- issue:h200-cudagraph-crash begin -->
-**CUDA graphs and torch.compile crash on H200 for this model, so eager is the default.** Graph capture
-hits an illegal memory access on vLLM 0.25.1, so `serve.sh` passes `--enforce-eager`. Set `PERF=1` to
-retry the compile path after a vLLM upgrade.
-<!-- issue:h200-cudagraph-crash end -->
-
-<!-- issue:deepgemm-h200-crash begin -->
-**Leave `VLLM_USE_DEEP_GEMM` at 0 on H200.** The DeepGEMM MoE path takes an illegal memory access on
-GLM-5.2's sparse attention, and forcing `VLLM_USE_DEEP_GEMM=1` on H200 independently reproduced the
-same crash for Qwen3-Coder-480B-FP8. It is load-bearing for more than one model on this hardware, so
-do not flip it without re-testing the model you are serving.
-<!-- issue:deepgemm-h200-crash end -->
-
-This model is where that DeepGEMM crash was first diagnosed, which is why `env/env.sh` sets
-`VLLM_USE_DEEP_GEMM=0` with a verified provenance note rather than an inherited one.
-
-<!-- issue:cross-node-tp-hangs begin -->
-**Keep tensor parallelism inside a node and use pipeline parallelism across nodes.** Pure tensor
-parallelism spanning two nodes hangs at NCCL initialization. The working shape is TP within each node,
-where all-reduce uses NVLink, and PP between nodes.
-<!-- issue:cross-node-tp-hangs end -->
-
-<!-- issue:pp-forbids-spec-decode begin -->
-**Pipeline parallelism disables speculative decoding.** vLLM rejects a speculative config when
-pipeline parallelism is in use, so no MTP or draft-model speedup is available in any recipe that needs
-PP to span nodes, even when the checkpoint ships an MTP head. This is why an SGLang recipe exists for
-GLM-5.2: SGLang can run TP8 across two nodes with EAGLE speculative decoding, where vLLM would need PP
-and therefore lose it. The guard is not visible in vLLM 0.25.1's config source, so treat it as behavior
-for this version rather than a documented API contract, and re-check after an engine upgrade.
-<!-- issue:pp-forbids-spec-decode end -->
-
-<!-- issue:jit-cache-node-local begin -->
-**JIT caches must be node-local.** Concurrent multi-node compiles against a shared NFS home hit stale
-file handles. `env/env.sh` points `TRITON_CACHE_DIR` and `TORCHINDUCTOR_CACHE_DIR` at
-`/tmp/$USER`, which also means the first launch on a fresh node pays the compile cost again.
-<!-- issue:jit-cache-node-local end -->
-
-<!-- issue:lustre-watchdog begin -->
-**A storage stall can kill the endpoint even after the storage recovers.** PyTorch kills the process
-when the NCCL watchdog thread stops sending heartbeats, on the assumption that a collective hung. A
-stalled network filesystem freezes every rank the same way, so at the 480 second default a transient
-storage outage takes the endpoint down permanently rather than pausing it. The signature is every rank
-reporting `Last enqueued NCCL work: -1`, meaning no collective was ever in flight, so the process was
-frozen rather than genuinely hung on communication. `env/env.sh` sets
-`TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC=3600` so a stall that resolves within an hour is survivable.
-<!-- issue:lustre-watchdog end -->
-
-<!-- issue:engine-ready-timeout begin -->
-**Startup exceeds vLLM's default readiness timeout.** Weight load plus torch.compile plus CUDA graph
-capture routinely takes longer than the 600 second default, so `env/env.sh` sets
-`VLLM_ENGINE_READY_TIMEOUT_S=3600`. A first launch that looks hung is usually still loading; check
-the log before killing it.
-<!-- issue:engine-ready-timeout end -->
-
-<!-- issue:node-local-logs begin -->
-**Logs are written to node-local `/tmp`, not to the repo.** Every rank writes stderr for the life of
-the endpoint, so a log on a network filesystem puts a blocking write on the critical path. During a
-filesystem stall that write hangs, which freezes the server. `LOG_DIR` defaults to
-`/tmp/$USER/vllm`, so read logs over SSH on the node that runs the server.
-<!-- issue:node-local-logs end -->
-
-**A Ray worker can die under you, and the head log will not say why.** The longest recorded run of this
-endpoint served requests intermittently for about 21 hours and then ended with
-`RayWorkerProc rank=[1] died unexpectedly, shutting down executor`, followed by
-`RuntimeError: Executor failed`. Rank 1 is the second pipeline stage, on the worker node. The head's log
-records the death and no cause, because the cause was on the other node, and Ray's own worker logs under
-`/tmp/ray` on the worker were not captured. If this happens to you, look there before theorizing:
-`ssh <worker_node> 'ls -t /tmp/ray/session_latest/logs | head'`. A single-node recipe cannot fail this
-way, which is why it is worth saying here.
-
-**Both nodes need a clean slate before a relaunch.** A leftover Ray cluster on either node is the most
-common cause of a second launch that never becomes ready, and it looks nothing like a Ray problem from
-the client side: the engine simply waits for GPUs that a stale Ray head believes are already in use.
-
-## Stop the endpoint
-
-For a Slurm job, `scancel <jobid>` is all of it: the job requests both nodes and starts Ray through
-`srun` inside that allocation, so Slurm's cgroups own every process on both nodes and remove them.
-
-The SSH path has no such owner, so name both nodes explicitly:
+Reproduce:
 
 ```
-bash common/tools/stop.sh <head_node> <worker_node>
+KEY_NAME=GLM-5.2-FP8-h200-4-nodes2 bash common/tools/bench.sh --host <head_node> --model glm-5.2
+KEY_NAME=GLM-5.2-FP8-h200-4-nodes2 bash common/tools/bench.sh --host <head_node> --model glm-5.2 \
+  --sweep 1,8,32,64,128,256,512,640,768,896,1024
 ```
 
-That stops Ray as well as the server. Do not reach for `ssh <node> ray stop` by hand: `ray` lives in the
-recipe venv and is not on `PATH` in a non-interactive shell, so it silently does nothing. `stop.sh` finds
-the venv from a running process instead, then confirms both the GPUs and the host are clear. Ray matters
-here even when nvidia-smi looks clean, because its GCS server and dashboard workers hold no GPU memory
-while still occupying several GB of host RAM.
+- `KEY_NAME` is required once `secrets/` holds more than one key, otherwise `bench.sh` resolves the shared
+  key and every request returns 401.
 
-`stop.sh` kills the server processes and waits for GPU memory to be released. Confirm with
-`ssh <node> nvidia-smi --query-gpu=memory.used --format=csv,noheader`, which should read 0 MiB on all
-four GPUs of both nodes before you relaunch, or the next start will fail on memory. A surviving Ray
-cluster is the other common cause of a failed relaunch, and it fails on resources rather than on memory,
-which reads like a different problem entirely. `stop.sh` clears both.
+## Known limits
 
-## Expected startup time
-
-| Stage | Warm nodes | Cold nodes |
-| --- | --- | --- |
-| Environment build, one time | skipped | 5 to 15 min |
-| Ray head plus worker bring-up | seconds | seconds |
-| Weight load, 141 shards across 8 ranks | 39 s | 14 min 23 s |
-| Engine init: profile, KV cache, warmup | 109 s | 84 s |
-| Total, vLLM banner to serving | 5 min 5 s | 19 min 36 s |
-
-The table starts at the vLLM banner. The validated run reached serving 16 minutes 23 seconds after the
-launcher was invoked; the extra time is Ray bring-up and the Python import of torch and vLLM, before
-vLLM logs anything.
-
-Both columns are measured on two different node pairs, with the checkpoint read from
-scratch in both cases. The difference is page cache: the fast pair had already loaded this
-checkpoint, the freshly allocated pair had not. Reading from the Lustre repository path instead is slower
-again.
-
-Nothing in this window looks like progress if you only watch the port, so watch the log. A first launch
-that appears hung is almost always still loading weights, and `VLLM_ENGINE_READY_TIMEOUT_S=3600` in
-`env/env.sh` exists precisely because the cold case exceeds vLLM's 600 second default.
+- The checkpoint declares 1048576 and the engine refuses it: one request that long needs 45.42 GiB of KV
+  against 26.33 available on the binding stage. vLLM's first estimate, 798528, is computed on the head stage
+  and is also refused; the fixed point is 641664. Context shrinks the pool as it grows, because the
+  sparse-attention workspace scales with the declared window.
+- No speculative decoding. The checkpoint ships an MTP head, `num_nextn_predict_layers` 1, but vLLM rejects
+  a speculative config whenever pipeline parallelism is active, and 704 GiB of weights needs two nodes.
+  That is why `h200-4-nodes2-sglang` exists as a documented negative result.
+- Keep tensor parallelism inside a node. TP8 across two nodes is legal by the FP8 block constraint, since
+  `moe_intermediate_size` 2048 shards to 256, but it hangs at NCCL initialization.
+- Eager only. CUDA graph capture takes an illegal memory access on vLLM 0.25.1, so `serve.sh` passes
+  `--enforce-eager`. Leave `VLLM_USE_DEEP_GEMM` at 0, which `env/env.sh` sets; this model is where that
+  crash was first diagnosed.
+- A Ray worker can die and the head log will not say why. One run served intermittently for about 21 hours
+  and ended with `RayWorkerProc rank=[1] died unexpectedly`. Rank 1 is the worker stage, so look at
+  `ssh <worker_node> 'ls -t /tmp/ray/session_latest/logs | head'` before theorizing.
+- Anthropic's hosted tools return HTTP 400. Use [docs/web-search.md](../../../docs/web-search.md).

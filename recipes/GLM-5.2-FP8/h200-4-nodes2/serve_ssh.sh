@@ -1,12 +1,6 @@
 #!/usr/bin/env bash
-# Bring up GLM-5.2-FP8 over SSH on two H200 nodes you already hold. Secondary path: prefer
-# serve.sbatch.
+# Bring up GLM-5.2-FP8 over SSH on two nodes you already hold.
 #   bash recipes/GLM-5.2-FP8/h200-4-nodes2/serve_ssh.sh <head_node> <worker_node>
-# The endpoint runs on <head_node>. Both nodes must see the same repo checkout and the same environment
-# path, since the Ray workers import vLLM from it.
-#
-# No hostname is hardcoded anywhere: the node names are arguments, and each node's ib0 address is read
-# from the node itself, because that is the interface env/env.sh pins the collectives to.
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/../../../common/defaults.sh"
@@ -28,8 +22,6 @@ echo "head=$HEAD ($HEAD_IP)  worker=$WORKER ($WORKER_IP)"
 
 ssh -o BatchMode=yes "$HEAD" "bash '$S/ray_head.sh' '$HEAD_IP' '$RAY_PORT'"
 ssh -o BatchMode=yes "$WORKER" "bash '$S/ray_worker.sh' '$HEAD_IP' '$RAY_PORT' '$WORKER_IP'"
-# Confirm the cluster really has 8 GPUs before loading 756 GB of weights. A worker that failed to join
-# otherwise shows up much later as an engine that waits for resources it will never get.
 ssh -o BatchMode=yes "$HEAD" "source '$S/env/env.sh'; python -c 'import ray; ray.init(address=\"auto\"); print(\"cluster GPUs:\", ray.cluster_resources().get(\"GPU\"))'"
 
 echo "launching glm-5.2 on $HEAD:${API_PORT}"

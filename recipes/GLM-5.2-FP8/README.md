@@ -15,12 +15,16 @@ is the slowest configuration in this repo.
 
 | Variant | Engine | Shape | Single stream | Aggregate | Status |
 | --- | --- | --- | --- | --- | --- |
-| [`h200-4-nodes2`](h200-4-nodes2/README.md) | vLLM | 2 H200 nodes, 4 GPUs each, TP4 x PP2 | 13.0 tok/s | 5421 at c=640, peak | Validated |
+| [`h200-4-nodes2`](h200-4-nodes2/README.md) | vLLM | 2 H200 nodes, 4 GPUs each, TP4 x PP2 | 12.9 tok/s | 5392 at c=512, peak | Validated |
 | [`h200-4-nodes2-sglang`](h200-4-nodes2-sglang/README.md) | SGLang | 2 H200 nodes, TP8, no PP, EAGLE | never measured | n/a | Blocked |
 
 Use the vLLM variant. The SGLang variant is documentation only: it has never successfully loaded
 weights, and it is kept because it is the one configuration that could use this checkpoint's MTP
 speculative head, which vLLM cannot reach here.
+
+The checkpoint declares a 1048576 context. It does not fit: one request that long needs 45.42 GiB of
+KV against 26.33 available on the binding pipeline stage. The vLLM recipe serves 641664, which is the
+fixed point of the engine's own estimate, from a 659,584-token pool.
 
 There is no single-node H200 variant, and there cannot be one: 756 GB of weights does not fit a 4-GPU
 node, which holds 562 GiB. If you want GLM-5.2 on one node, use the separately quantized NVFP4

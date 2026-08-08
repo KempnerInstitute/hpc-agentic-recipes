@@ -8,15 +8,6 @@
 #SBATCH --mem=500G
 #SBATCH --time=1-00:00:00
 #SBATCH --output=%x-%j.log
-#
-# GLM-5.2-FP8 across two H200 nodes: Ray, TP4 inside each node, PP2 between them.
-#
-# Submit from the repo root, and pass your account:
-#   sbatch --account=<acct> recipes/GLM-5.2-FP8/h200-4-nodes2/serve.sbatch
-#
-# Slurm stages this script into its spool directory, so $0 does not point into the repo and the path
-# below is resolved against the submit directory instead. The log lands in the submit directory.
-# The endpoint runs on the FIRST allocated node; find it with `squeue --me`.
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 R=recipes/GLM-5.2-FP8/h200-4-nodes2
@@ -25,17 +16,12 @@ RAY_PORT="${RAY_PORT:-6379}"
 mapfile -t nodes < <(scontrol show hostnames "$SLURM_JOB_NODELIST")
 HEAD="${nodes[0]}"
 WORKER="${nodes[1]}"
-# Ray needs a routable address rather than a hostname for both ranks, and it must be the interface the
-# collectives use: env/env.sh pins NCCL and Gloo to ib0, so the Ray addresses are the ib0 addresses.
 ipof () { srun --nodes=1 --ntasks=1 -w "$1" --overlap bash -c 'ip -br -4 addr show ib0 | awk "{print \$3}" | cut -d/ -f1'; }
 HEAD_IP="$(ipof "$HEAD")"
 WORKER_IP="$(ipof "$WORKER")"
 echo "head=$HEAD ($HEAD_IP)  worker=$WORKER ($WORKER_IP)"
 echo "serving glm-5.2: http://$HEAD:${API_PORT:-8000}/v1"
 
-# RAY_BLOCK keeps each ray start in the foreground so Slurm does not tear its step down while vLLM is
-# using the cluster. The sleeps let the head bind its port before the worker dials in, and let the
-# worker register before the engine asks Ray for 8 GPUs.
 srun --export=ALL,RAY_BLOCK=1 --nodes=1 --ntasks=1 -w "$HEAD" --overlap bash "$R/ray_head.sh" "$HEAD_IP" "$RAY_PORT" &
 sleep 12
 srun --export=ALL,RAY_BLOCK=1 --nodes=1 --ntasks=1 -w "$WORKER" --overlap bash "$R/ray_worker.sh" "$HEAD_IP" "$RAY_PORT" "$WORKER_IP" &
