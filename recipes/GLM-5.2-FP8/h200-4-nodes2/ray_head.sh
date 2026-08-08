@@ -1,12 +1,5 @@
 #!/usr/bin/env bash
-# Start the Ray head on this node, for GLM-5.2-FP8 across two H200 nodes.
-#   bash recipes/GLM-5.2-FP8/h200-4-nodes2/ray_head.sh <head_ip> [ray_port]
-# Set RAY_BLOCK=1 to stay in the foreground, which is what serve.sbatch needs so Slurm keeps the step
-# alive. Leave it unset for the SSH path, where ray start daemonizes and the shell returns.
-#
-# The GPU count comes from the allocation rather than a hardcoded value, so a node with a different
-# GPU count is neither under- nor over-subscribed; 4 is the H200 default. Environment settings come
-# from this recipe's own env/env.sh.
+# Start the Ray head for the two-node GLM-5.2-FP8 recipe.
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/env/env.sh"
