@@ -11,7 +11,7 @@ run natively. This is the fastest large model in this repo; the small Gemma mode
 
 | Variant | Shape | Single stream | Aggregate |
 | --- | --- | --- | --- |
-| [`rtx-8`](rtx-8/README.md) | 1 RTX PRO 6000 node, 8 GPUs, TP8 | 93.4 tok/s | 1389 at c=256, peak |
+| [`rtx-8`](rtx-8/README.md) | 1 RTX PRO 6000 node, 8 GPUs, TP8 | 91.1 tok/s | 1375 at c=256, peak |
 
 There is no Hopper variant of this checkpoint. NVFP4 execution needs Blackwell; on H200 it would fall
 back to emulation. The FP8 build of the same base model is a separate checkpoint with its own recipes.
@@ -27,3 +27,7 @@ back to emulation. The FP8 build of the same base model is a separate checkpoint
 
 Quantization is 4-bit weights and 4-bit input activations at group size 16, with the embeddings,
 `lm_head`, the first three layers and the last left unquantized.
+
+The checkpoint declares a 1048576 context, which does not fit one node: a single request that long
+needs 53.45 GiB of KV against 11.08 available. The engine's own ceiling is 217344, which the recipe
+serves, giving 1.61 full-length requests from a 349,888-token pool.

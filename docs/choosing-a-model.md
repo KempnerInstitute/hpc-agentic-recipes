@@ -8,7 +8,7 @@ one you want for hard agentic work.
 **Best default for interactive coding on one GPU:** Gemma-4-26B-A4B. It is a mixture of experts with 4B
 active parameters, so it is fast and cheap to schedule, and one GPU means the shortest queue wait.
 
-**Fastest large model:** GLM-5.2 in NVFP4 on one RTX node, at 93.4 tok/s single stream, helped by MTP
+**Fastest large model:** GLM-5.2 in NVFP4 on one RTX node, at 91.1 tok/s single stream, helped by MTP
 speculative decoding that works because the model fits one node with no pipeline parallelism. Its NVFP4
 card measures no meaningful quality loss against FP8; see below.
 

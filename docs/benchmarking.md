@@ -11,7 +11,7 @@ right number for agentic work where one person waits on one response.
 sequences in one forward pass, so aggregate throughput keeps climbing with concurrency until compute, memory
 bandwidth, or KV cache space runs out. It is the right number when one endpoint serves several people.
 
-The gap is large. GLM-5.2-NVFP4 on one RTX node measures 93.4 tok/s single stream and 1389 tok/s aggregate at
+The gap is large. GLM-5.2-NVFP4 on one RTX node measures 91.1 tok/s single stream and 1374.5 tok/s aggregate at
 concurrency 256, a factor of 15.
 
 ```
@@ -23,7 +23,7 @@ bash common/tools/bench.sh --host <node> --model <name> --sweep 1,8,32,128     f
 ## Sweep until throughput turns over
 
 A sweep that stops early reports a floor, not a ceiling, and the two look identical. That same GLM-5.2-NVFP4
-endpoint reports 683 tok/s if the sweep stops at concurrency 32, half its actual capacity at 256. Of the 14
+endpoint reports 674 tok/s if the sweep stops at concurrency 32, half its actual capacity at 256. Of the 14
 rates the labeling rule covers, 5 turn over at a peak, 5 are flat to within 4 percent between 512 and 1024,
 and 4 were still climbing at the top of their sweep, so those figures are floors. Twelve sweeps ran to 1024
 and two stopped at 512.
@@ -49,7 +49,7 @@ The slope method cancels prefill, so prompt length never distorts the measuremen
 result depends on the model's attention design.
 
 GLM-5.2-NVFP4, one RTX node, concurrency 1. All three rows come from one run, separate from the sweep in
-that recipe, so compare them against each other rather than against the recipe's 93.4 tok/s:
+that recipe, so compare them against each other rather than against the recipe's 91.1 tok/s:
 
 | ISL, input tokens | Decode | TTFT |
 | --- | --- | --- |
