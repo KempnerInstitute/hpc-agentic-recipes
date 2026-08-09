@@ -6,7 +6,7 @@ Status: Validated - vLLM 0.25.1+cu129, protocol: slope(128,1152) at concurrency 
 | --- | --- |
 | Served name | `kimi-k2.7-code` |
 | Checkpoint | `Kimi-K2.7-Code`, Hugging Face `moonshotai/Kimi-K2.7-Code` |
-| On disk | 555 GB, INT4, `DeepseekV3ForCausalLM`, multimodal |
+| On disk | 554.3 GiB across 64 shards, INT4, `KimiK25ForConditionalGeneration`, multimodal |
 | Served precision | INT4 pack-quantized at group size 32, attention and shared experts left unquantized |
 | Context | 262144, the checkpoint maximum |
 | Hardware | 2 H200 nodes, 8 GPUs, 143771 MiB each, TP4 inside a node and PP2 between over Ray |
@@ -210,7 +210,7 @@ KEY_NAME=Kimi-K2.7-Code-h200-4-nodes2 bash common/tools/bench.sh --host <head_no
   default rather than adding to it, and without those flags a multimodal checkpoint on more than one node
   completes weight loading and then hangs at multimodal profiling with no error and no timeout.
 - No speculative decoding. vLLM rejects a speculative config whenever pipeline parallelism is active, and
-  555 GB of weights needs two nodes.
+  554.3 GiB of weights needs two nodes.
 - Keep tensor parallelism inside a node. Tensor parallelism spanning two nodes hangs at NCCL initialization.
 - Leave `VLLM_USE_DEEP_GEMM` at 0, which `env/env.sh` sets. The DeepGEMM MoE path takes an illegal memory
   access on H200 for two other checkpoints on this hardware.

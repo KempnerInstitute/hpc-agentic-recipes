@@ -6,7 +6,7 @@ Status: Validated - vLLM 0.25.1, protocol: slope(128,1152) at concurrency 1, 8, 
 | --- | --- |
 | Served name | `kimi-k2.7-code` |
 | Checkpoint | `Kimi-K2.7-Code`, Hugging Face `moonshotai/Kimi-K2.7-Code` |
-| On disk | 555 GB, INT4, `DeepseekV3ForCausalLM`, multimodal |
+| On disk | 554.3 GiB across 64 shards, INT4, `KimiK25ForConditionalGeneration`, multimodal |
 | Served precision | INT4 pack-quantized at group size 32, 72.03 GiB of weights per GPU |
 | Context | 131072. The checkpoint declares 262144, which does not fit; see Known limits |
 | Hardware | 1 RTX PRO 6000 Blackwell node, 8 GPUs, 97887 MiB each, TP8 over PCIe with no NVLink |
