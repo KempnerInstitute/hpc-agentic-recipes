@@ -1,71 +1,178 @@
 # <Model> on <hardware>
 
-Status: Untested - not yet run end to end
+Status: Validated - <engine and version>, protocol: slope(128,1152) at concurrency <levels>
 
-Everything needed to build, launch, verify, connect to, and debug this endpoint is on this page.
-Do not link out for anything required: repeat it here instead. Shared failure-mode text comes from
-common/issues and a maintainer fills it in, so leave empty marker pairs rather than writing prose:
+<!-- Instructions only. A recipe page carries the steps and the measured numbers, nothing else.
+     Reasoning, history, and anything that did not work belong outside the repo.
+     Prefer a table to prose. Never write a two-column table whose left cell is a label and whose
+     right cell is a sentence: that is prose with extra pipes.
+     Give an engine version rather than a calendar date, and write about the recipe rather than
+     about yourself. -->
 
-    <!-- issue:<slug> begin -->
-    <!-- issue:<slug> end -->
+| | |
+| --- | --- |
+| Served name | `<served-model-name>` |
+| Checkpoint | `<directory>`, Hugging Face `<org/repo>` |
+| On disk | <size> across <n> shards, <precision> |
+| Served precision | <precision and block size>, <GiB> of weights per GPU |
+| Context | <max_model_len>, <how it relates to the checkpoint maximum> |
+| Hardware | <n> <gpu type> <nodes or GPUs>, <MiB> each, <parallel shape and interconnect> |
+| Engine | <engine and version>, <graphs or eager>, <speculative decoding or none> |
 
-## Configure once
+## 1. Create the API key
 
-<!-- API key creation, and the variables this recipe reads. A fresh clone must work without edits. -->
+```
+mkdir -p secrets
+printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/<Checkpoint-Name>-<hardware>.key
+chmod 600 secrets/<Checkpoint-Name>-<hardware>.key
+```
 
-## Status
+- `secrets/vllm_api_key` is read when this file is absent.
+- To rotate, replace the file and relaunch; the engine reads it once at launch.
 
-<!-- Validated needs an engine version and a protocol label, or the audit rejects it. No dates: the
-     prose checker rejects them, because a version says whether a number still holds and a date does not. -->
+## 2. Build the environment
 
-## What this is
+Run on a compute node, not a login node. Needs `uv` on your PATH, and `mamba` where a recipe builds a
+CUDA toolkit.
 
-<!-- Model, checkpoint directory, Hugging Face repo id, documented repository path, faster-copy note. -->
+```
+bash recipes/<Checkpoint-Name>/<hardware>/env/build.sh
+```
 
-## Hardware
+- Size under `ENV_ROOT`, and anything the build needs beyond the venv.
+- One bullet per non-obvious pin, saying what breaks without it.
 
-<!-- GPU type, count, nodes, partition, per-GPU CPU and memory limits, max wall time. -->
+## 3. Launch
 
-## Environment build
+Slurm, from the repo root:
 
-<!-- The full command sequence inline, plus why any non-obvious step exists. -->
+```
+sbatch --account=<your-account> recipes/<Checkpoint-Name>/<hardware>/serve.sbatch
+squeue --me                                  # NODELIST gives the host
+tail -f <job-name>-<jobid>.log
+```
 
-## Launch
+Direct, on a node you already hold:
 
-<!-- The sbatch path from the repo root, then the direct SSH alternative. State the submit directory. -->
+```
+bash recipes/<Checkpoint-Name>/<hardware>/serve_ssh.sh <node>
+```
 
-## Verify
+| Stage | Measured |
+| --- | --- |
+| Launch to serving | <range across launches, cold and warm> |
+| Weight load, <n> shards across <n> ranks | <seconds> |
 
-<!-- curl commands, including that a keyless request must return 401. -->
+- Measure these. A `to be measured` cell under a Validated status is a defect.
 
-## Connect a client
+## 4. Verify
 
-<!-- The full client block. Anthropic for vLLM, OpenAI-compatible for SGLang. -->
+```
+KEY=$(cat secrets/<Checkpoint-Name>-<hardware>.key 2>/dev/null || cat secrets/vllm_api_key)
+NODE=<the node serving it>
+
+curl -s -H "Authorization: Bearer $KEY" http://$NODE:8000/v1/models
+
+curl -s -o /dev/null -w '%{http_code}\n' http://$NODE:8000/v1/models
+
+curl -s -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
+  http://$NODE:8000/v1/chat/completions \
+  -d '{"model":"<served-name>","messages":[{"role":"user","content":"What is 2+2? Answer briefly."}],"max_tokens":400}'
+```
+
+| Command | Expected |
+| --- | --- |
+| `/v1/models` with the key | `"id": "<served-name>"`, `"max_model_len": <n>` |
+| `/v1/models` without a key | `401` |
+| chat completion | `content` holds the answer, `finish_reason: stop` |
+
+- A thinking model needs at least 400 output tokens, or the budget goes on reasoning and `content`
+  comes back empty.
+
+## 5. Connect a client
+
+```
+export NODE=<the node serving it>
+source recipes/<Checkpoint-Name>/<hardware>/client.env
+claude
+```
+
+- `client.env` must set `CLAUDE_CODE_MAX_CONTEXT_TOKENS` to the served window, in both directions.
+  Claude Code assumes 200k for a served name it does not recognize, so a smaller endpoint overflows
+  instead of compacting and a larger one goes mostly unused.
+- Use `ANTHROPIC_AUTH_TOKEN`. `ANTHROPIC_API_KEY` sends `x-api-key` and returns 401.
+- `client.env` also sets `ANTHROPIC_SMALL_FAST_MODEL`; without it the client reaches for a hosted Haiku.
+- OpenAI clients such as Codex: base URL `http://<node>:8000/v1`, same key, model `<served-name>`. See
+  [docs/clients.md](../../../docs/clients.md).
+
+## 6. Stop it
+
+```
+scancel <jobid>                        # Slurm path
+bash common/tools/stop.sh <node>       # direct path
+```
+
+- Multi-node recipes must name every node, since there is no scheduler to clean up after the direct path.
 
 ## Tunable inputs
 
-<!-- Every variable this recipe honors, with default and effect. -->
+Every variable the scripts read, with the default they actually carry. Extract them from the scripts
+rather than writing them from memory; a wrong default here has slipped through review more than once.
 
-## Web search
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `MODEL` | `$MODELS_DIR/<Checkpoint-Name>` | Serve a different copy of the checkpoint |
+| `API_PORT` | 8000 | Listening port |
+| `MAX_MODEL_LEN` | <n> | Context window |
+| `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
+| ... | | One row per variable, including those from `common/defaults.sh` |
 
-<!-- Required for vLLM recipes: the hosted-tool failure and the local replacement. -->
+## Benchmarking
 
-## Measured performance
+Conditions:
 
-<!-- Rate, protocol, and what was tried that did not help. -->
+| | |
+| --- | --- |
+| Protocol | slope(128,1152), 3 repeats per level, median reported |
+| Input length | ISL <n> tokens. Rates at a long input are not measured; use `--prompt-tokens` |
+| Output length | OSL 1152 tokens, output only |
+| Context | `MAX_MODEL_LEN=<n>` |
+| Allocation for the measurement | <GPUs, cores, memory, partition> |
+| Sequence cap | `max_num_seqs` <n> |
+| Preemption | <count>. Read `vllm:num_preemptions_total` from `/metrics`; the server log does not report it |
+| Endpoint | idle, and the benchmark client ran on a separate CPU-only node |
+| Power | <limit> enforced, median and peak across <n> samples |
 
-## Parallelism and quantization
+Results:
 
-<!-- Why this TP, PP and quantization, including divisibility constraints. -->
+| Concurrency | Aggregate | Per stream | Spread over 3 runs | TTFT median |
+| --- | --- | --- | --- | --- |
+| 1 | | | | |
+| ... | | | | |
 
-## Gotchas
+Verify every cell against the sweep log mechanically, column by column, before publishing. A fabricated
+column is invisible when every other column is right.
 
-<!-- Every issue from the matrix, in full. -->
+| | |
+| --- | --- |
+| Label | peak, saturated, rising or capped, with the reason. See [docs/choosing-a-model.md](../../../docs/choosing-a-model.md) |
+| Quote for one caller | <n> tok/s |
+| Quote for a shared endpoint | <n> tok/s at concurrency <n> |
+| KV cache | <n> tokens from <GiB> per GPU, <n> full-length requests at once |
+| Long prompt | <n> tokens in <s> cold; <s> when the prefix is already cached |
 
-## Stop the endpoint
+Reproduce:
 
-<!-- Teardown, and confirming GPU memory was released before relaunching. -->
+```
+KEY_NAME=<Checkpoint-Name>-<hardware> bash common/tools/bench.sh --host <node> --model <served-name> \
+  --sweep 1,8,32,64,128,256,512,640,768,896,1024
+```
 
-## Expected startup time
+- `KEY_NAME` is required once `secrets/` holds more than one key, otherwise `bench.sh` resolves the
+  shared key and every request returns 401.
 
-<!-- Environment build, weight load, JIT. Measure it or say to be measured. -->
+## Known limits
+
+One bullet per failure a reader would otherwise walk into. State the symptom and the rule, not the
+investigation. Cover at least: any parallelism shape the checkpoint refuses, anything that must not be
+enabled, and any client-side limit.
