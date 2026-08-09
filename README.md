@@ -8,7 +8,7 @@ Both vLLM and SGLang are used here, and both serve an Anthropic-compatible endpo
 to directly. vLLM runs most recipes. SGLang runs Kimi-K3 from a container. See
 [docs/engines.md](docs/engines.md).
 
-## If someone is already serving a model
+## Connect to a running endpoint
 
 Set five variables:
 
@@ -30,7 +30,7 @@ curl -s -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" http://<node>:8000/v1/m
 
 Walkthrough in [docs/quickstart.md](docs/quickstart.md).
 
-## To serve your own
+## Serve a model
 
 `uv` has to be on your PATH before any recipe builds, because it installs the Python environment. An RTX
 recipe also needs `mamba`, which installs the CUDA toolkit; the H200 and H100 recipes do not use it. On this
