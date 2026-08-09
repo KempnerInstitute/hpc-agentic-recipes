@@ -27,6 +27,6 @@ ssh -o BatchMode=yes "$HEAD" "cd '$REPO_ROOT'; source '$S/env/env.sh'; ray stop 
 ssh -o BatchMode=yes "$WORKER" "cd '$REPO_ROOT'; source '$S/env/env.sh'; ray stop >/dev/null 2>&1 || true; ray start --address='$HEAD_IP:$RAY_PORT' --node-ip-address='$WORKER_IP' --num-gpus=8"
 
 echo "launching deepseek-v4-pro on $HEAD:${API_PORT}"
-ssh -o BatchMode=yes "$HEAD" "mkdir -p '$LOG_DIR'; cd '$REPO_ROOT'; MODEL='${MODEL:-}' API_PORT='$API_PORT' MAX_MODEL_LEN='${MAX_MODEL_LEN:-}' GPU_UTIL='${GPU_UTIL:-}' TP='${TP:-}' PP='${PP:-}' PERF='${PERF:-}' EXTRA_ARGS='${EXTRA_ARGS:-}' nohup bash '$S/serve.sh' '$HEAD_IP' '$RAY_PORT' > '$LOG' 2>&1 < /dev/null & echo launched pid \$!"
+ssh -o BatchMode=yes "$HEAD" "mkdir -p '$LOG_DIR'; cd '$REPO_ROOT'; MODEL='${MODEL:-}' API_PORT='$API_PORT' MAX_MODEL_LEN='${MAX_MODEL_LEN:-}' GPU_UTIL='${GPU_UTIL:-}' TP='${TP:-}' PP='${PP:-}' PERF='${PERF:-}' CUDAGRAPH_MODE='${CUDAGRAPH_MODE:-}' EXTRA_ARGS='${EXTRA_ARGS:-}' nohup bash '$S/serve.sh' '$HEAD_IP' '$RAY_PORT' > '$LOG' 2>&1 < /dev/null & echo launched pid \$!"
 echo "watch:    ssh $HEAD tail -f $LOG"
 echo "endpoint: http://$HEAD:$API_PORT/v1   (served model: deepseek-v4-pro)"

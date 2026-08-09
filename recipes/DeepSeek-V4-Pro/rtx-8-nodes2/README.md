@@ -128,7 +128,8 @@ bash common/tools/stop.sh <head_node> <worker_node>    # direct path, name both
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
 | `TP` | 8 | Tensor parallel size; 8 is one node's GPU count and must stay inside a node |
 | `PP` | 2 | Pipeline parallel size; 2 is the node count |
-| `ENFORCE_EAGER` | 1 | Eager is the default and is what the rates below were measured with |
+| `PERF` | unset | Try CUDA graph capture instead of eager; the rates below are eager |
+| `CUDAGRAPH_MODE` | `NONE` | Graph mode passed through when `PERF` is set |
 | `EXTRA_ARGS` | unset | Extra flags appended to the `vllm serve` command line |
 | `TOOL_PARSER` | `deepseek_v4` | Tool call parser |
 | `REASONING_PARSER` | `deepseek_v4` | Reasoning parser |
