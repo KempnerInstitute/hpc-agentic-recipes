@@ -5,12 +5,10 @@
 # because they cannot match any recipe path.
 #
 # A recipe belongs here when it will never be launched as written. The repo carries working recipes
-# only, so a blocked configuration is removed rather than listed here, and its page is kept outside
-# the repo. What remains is a model directory holding a README.md and no hardware subdirectory.
+# only, so a blocked or never-launched configuration is removed rather than listed here, and its page is
+# kept outside the repo.
 #
-# The checks glob recipes/*/*/ and so do not enumerate model-level directories at all. The entry below
-# is documentation of intent rather than something the audit consults today, listed so the intent
-# survives if the audit is later taught to walk model-level READMEs.
-#
-# Untested: the bf16 twin of the FP8 Coder checkpoint, staged and supported but never launched.
-Qwen3-Coder-480B-A35B-Instruct
+# The list is empty, and by the rule above it should stay that way. The checks glob recipes/*/*/ and so
+# do not enumerate model-level directories at all, so this file is documentation of intent rather than
+# something the audit consults today. It is kept so the intent survives if the audit is later taught to
+# walk model-level READMEs.
