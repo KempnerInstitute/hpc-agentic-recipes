@@ -11,8 +11,6 @@
 # Submit from the repo root, and pass your account:
 #   sbatch --account=<acct> recipes/Qwen3-235B-A22B/rtx-8/serve.sbatch
 #
-# Slurm stages this script into its spool directory, so $0 does not point into the repo and the path
-# below is resolved against the submit directory instead. The log lands in the submit directory.
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 R=recipes/Qwen3-235B-A22B/rtx-8
