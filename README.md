@@ -76,7 +76,7 @@ under SGLang; method in [docs/benchmarking.md](docs/benchmarking.md). `c=256` me
 requests. `Context` is what the recipe serves by default; raise it with `MAX_MODEL_LEN` up to what the
 checkpoint supports, which each recipe states.
 
-| Model | Precision | Hardware | One stream<br>tok/s | Aggregate<br>tok/s / c | Context |
+| Model | Precision | Hardware | 1xStream<br>tok/s | Aggregate<br>tok/s / c | Context |
 | --- | --- | --- | --- | --- | --- |
 | **GLM-5.2** | NVFP4 | [1 RTX node](recipes/GLM-5.2-NVFP4/rtx-8) | 91.1 | 1375/256 ⛰️ | 212K |
 | | FP8 | [2 H200 nodes](recipes/GLM-5.2-FP8/h200-4-nodes2) | 12.9 | 5392/512 ⛰️ | 626K |
@@ -94,13 +94,10 @@ checkpoint supports, which each recipe states.
 | | FP8 | [1 H100 GPU](recipes/gemma-4-31B-it/h100-1) | 68.7 | 2471/512 ➖ | 256K |
 | | FP8 | [1 RTX GPU](recipes/gemma-4-31B-it/rtx-1) | 39.5 | 2136/768 ➖ | 256K |
 
-A node here is 8 GPUs on RTX and 4 on H200 and H100, so a 2 RTX node recipe uses 16 GPUs and a 4 H200
-node recipe uses 16. A row naming a GPU rather than a node uses that one GPU and shares the node.
+1 RTX Node = 8 GPUs, 1 H200 Node = 4 GPUs.
 
 Aggregate labels: ⛰️ peak, 📈 rising, 🚧 capped, ➖ saturated. Each says what the sweep found at the top,
 and all four are defined in [docs/choosing-a-model.md](docs/choosing-a-model.md).
-
-Every recipe here is validated on hardware.
 
 ## Weights
 
