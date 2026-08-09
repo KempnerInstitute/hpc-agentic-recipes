@@ -12,7 +12,7 @@ active parameters, so it is fast and cheap to schedule, and one GPU means the sh
 speculative decoding that works because the model fits one node with no pipeline parallelism. Its NVFP4
 card measures no meaningful quality loss against FP8; see below.
 
-**Best quality-per-second on one node:** Qwen3-Coder-480B-FP8 on one RTX node at 67.7 tok/s, slightly
+**Best quality-per-second on one node:** Qwen3-Coder-480B-FP8 on one RTX node at 68.0 tok/s, slightly
 faster than the much smaller Qwen3-235B on the same hardware.
 
 **Highest published coding scores:** Kimi-K3, a 2.8T MoE in MXFP4, which needs 4 H200 nodes and runs only

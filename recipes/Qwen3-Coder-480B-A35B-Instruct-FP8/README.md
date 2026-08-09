@@ -11,7 +11,7 @@ proxy. It is the largest coding model in this repo that fits a single node.
 
 | Variant | Shape | Single stream | Aggregate |
 | --- | --- | --- | --- |
-| [`rtx-8`](rtx-8/README.md) | 1 RTX PRO 6000 node, 8 GPUs, TP4 x PP2 | 67.7 tok/s | 3238 at c=768, peak |
+| [`rtx-8`](rtx-8/README.md) | 1 RTX PRO 6000 node, 8 GPUs, TP4 x PP2 | 68.0 tok/s | 3197 at c=640, peak |
 
 Serve this checkpoint on RTX. Two constraints shape it. TP8 is impossible: the `moe_intermediate_size`
 is 2560 against an FP8 quantization block of 128, so a 320-column shard is not a multiple of the block
