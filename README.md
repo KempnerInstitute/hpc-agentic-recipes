@@ -1,8 +1,7 @@
 # HPC Agentic Recipes
 
 Recipes for serving open-weight models on the Kempner AI Cluster and driving them with Claude Code or any
-OpenAI-compatible client. Each runnable recipe is self-contained. A few entries in the table below are
-documentation only.
+OpenAI-compatible client.
 
 Both vLLM and SGLang are used here, and both serve an Anthropic-compatible endpoint that Claude Code talks
 to directly. vLLM runs most recipes. SGLang runs Kimi-K3 from a container. See
@@ -34,8 +33,7 @@ Walkthrough in [docs/quickstart.md](docs/quickstart.md).
 
 `uv` has to be on your PATH before any recipe builds, because it installs the Python environment. An RTX
 recipe also needs `mamba`, which installs the CUDA toolkit; the H200 and H100 recipes do not use it. On this
-cluster `mamba` comes from a module, and a build submitted through Slurm has to load it there too, since an
-interactive shell's copy is a function that a batch job does not inherit:
+cluster `mamba` comes from a module:
 
 ```
 module load Mambaforge
@@ -83,10 +81,10 @@ checkpoint supports, which each recipe states.
 | **GLM-4.6** | FP8 | [1 H200 node](recipes/GLM-4.6-FP8/h200-4) | 19.1 | 8127/1024 📈 | 198K |
 | **Kimi-K2.7-Code** | INT4 | [1 RTX node](recipes/Kimi-K2.7-Code/rtx-8) | 20.6 | 1833/896 ➖ | 128K |
 | | INT4 | [2 H200 nodes](recipes/Kimi-K2.7-Code/h200-4-nodes2) | 30.2 | 7094/1024 📈 | 256K |
-| **Kimi-K3** | MXFP4, QAT | [4 H200 nodes, SGLang](recipes/Kimi-K3/h200-4-nodes4-sglang) | 40.3 | 1067/64 🚧 | 374K |
+| **Kimi-K3** | MXFP4 QAT | [4 H200 nodes](recipes/Kimi-K3/h200-4-nodes4-sglang) | 40.3 | 1067/64 🚧 | 374K |
 | **Qwen3-235B-A22B** | BF16 | [1 RTX node](recipes/Qwen3-235B-A22B/rtx-8) | 62.7 | 3948/512 ⛰️ | 40K |
 | **Qwen3-Coder-480B** | FP8 | [1 RTX node](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8) | 68.0 | 3197/640 ⛰️ | 256K |
-| **DeepSeek-V4-Pro** | FP8 / FP4 experts | [2 RTX nodes](recipes/DeepSeek-V4-Pro/rtx-8-nodes2) | 18.7 | 3003/1024 📈 | 1M |
+| **DeepSeek-V4-Pro** | FP8/FP4 | [2 RTX nodes](recipes/DeepSeek-V4-Pro/rtx-8-nodes2) | 18.7 | 3003/1024 📈 | 1M |
 | **Gemma-4-26B-A4B** | BF16 | [1 H200 GPU](recipes/gemma-4-26B-A4B-it/h200-1) | 250.5 | 10905/1024 ➖ | 256K |
 | | BF16 | [1 H100 GPU](recipes/gemma-4-26B-A4B-it/h100-1) | 204.5 | 7165/640 ➖ | 256K |
 | | BF16 | [1 RTX GPU](recipes/gemma-4-26B-A4B-it/rtx-1) | 141.1 | 5798/1024 📈 | 256K |
@@ -127,8 +125,7 @@ docs/                                   guides, indexed below
 ```
 
 Hardware directory names are `<gpu-type>-<gpus-per-node>[-nodes<N>][-<engine>]`, so `rtx-8` is one full RTX
-node, `h200-4-nodes2` is two H200 nodes, and `h100-1` is a single H100. Documentation-only entries have no
-hardware level, just the checkpoint directory.
+node, `h200-4-nodes2` is two H200 nodes, and `h100-1` is a single H100.
 
 ## Guides
 
