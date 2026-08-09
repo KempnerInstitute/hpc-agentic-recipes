@@ -16,7 +16,7 @@ wheel. All three are TP1 on one GPU and serve the same name.
 | Variant | GPU | Single stream | Aggregate | KV cache | Status |
 | --- | --- | --- | --- | --- | --- |
 | [`h200-1`](h200-1/README.md) | 1 H200, 143771 MiB | 250.5 tok/s | 10905 at c=1024, saturated | 2,776,615 tokens | Validated |
-| [`h100-1`](h100-1/README.md) | 1 H100, 81559 MiB | 204.5 tok/s | 7165 at c=640, peak | 661,098 tokens | Validated |
+| [`h100-1`](h100-1/README.md) | 1 H100, 81559 MiB | 204.5 tok/s | 7165 at c=640, saturated | 661,098 tokens | Validated |
 | [`rtx-1`](rtx-1/README.md) | 1 RTX PRO 6000 Blackwell, 97887 MiB | 141.1 tok/s | 5798 at c=1024, rising | 1,013,590 tokens | Validated |
 
 Measured in bf16 at the 262144 default, protocol slope(128,1152) over output tokens only, 3 repeats per

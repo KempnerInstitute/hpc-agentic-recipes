@@ -153,7 +153,7 @@ Results:
 
 | | |
 | --- | --- |
-| Label | peak. Throughput turns over at 640; 1024 is 0.25 percent lower |
+| Label | saturated. It varies 0.25 percent across 640 and 1024, under the 4 percent the rule uses. That gap is also a tenth of the 2.4 percent this level varies across runs, so no single level stands out |
 | Cross-run spread | concurrency 640 measured 6998.8 to 7164.7 tok/s across four runs, 2.4 percent, with no cause established |
 | Concurrency 1 across restarts | 204.5 to 213.8 tok/s. Both values are reproducible in triplicate within a launch and neither is power limited; the cause is not identified |
 | Quote for one caller | 204.5 tok/s |
