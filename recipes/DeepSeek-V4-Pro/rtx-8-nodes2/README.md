@@ -203,8 +203,8 @@ KEY_NAME=DeepSeek-V4-Pro-rtx-8-nodes2 bash common/tools/bench.sh --host <head_no
 
 - The full context is reached by YaRN scaling factor 16 over a native 65536, so a million tokens is what the
   hardware serves rather than what the model was trained on. Quality at extreme lengths is not measured here.
-- The context is not free on this recipe, unlike the others: the full window costs 14 to 17 percent of
-  aggregate throughput above concurrency 256, though nothing at concurrency 1.
+- The context is not free on this recipe: the full window costs 14 to 17 percent of aggregate throughput
+  above concurrency 256, though nothing at concurrency 1.
 - No speculative decoding. vLLM rejects a speculative config whenever pipeline parallelism is active, and
   805 GiB of weights needs two nodes.
 - Keep tensor parallelism inside a node. Tensor parallelism spanning two nodes hangs at NCCL initialization.
