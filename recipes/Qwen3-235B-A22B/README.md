@@ -9,7 +9,7 @@ vLLM's Anthropic-compatible API as `qwen3-235b`, so Claude Code connects with no
 
 | Variant | Shape | Single stream | Aggregate |
 | --- | --- | --- | --- |
-| [`rtx-8`](rtx-8/README.md) | 1 RTX PRO 6000 node, 8 GPUs, TP8 | 63.3 tok/s | 3984 at c=512, peak |
+| [`rtx-8`](rtx-8/README.md) | 1 RTX PRO 6000 node, 8 GPUs, TP8 | 62.7 tok/s | 3948 at c=512, peak |
 
 The weights are bf16 and unquantized, at about 470 GB, so a whole 8-GPU node is the smallest thing
 that holds them. Quantizing to FP8 on load measured no faster, because decode at TP8 on this hardware

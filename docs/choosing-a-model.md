@@ -19,8 +19,9 @@ faster than the much smaller Qwen3-235B on the same hardware.
 under SGLang. Kimi-K2.7-Code, 1T in INT4, is the largest coding-specialized checkpoint and fits a single
 RTX node. Both trade a lot of latency for that quality: 40.2 and 20.6 tok/s.
 
-**Longest context:** GLM-5.2-FP8 across two H200 nodes and Kimi-K3 both support 1M tokens. The recipes
-serve less by default and raising it costs decode rate.
+**Longest context:** DeepSeek-V4-Pro across two RTX nodes, which serves its full 1M window by default.
+That window is the one case here where context is not free: it costs 14 to 17 percent of aggregate
+throughput above concurrency 256, though nothing at concurrency 1.
 
 No published source ranks all of these against each other, so pick on the scores below and on your own
 task rather than on this ordering.
