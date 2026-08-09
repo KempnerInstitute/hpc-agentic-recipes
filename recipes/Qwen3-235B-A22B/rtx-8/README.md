@@ -108,6 +108,9 @@ claude
 - `client.env` also caps `CLAUDE_CODE_MAX_OUTPUT_TOKENS` at 4096. The client asks for 32000 output tokens
   by default, which would leave too little of a 40960 window for the prompt. Raise it only if you also
   raise `MAX_MODEL_LEN`, which on this recipe you cannot; see Known limits.
+- Even with the pin, this is the smallest window in the repo. Claude Code also holds back a fixed allowance
+  for auto-compaction, so the room left for the conversation itself is a fraction of 40960. Prefer an
+  endpoint with a larger context for long agentic sessions.
 - Use `ANTHROPIC_AUTH_TOKEN`. `ANTHROPIC_API_KEY` sends `x-api-key` and returns 401.
 - `client.env` also sets `ANTHROPIC_SMALL_FAST_MODEL`; without it the client reaches for a hosted Haiku.
 - OpenAI clients such as Codex: base URL `http://<node>:8000/v1`, same key, model `qwen3-235b`. See
