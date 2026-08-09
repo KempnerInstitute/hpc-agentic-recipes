@@ -493,13 +493,31 @@ class KimiK3Detector(BaseReasoningFormatDetector):
         ]
         return min(found) if found else -1
 
+    # The serving layer can feed the open marker as a generation prefix, and on a turn that
+    # resumes after a tool result the model emits its own separator on top of it, giving
+    # "<|open|>think<|sep|<|sep|>". An exact match misses that, so the whole reasoning block
+    # leaks into visible text. Tolerate a repeated separator.
+    def _find_think_open(self, text: str, start: int = 0):
+        """Return (start, end) of the opening think marker, or (-1, -1)."""
+        rx = getattr(self, "_think_open_re", None)
+        if rx is None:
+            tok = self.think_start_token
+            if tok.endswith(">") and "<|" in tok[:-1]:
+                cut = tok.rindex("<|")
+                rx = re.compile(re.escape(tok[:cut]) + "(?:" + re.escape(tok[cut:-1]) + ">?)+")
+            else:
+                rx = re.compile(re.escape(tok))
+            self._think_open_re = rx
+        m = rx.search(text, start)
+        return (m.start(), m.end()) if m else (-1, -1)
+
     def detect_and_parse(self, text: str) -> StreamingParseResult:
         in_reasoning = self._in_reasoning or self.think_start_token in text
         if not in_reasoning and self.think_end_token not in text:
             return StreamingParseResult(normal_text=self._clean_content(text))
 
-        open_idx = text.find(self.think_start_token)
-        start = open_idx + len(self.think_start_token) if open_idx != -1 else 0
+        open_idx, open_end = self._find_think_open(text)
+        start = open_end if open_idx != -1 else 0
         close_idx = text.find(self.think_end_token, start)
         if close_idx == -1:
             channel_idx = self._next_channel_idx(text, start)
@@ -522,9 +540,9 @@ class KimiK3Detector(BaseReasoningFormatDetector):
         self._buffer += new_text
 
         if not self._in_reasoning and not self._reasoning_done:
-            open_idx = self._buffer.find(self.think_start_token)
+            open_idx, open_end = self._find_think_open(self._buffer)
             if open_idx != -1:
-                self._buffer = self._buffer[open_idx + len(self.think_start_token) :]
+                self._buffer = self._buffer[open_end:]
                 self._in_reasoning = True
                 self.stripped_think_start = True
             elif self.think_start_token.startswith(self._buffer):
@@ -535,9 +553,9 @@ class KimiK3Detector(BaseReasoningFormatDetector):
         if self._in_reasoning:
             buf = self._buffer
             if not self.stripped_think_start:
-                open_idx = buf.find(self.think_start_token)
+                open_idx, open_end = self._find_think_open(buf)
                 if open_idx != -1:
-                    buf = buf[open_idx + len(self.think_start_token) :]
+                    buf = buf[open_end:]
                     self._buffer = buf
                     self.stripped_think_start = True
 
@@ -576,6 +594,26 @@ class KimiK3Detector(BaseReasoningFormatDetector):
             emit = strip_partial_marker_suffix(emit)
             self._buffer = buf[len(emit) :]
             return StreamingParseResult(reasoning_text=emit)
+
+        # A response can hold more than one reasoning block: the model thinks, calls a tool, then
+        # thinks again about the result. Closing the first block latches _reasoning_done, and every
+        # gate that strips an opening marker is behind that latch, so without this the second block
+        # is emitted verbatim as visible text.
+        if self._reasoning_done and not self._tools_passthrough:
+            open_idx, open_end = self._find_think_open(self._buffer)
+            if open_idx != -1:
+                before = self._buffer[:open_idx]
+                self._buffer = self._buffer[open_end:]
+                self._in_reasoning = True
+                self._reasoning_done = False
+                self.stripped_think_start = True
+                head = self._clean_content(before) if before else ""
+                return StreamingParseResult(normal_text=head or None)
+            hold = partial_suffix_len(self._buffer, [self.think_start_token])
+            if hold:
+                emit = self._buffer[: len(self._buffer) - hold]
+                self._buffer = self._buffer[len(self._buffer) - hold :]
+                return StreamingParseResult(normal_text=self._clean_content(emit) or None)
 
         return StreamingParseResult(normal_text=self._drain_content())
 
