@@ -2,7 +2,7 @@
 #SBATCH --job-name=gemma26-rtx-1
 #SBATCH --partition=kempner_rtx
 #SBATCH --nodes=1
-#SBATCH --gpus=1
+#SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=180G
 #SBATCH --time=1-00:00:00

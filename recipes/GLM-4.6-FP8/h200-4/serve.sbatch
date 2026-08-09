@@ -2,9 +2,9 @@
 #SBATCH --job-name=glm46
 #SBATCH --partition=kempner_h200
 #SBATCH --nodes=1
-#SBATCH --gpus=4
-#SBATCH --cpus-per-task=48
-#SBATCH --mem=500G
+#SBATCH --gres=gpu:4
+#SBATCH --cpus-per-task=64
+#SBATCH --mem=1440G
 #SBATCH --time=1-00:00:00
 #SBATCH --output=%x-%j.log
 set -euo pipefail

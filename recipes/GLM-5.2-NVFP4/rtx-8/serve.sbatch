@@ -2,9 +2,9 @@
 #SBATCH --job-name=glm52-nvfp4
 #SBATCH --partition=kempner_rtx
 #SBATCH --nodes=1
-#SBATCH --gpus=8
-#SBATCH --cpus-per-task=96
-#SBATCH --mem=500G
+#SBATCH --gres=gpu:8
+#SBATCH --cpus-per-task=128
+#SBATCH --mem=1440G
 #SBATCH --time=1-00:00:00
 #SBATCH --output=%x-%j.log
 set -euo pipefail

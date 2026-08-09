@@ -2,9 +2,9 @@
 #SBATCH --job-name=gemma26-h100-1
 #SBATCH --partition=kempner_h100
 #SBATCH --nodes=1
-#SBATCH --gpus=1
+#SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=24
-#SBATCH --mem=180G
+#SBATCH --mem=360G
 #SBATCH --time=1-00:00:00
 #SBATCH --output=%x-%j.log
 #
