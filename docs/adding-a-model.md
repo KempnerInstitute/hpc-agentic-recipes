@@ -6,7 +6,7 @@ indexes that point at it. Everything else lives inside the directory.
 ## Before you write anything
 
 **1. Find the checkpoint and decide which variant you want.** Quantized variants matter more than the
-parameter count: an FP8 or NVFP4 build may fit hardware the bf16 build cannot. Record the Hugging Face
+parameter count: an FP8 or NVFP4 build may fit hardware the BF16 build cannot. Record the Hugging Face
 repo id, because the recipe README must state it.
 
 **2. Confirm your engine can actually load it.** Do this first, and do it by asking the engine rather

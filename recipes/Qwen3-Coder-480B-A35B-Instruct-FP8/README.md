@@ -29,5 +29,5 @@ only an eager fallback that costs roughly 3x.
 - Architecture: `Qwen3MoeForCausalLM`, native to vLLM 0.25.1
 
 Quantization is FP8 with a dynamic activation scheme and a 128-wide weight block, with `lm_head`, the
-router gates and every layer's norms left unconverted, 187 entries covering all 62 layers. The bf16 release of the same model is
+router gates and every layer's norms left unconverted, 187 entries covering all 62 layers. The BF16 release of the same model is
 a separate, larger checkpoint and is not what these recipes serve.

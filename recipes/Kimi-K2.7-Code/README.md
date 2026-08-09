@@ -8,7 +8,7 @@ Code connects with no proxy.
 
 The checkpoint is natively INT4 quantization-aware trained rather than post-quantized: the routed
 experts are compressed-tensors pack-quantized W4A16 at group size 32, while attention, the shared
-expert, the dense layers, `lm_head` and the vision tower stay bf16.
+expert, the dense layers, `lm_head` and the vision tower stay BF16.
 
 ## Hardware variants
 

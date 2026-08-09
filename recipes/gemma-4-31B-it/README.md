@@ -28,7 +28,7 @@ level. Rates are defined in [docs/benchmarking.md](../../docs/benchmarking.md), 
 - Single stream varies 2.1x across the three GPU types and tracks HBM bandwidth, so unlike the 26B sibling
   it is worth queueing for the faster card.
 - `QUANT=fp8` is the default everywhere and is worth 72 percent on RTX, 69 percent on H100 and 51 percent on
-  H200, against bf16 rates of 23.0, 40.7 and 56.3 tok/s that were not re-measured in this sweep. The 26B
+  H200, against BF16 rates of 23.0, 40.7 and 56.3 tok/s that were not re-measured in this sweep. The 26B
   sibling is the opposite case, where the same flag measured no change.
 - `SPEC_DRAFT` works on all three and is worth 2.6 to 2.7x on single stream, at a KV pool cost of 2.5 to 6.0
   percent. Each variant page carries its own figures.
@@ -41,7 +41,7 @@ level. Rates are defined in [docs/benchmarking.md](../../docs/benchmarking.md), 
 | Directory | `gemma-4-31B-it` |
 | Hugging Face repo | `google/gemma-4-31B-it` |
 | Documented path | `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/gemma-4-31B-it` |
-| Size on disk | 62.6 GB, bf16, quantized to FP8 at load time rather than from a second checkpoint |
+| Size on disk | 62.6 GB, BF16, quantized to FP8 at load time rather than from a second checkpoint |
 | Architecture | `Gemma4ForConditionalGeneration`, dense, multimodal |
 | Context | 262144, the checkpoint maximum, served by default on all three variants |
 | Drafter | `gemma-4-31B-it-assistant`, under 1 GB, wired through `SPEC_DRAFT` and usable on all three |

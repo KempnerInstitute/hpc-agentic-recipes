@@ -19,12 +19,12 @@ wheel. All three are TP1 on one GPU and serve the same name.
 | [`h100-1`](h100-1/README.md) | 1 H100, 81559 MiB | 204.5 tok/s | 7165 at c=640, saturated | 661,098 tokens | Validated |
 | [`rtx-1`](rtx-1/README.md) | 1 RTX PRO 6000 Blackwell, 97887 MiB | 141.1 tok/s | 5798 at c=1024, rising | 1,013,590 tokens | Validated |
 
-Measured in bf16 at the 262144 default, protocol slope(128,1152) over output tokens only, 3 repeats per
+Measured in BF16 at the 262144 default, protocol slope(128,1152) over output tokens only, 3 repeats per
 level. Rates are defined in [docs/benchmarking.md](../../docs/benchmarking.md), the aggregate labels in
 [docs/choosing-a-model.md](../../docs/choosing-a-model.md).
 
 - Single stream varies only 1.8x across the three GPU types, so an idle GPU beats queueing for a faster one.
-- `QUANT=fp8` measured no change in rate on any of them, so every variant serves bf16.
+- `QUANT=fp8` measured no change in rate on any of them, so every variant serves BF16.
 
 ## Checkpoint
 
@@ -33,7 +33,7 @@ level. Rates are defined in [docs/benchmarking.md](../../docs/benchmarking.md), 
 | Directory | `gemma-4-26B-A4B-it` |
 | Hugging Face repo | `google/gemma-4-26B-A4B-it` |
 | Documented path | `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/gemma-4-26B-A4B-it` |
-| Size on disk | 51.6 GB, bf16 |
+| Size on disk | 51.6 GB, BF16 |
 | Architecture | `Gemma4ForConditionalGeneration`, 128 experts with top-8 routing, multimodal |
 | Context | 262144, the checkpoint maximum, served by default on all three variants |
 | Drafter | `gemma-4-26B-A4B-it-assistant`, under 1 GB, wired through `SPEC_DRAFT`, unusable on vLLM 0.25.1 and 0.26.0 |

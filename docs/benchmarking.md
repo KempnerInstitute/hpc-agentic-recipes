@@ -61,7 +61,7 @@ Decode is flat to 26K within noise; only time to first token grows, which is pre
 is architectural: MLA compresses the KV cache, this recipe stores it in DeepSeek's sparse-MLA fp8 layout, and
 sparse attention reads only a subset of the context, so the per-step read barely grows with length.
 
-Do not generalize it. A dense model with full attention and a bf16 KV cache reads the whole cache every step
+Do not generalize it. A dense model with full attention and a BF16 KV cache reads the whole cache every step
 and should degrade. Measure with `--prompt-tokens`; the tool reports the prompt length the server actually
 counted, not an estimate.
 

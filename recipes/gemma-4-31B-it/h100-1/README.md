@@ -6,7 +6,7 @@ Status: Validated - vLLM 0.25.1, protocol: slope(128,1152) at concurrency 1, 64,
 | --- | --- |
 | Served name | `gemma-4-31b` |
 | Checkpoint | `gemma-4-31B-it`, Hugging Face `google/gemma-4-31B-it` |
-| On disk | 62.6 GB, bf16, `Gemma4ForConditionalGeneration` |
+| On disk | 62.6 GB, BF16, `Gemma4ForConditionalGeneration` |
 | Served precision | FP8, quantized on load, 31.73 GiB of weights |
 | Context | 262144, the checkpoint maximum |
 | Hardware | 1 H100, 81559 MiB, TP1 |
@@ -114,7 +114,7 @@ bash common/tools/stop.sh <node>       # direct path
 | `MAX_MODEL_LEN` | 262144 | Context window, the checkpoint maximum |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
 | `TP` | 1 | Tensor parallel size |
-| `QUANT` | `fp8` | Set but empty for bf16. bf16 weights are 58.25 GiB and will not start at 262144, since one full-length request needs 27.04 GiB of KV; cap `MAX_MODEL_LEN` near 52000 for bf16 |
+| `QUANT` | `fp8` | Set but empty for BF16. BF16 weights are 58.25 GiB and will not start at 262144, since one full-length request needs 27.04 GiB of KV; cap `MAX_MODEL_LEN` near 52000 for BF16 |
 | `KV_FP8` | unset | `--kv-cache-dtype fp8`; halves KV bytes |
 | `ENFORCE_EAGER` | unset | Skip torch.compile and CUDA graph capture, to debug a startup failure |
 | `SPEC_DRAFT` | unset | Path to the drafter checkpoint, `$MODELS_DIR/gemma-4-31B-it-assistant`. Works on this engine and measured 2.7 times faster; see Benchmarking |
