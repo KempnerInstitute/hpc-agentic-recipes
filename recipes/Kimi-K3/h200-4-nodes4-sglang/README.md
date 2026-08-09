@@ -137,6 +137,7 @@ bash common/tools/stop.sh <node0> <node1> <node2> <node3>    # direct path, name
 | `API_PORT` | 8000 | Listening port |
 | `DIST_PORT` | 29500 | Port the 16 ranks use to form their group |
 | `MAX_MODEL_LEN` | 383216 | Context window, the largest the engine will accept |
+| `EXTRA_ARGS` | unset | Extra flags appended to the `sglang` command line, for example `--enable-metrics` |
 | `MEM_FRACTION` | 0.88, 0.90 under `WIDE=1` | Static memory fraction; it feeds the KDA state pool, so lowering it cuts the concurrency cap |
 | `WIDE` | 0 | Set to 1 for the configuration that lifts the request cap from 67 to 156 |
 | `MAMBA_RATIO` | unset, 3.2 under `WIDE=1` | Size of the KDA state pool relative to KV |

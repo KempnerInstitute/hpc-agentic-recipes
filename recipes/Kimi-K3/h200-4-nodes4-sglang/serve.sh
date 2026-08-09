@@ -3,7 +3,7 @@
 set -uo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/env/env.sh"
-KEY_NAME=Kimi-K3-h200-4-nodes4-sglang
+KEY_NAME="${KEY_NAME:-Kimi-K3-h200-4-nodes4-sglang}"
 source "$REPO_ROOT/common/lib/api_key.sh"
 MODEL="${MODEL:-$MODELS_DIR/Kimi-K3}"
 DRAFT="${DRAFT:-$MODELS_DIR/Kimi-K3-DSpark}"
@@ -97,4 +97,4 @@ exec singularity exec --nv \
     --moe-runner-backend marlin \
     ${MAMBA_RATIO:+--mamba-full-memory-ratio "$MAMBA_RATIO"} \
     ${MAMBA_CACHE_STRATEGY:+--mamba-radix-cache-strategy "$MAMBA_CACHE_STRATEGY"} \
-    "${SPEC[@]}"
+    "${SPEC[@]}" ${EXTRA_ARGS:-}
