@@ -70,18 +70,10 @@ were measured on in the recipe instead, and say that a rebuild will differ.
 
 ## Write the flags
 
-`env/env.sh` holds the runtime environment. Every flag needs a provenance comment, and a review will ask
-for any that is missing:
-
-```
-# verified: <symptom>, <engine version>
-# inherited from <source>, untested for this model
-# required: <reason>
-```
-
-This exists because the alternative is folklore. A flag copied from another recipe with a confident
-one-line justification looks measured, and the next person cannot tell the difference between a setting
-that prevents a crash and one that was inherited by accident.
+`env/env.sh` holds the runtime environment. Carry a flag only if you know why it is there; a flag copied
+from another recipe with a confident one-line justification looks measured, and the next person cannot
+tell a setting that prevents a crash from one inherited by accident. Record what you established outside
+the repo, and let the recipe carry the setting alone.
 
 Candidates to consider: attention backend, `VLLM_USE_DEEP_GEMM`, `NCCL_P2P_DISABLE`,
 `NCCL_SOCKET_IFNAME` and `NCCL_IB_HCA`, `TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC`,
