@@ -6,7 +6,7 @@ Status: Validated - vLLM 0.26.1rc1.dev162+g8700f86a7, protocol: slope(128,1152) 
 | --- | --- |
 | Served name | `gemma-4-31b` |
 | Checkpoint | `gemma-4-31B-it`, Hugging Face `google/gemma-4-31B-it` |
-| On disk | 62.6 GB, bf16, `Gemma4ForConditionalGeneration` |
+| On disk | 62.6 GB, BF16, `Gemma4ForConditionalGeneration` |
 | Served precision | FP8, quantized on load, 31.73 GiB of weights |
 | Context | 262144, the checkpoint maximum |
 | Hardware | 1 RTX PRO 6000 Blackwell, 97887 MiB, TP1 |
@@ -120,7 +120,7 @@ bash common/tools/stop.sh <node>       # direct path
 | `MAX_MODEL_LEN` | 262144 | Context window, the checkpoint maximum |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
 | `TP` | 1 | Tensor parallel size |
-| `QUANT` | `fp8` | Set but empty for bf16. bf16 will not start at 262144 on this card: it needs 33.29 GiB of KV against 23.57 available, and the engine reports a maximum length of 134624, so cap `MAX_MODEL_LEN` at 131072 for bf16 |
+| `QUANT` | `fp8` | Set but empty for BF16. BF16 will not start at 262144 on this card: it needs 33.29 GiB of KV against 23.57 available, and the engine reports a maximum length of 134624, so cap `MAX_MODEL_LEN` at 131072 for BF16 |
 | `KV_FP8` | unset | `--kv-cache-dtype fp8`; halves KV bytes, and measured no change in rate |
 | `ENFORCE_EAGER` | unset | Skip torch.compile and CUDA graph capture, to debug a startup failure |
 | `SPEC_DRAFT` | unset | Path to the drafter checkpoint, `$MODELS_DIR/gemma-4-31B-it-assistant`. Works on this build and measured 2.6 times faster; see Benchmarking |
@@ -172,7 +172,7 @@ Results:
 | Quote for a shared endpoint | 2136.2 tok/s at concurrency 768 |
 | KV cache | 401,491 tokens from 50.99 GiB, 1.53 full-length requests at once. The pool varies about 0.15 percent between launches |
 | Speculative decoding | `SPEC_DRAFT=$MODELS_DIR/gemma-4-31B-it-assistant` measured 101.0 tok/s single stream against 39.5, a 2.6 times gain, with 64 percent of draft tokens accepted. It costs 5.7 percent of the KV pool, which drops to 378,673 tokens. Aggregate throughput with it is not measured |
-| bf16 rate cost | bf16 measured 23.0 tok/s single stream against 39.5 for FP8, so bf16 costs about 42 percent |
+| BF16 rate cost | BF16 measured 23.0 tok/s single stream against 39.5 for FP8, so BF16 costs about 42 percent |
 | Long prompt, cold | 30,048 tokens in 7.8 s, 120,049 in 76.2 s, 240,049 in 272 s |
 
 Reproduce:

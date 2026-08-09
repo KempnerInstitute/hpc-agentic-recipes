@@ -6,8 +6,8 @@ Status: Validated - vLLM 0.25.1, protocol: slope(128,1152) at concurrency 1, 8, 
 | --- | --- |
 | Served name | `qwen3-235b` |
 | Checkpoint | `Qwen3-235B-A22B`, Hugging Face `Qwen/Qwen3-235B-A22B` |
-| On disk | 437.90 GiB across 118 shards, bf16 |
-| Served precision | bf16 as the checkpoint ships, 54.92 GiB of weights per GPU |
+| On disk | 437.90 GiB across 118 shards, BF16 |
+| Served precision | BF16 as the checkpoint ships, 54.92 GiB of weights per GPU |
 | Context | 40960, the checkpoint maximum. The spare KV cannot buy a larger one; see Known limits |
 | Hardware | 1 RTX PRO 6000 Blackwell node, 8 GPUs, 97887 MiB each, TP8 over PCIe with no NVLink |
 | Engine | vLLM 0.25.1, CUDA graphs, prefix caching, no speculative decoding |

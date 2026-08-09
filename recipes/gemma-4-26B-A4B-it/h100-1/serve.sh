@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Serve gemma-4-26B-A4B-it on one H100 GPU. TP1, bf16, prefix caching on.
+# Serve gemma-4-26B-A4B-it on one H100 GPU. TP1, BF16, prefix caching on.
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/env/env.sh"

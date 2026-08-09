@@ -15,5 +15,5 @@ set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 R=recipes/gemma-4-31B-it/rtx-1
 Q="${QUANT-fp8}"
-echo "serving gemma-4-31b on $(hostname): http://$(hostname):${API_PORT:-8000}/v1  (quant ${Q:-bf16})"
+echo "serving gemma-4-31b on $(hostname): http://$(hostname):${API_PORT:-8000}/v1  (quant ${Q:-BF16})"
 exec bash "$R/serve.sh"

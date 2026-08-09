@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Serve Qwen3-235B-A22B on one RTX PRO 6000 Blackwell node: bf16, TP8, CUDA graphs, prefix caching.
+# Serve Qwen3-235B-A22B on one RTX PRO 6000 Blackwell node: BF16, TP8, CUDA graphs, prefix caching.
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/env/env.sh"

@@ -60,7 +60,7 @@ Read from `config.json` and the model card:
 
 MXFP4 is not a post-training compression here. The card states the model was quantization-aware
 trained from the SFT stage onward with MXFP4 weights and MXFP8 activations, which is how 2.8T
-parameters fit in 1.5 TiB. That also means there is no bf16 twin to fall back on.
+parameters fit in 1.5 TiB. That also means there is no BF16 twin to fall back on.
 
 The model always thinks: it returns `reasoning_content`, thinking effort is set with a top-level
 `reasoning_effort` field taking `low`, `high`, or `max` with `max` as the default, and multi-turn use

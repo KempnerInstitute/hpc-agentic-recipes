@@ -6,7 +6,7 @@ Status: Validated - vLLM 0.25.1+cu129, protocol: slope(128,1152) at concurrency 
 | --- | --- |
 | Served name | `gemma-4-26b` |
 | Checkpoint | `gemma-4-26B-A4B-it`, Hugging Face `google/gemma-4-26B-A4B-it` |
-| On disk | 51.6 GB, bf16, `Gemma4ForConditionalGeneration` |
+| On disk | 51.6 GB, BF16, `Gemma4ForConditionalGeneration` |
 | Context | 262144, the checkpoint maximum |
 | Hardware | 1 H200, 140 GB, TP1, no NCCL |
 | Engine | vLLM 0.25.1+cu129 |
@@ -110,7 +110,7 @@ bash common/tools/stop.sh <node>       # direct path
 | `MAX_MODEL_LEN` | 262144 | Context window, the checkpoint maximum |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
 | `TP` | 1 | Tensor parallel size |
-| `QUANT` | unset, bf16 | `fp8` quantizes weights on load; measured no change in rate |
+| `QUANT` | unset, BF16 | `fp8` quantizes weights on load; measured no change in rate |
 | `KV_FP8` | unset | `--kv-cache-dtype fp8`; halves KV bytes, measured no change in rate |
 | `ENFORCE_EAGER` | unset | Skip torch.compile and CUDA graph capture, to debug a startup failure |
 | `SPEC_DRAFT` | unset | Must stay unset on vLLM 0.25.1 and 0.26.0; see Known limits |

@@ -247,7 +247,7 @@ KEY_NAME=Kimi-K3-h200-4-nodes4-sglang bash common/tools/bench.sh --host <head_no
 - Keep `--ep-size 16`. Under pure TP16 the MoE intermediate dimension does not divide into the 128 Marlin
   needs, `w2` pads, weights reach 131.62 GiB per GPU, and the KDA state cache cannot be allocated at all.
 - Keep `--moe-runner-backend marlin`. MXFP4 is Blackwell-native and these are Hopper cards; the `auto`
-  backend dequantizes every expert to bf16 and runs out of memory.
+  backend dequantizes every expert to BF16 and runs out of memory.
 - Down InfiniBand ports stall initialization with no error, so `serve.sh` detects the active HCAs rather
   than hardcoding them.
 - Multimodal is left off. The vision tower is opt-in, and enabling it risks the cross-node profiling stall
