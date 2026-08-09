@@ -76,23 +76,23 @@ under SGLang; method in [docs/benchmarking.md](docs/benchmarking.md). `c=256` me
 requests. `Context` is what the recipe serves by default; raise it with `MAX_MODEL_LEN` up to what the
 checkpoint supports, which each recipe states.
 
-| Model | Precision | Hardware | Parallelism | Single stream | Aggregate | Context |
-| --- | --- | --- | --- | --- | --- | --- |
-| **GLM-5.2** | NVFP4 | [1 RTX node](recipes/GLM-5.2-NVFP4/rtx-8) | TP8 | 91.1 tok/s | 1375 at c=256, peak | 212K |
-| | FP8 | [2 H200 nodes](recipes/GLM-5.2-FP8/h200-4-nodes2) | TP4 x PP2 | 12.9 tok/s | 5392 at c=512, peak | 626K |
-| **GLM-4.6** | FP8 | [1 H200 node](recipes/GLM-4.6-FP8/h200-4) | TP4 | 19.1 tok/s | 8127 at c=1024, rising | 198K |
-| **Kimi-K2.7-Code** | INT4 | [1 RTX node](recipes/Kimi-K2.7-Code/rtx-8) | TP8 | 20.6 tok/s | 1833 at c=896, saturated | 128K |
-| | INT4 | [2 H200 nodes](recipes/Kimi-K2.7-Code/h200-4-nodes2) | TP4 x PP2 | 30.2 tok/s | 7094 at c=1024, rising | 256K |
-| **Kimi-K3** | MXFP4, QAT | [4 H200 nodes, SGLang](recipes/Kimi-K3/h200-4-nodes4-sglang) | TP16 x EP16 | 40.3 tok/s | 1067 at c=64, capped | 374K |
-| **Qwen3-235B-A22B** | bf16 | [1 RTX node](recipes/Qwen3-235B-A22B/rtx-8) | TP8 | 62.7 tok/s | 3948 at c=512, peak | 40K |
-| **Qwen3-Coder-480B** | FP8 | [1 RTX node](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8) | TP4 x PP2 | 68.0 tok/s | 3197 at c=640, peak | 256K |
-| **DeepSeek-V4-Pro** | FP8 with FP4 experts | [2 RTX nodes](recipes/DeepSeek-V4-Pro/rtx-8-nodes2) | TP8 x PP2 | 18.7 tok/s | 3003 at c=1024, rising | 1M |
-| **Gemma-4-26B-A4B** | bf16 | [1 H200 GPU](recipes/gemma-4-26B-A4B-it/h200-1) | TP1 | 250.5 tok/s | 10905 at c=1024, saturated | 256K |
-| | bf16 | [1 H100 GPU](recipes/gemma-4-26B-A4B-it/h100-1) | TP1 | 204.5 tok/s | 7165 at c=640, peak | 256K |
-| | bf16 | [1 RTX GPU](recipes/gemma-4-26B-A4B-it/rtx-1) | TP1 | 141.1 tok/s | 5798 at c=1024, rising | 256K |
-| **Gemma-4-31B** | FP8 | [1 H200 GPU](recipes/gemma-4-31B-it/h200-1) | TP1 | 85.0 tok/s | 3154 at c=768, saturated | 256K |
-| | FP8 | [1 H100 GPU](recipes/gemma-4-31B-it/h100-1) | TP1 | 68.7 tok/s | 2471 at c=512, saturated | 256K |
-| | FP8 | [1 RTX GPU](recipes/gemma-4-31B-it/rtx-1) | TP1 | 39.5 tok/s | 2136 at c=768, saturated | 256K |
+| Model | Precision | Hardware | Single stream | Aggregate | Context |
+| --- | --- | --- | --- | --- | --- |
+| **GLM-5.2** | NVFP4 | [1 RTX node](recipes/GLM-5.2-NVFP4/rtx-8) | 91.1 tok/s | 1375 at c=256, peak | 212K |
+| | FP8 | [2 H200 nodes](recipes/GLM-5.2-FP8/h200-4-nodes2) | 12.9 tok/s | 5392 at c=512, peak | 626K |
+| **GLM-4.6** | FP8 | [1 H200 node](recipes/GLM-4.6-FP8/h200-4) | 19.1 tok/s | 8127 at c=1024, rising | 198K |
+| **Kimi-K2.7-Code** | INT4 | [1 RTX node](recipes/Kimi-K2.7-Code/rtx-8) | 20.6 tok/s | 1833 at c=896, saturated | 128K |
+| | INT4 | [2 H200 nodes](recipes/Kimi-K2.7-Code/h200-4-nodes2) | 30.2 tok/s | 7094 at c=1024, rising | 256K |
+| **Kimi-K3** | MXFP4, QAT | [4 H200 nodes, SGLang](recipes/Kimi-K3/h200-4-nodes4-sglang) | 40.3 tok/s | 1067 at c=64, capped | 374K |
+| **Qwen3-235B-A22B** | bf16 | [1 RTX node](recipes/Qwen3-235B-A22B/rtx-8) | 62.7 tok/s | 3948 at c=512, peak | 40K |
+| **Qwen3-Coder-480B** | FP8 | [1 RTX node](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8) | 68.0 tok/s | 3197 at c=640, peak | 256K |
+| **DeepSeek-V4-Pro** | FP8 with FP4 experts | [2 RTX nodes](recipes/DeepSeek-V4-Pro/rtx-8-nodes2) | 18.7 tok/s | 3003 at c=1024, rising | 1M |
+| **Gemma-4-26B-A4B** | bf16 | [1 H200 GPU](recipes/gemma-4-26B-A4B-it/h200-1) | 250.5 tok/s | 10905 at c=1024, saturated | 256K |
+| | bf16 | [1 H100 GPU](recipes/gemma-4-26B-A4B-it/h100-1) | 204.5 tok/s | 7165 at c=640, peak | 256K |
+| | bf16 | [1 RTX GPU](recipes/gemma-4-26B-A4B-it/rtx-1) | 141.1 tok/s | 5798 at c=1024, rising | 256K |
+| **Gemma-4-31B** | FP8 | [1 H200 GPU](recipes/gemma-4-31B-it/h200-1) | 85.0 tok/s | 3154 at c=768, saturated | 256K |
+| | FP8 | [1 H100 GPU](recipes/gemma-4-31B-it/h100-1) | 68.7 tok/s | 2471 at c=512, saturated | 256K |
+| | FP8 | [1 RTX GPU](recipes/gemma-4-31B-it/rtx-1) | 39.5 tok/s | 2136 at c=768, saturated | 256K |
 
 A node here is 8 GPUs on RTX and 4 on H200 and H100, so a 2 RTX node recipe uses 16 GPUs and a 4 H200
 node recipe uses 16. A row naming a GPU rather than a node uses that one GPU and shares the node.

@@ -9,7 +9,7 @@ Status: Validated - SGLang 0.5.16, protocol: slope(128,1152) swept to each confi
 | On disk | 1453.8 GiB across 96 shards, MXFP4 quantization-aware trained |
 | Served precision | MXFP4 through Marlin W4A16, 102.75 GB of weights per GPU |
 | Context | 383216. The checkpoint declares 1048576, which the engine will not accept; see Known limits |
-| Hardware | 4 H200 nodes, 16 GPUs, 143771 MiB each, TP16 with expert parallelism, no pipeline parallelism |
+| Hardware | 4 H200 nodes, 16 GPUs, 143771 MiB each, TP16 x EP16, no pipeline parallelism |
 | Engine | SGLang 0.5.16 in `lmsysorg/sglang:kimi-k3-cu12`, a container rather than a virtual environment |
 
 ## 1. Create the API key
