@@ -35,11 +35,15 @@ the memory budget, and whether multimodal profiling will bite you.
 
 ## Scaffold
 
+Copy an existing recipe directory and edit it:
+
 ```
-bash common/tools/new_recipe.sh <Checkpoint-Name> <hardware> --from <existing-recipe>
+cp -r recipes/<existing-recipe> recipes/<Checkpoint-Name>/<hardware>
 ```
 
-Hardware directory names are `<gpu-type>-<gpus-per-node>[-nodes<N>][-<engine>]`.
+Hardware directory names are `<gpu-type>-<gpus-per-node>[-nodes<N>][-<engine>]`. Rename the served model,
+the key name, the log file and the checkpoint path throughout, and delete anything the new model does not
+need.
 
 Pick what to copy from by toolchain, not by model similarity:
 
@@ -112,16 +116,11 @@ bash common/tools/bench.sh --host <node> --model <served-name>
 
 ## Write the README and check it
 
-Fill in all 15 required sections from `common/templates/recipe-README.md`, in that order. For failure modes,
-leave the marker pairs empty:
+Follow `common/templates/recipe-README.md`, which carries the section order every recipe here uses.
 
-```
-<!-- issue:<slug> begin -->
-<!-- issue:<slug> end -->
-```
-
-Do not write that text yourself. It is duplicated across recipes on purpose, the single source is
-`common/issues/`, and a maintainer fills every copy from it so they cannot drift.
+A recipe page carries the instructions and the measured numbers, and nothing else. Reasoning, history, and
+anything that was tried and did not work stay out of the repo. Prefer a table to prose, and put failure
+modes in Known limits as one bullet each: the symptom and the rule, not the investigation.
 
 Two conventions the README text has to follow. Give an engine version rather than a calendar date, because a
 date does not tell a reader whether a number still holds. And write about the recipe rather than about
@@ -130,8 +129,7 @@ yourself: no first person, and no citing notes that are not in the repo.
 ## Update the indexes
 
 - One row in the model table in the top-level README
-- One row in `common/issues/matrix.tsv` for each applicable issue
-- An entry in `common/issues/readme-only.txt` if the recipe is documentation-only
+- A row in the model's own `README.md` if the model has more than one hardware variant
 - A mention in [choosing-a-model.md](choosing-a-model.md) if it is a model someone should reach for
 
 Coverage is checked in both directions when your pull request is reviewed, so a recipe missing from a table
