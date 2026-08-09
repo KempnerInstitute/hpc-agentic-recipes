@@ -1,7 +1,9 @@
 # Parser patch for the container
 
-Two files taken unmodified from SGLang's `kimi-k3` branch and bind-mounted over the copies inside
-`sglang-kimi-k3-cu12.sif`. Set `K3_PARSER_PATCH=1` to apply them.
+Two files from SGLang's `kimi-k3` branch, bind-mounted over the copies inside
+`sglang-kimi-k3-cu12.sif`. Set `K3_PARSER_PATCH=1` to apply them. `kimik3_format.py` is verbatim.
+`reasoning_parser.py` carries one local change on top of upstream, described under Second reasoning
+block below.
 
 The image predates the commit named in `UPSTREAM_SHA`, which reworked K3 reasoning and tool-call
 handling. No release of SGLang carries that work: 0.5.16 is older than it, and the `kimi-k3-cu12` tag
@@ -22,6 +24,35 @@ Three changes address it: the detector now also breaks on `RESPONSE_OPEN`, a new
 `strip_partial_marker_suffix` trims truncated markers, and `_tools_passthrough` is set only when the
 channel really is tools rather than unconditionally.
 
+## Second reasoning block, the local change
+
+A response can hold more than one reasoning block: the model thinks, calls a tool, then thinks again
+about the result. Closing the first block latches `_reasoning_done`, and every gate that strips an
+opening marker sits behind that latch, so upstream emits the second block verbatim as visible text.
+It shows up only after a tool call, which is why single-shot requests look clean.
+
+Two changes in `KimiK3Detector`:
+
+- `parse_streaming_increment` re-enters the reasoning channel when content after a completed block
+  opens a new one, and holds back a marker split across chunks instead of emitting it.
+- `_find_think_open` replaces an exact string match, so a repeated separator such as
+  `<|open|>think<|sep|<|sep|>` is still recognized.
+
+Verified by running the detector inside the image with both parsers over the same streams. Upstream
+leaks on four shapes, this one on none:
+
+| Stream | Upstream | Patched |
+| --- | --- | --- |
+| single block | clean | clean |
+| two blocks, tool shape | leaks | clean |
+| second block, repeated separator | leaks | clean |
+| open marker split across chunks | leaks | clean |
+| three blocks | leaks | clean |
+| no reasoning, or reasoning only | clean | clean |
+
+End to end, Claude Code at maximum effort driving a `search.sh` round-trip showed the markers twice
+before and none after.
+
 ## Measured, patched against unpatched
 
 Same four nodes, same task, same key. Markers gone from the client's displayed output and from the raw
@@ -36,7 +67,8 @@ Pinned to the commit in `UPSTREAM_SHA`, fetched from
 `raw.githubusercontent.com/sgl-project/sglang/<sha>/python/sglang/srt/...`. Both files are upstream
 Apache-2.0 code, held here only so a bind mount has a source on a filesystem every node can read. They
 are verbatim, so they carry upstream's own style and are exempt from this repository's prose rules.
-`kimik3_format.py` is needed because the parser imports three new helpers from it.
+`kimik3_format.py` is needed because the parser imports three new helpers from it. The local change to
+`reasoning_parser.py` is confined to `KimiK3Detector`; nothing shared with other models is touched.
 
 ## When to retire it
 
