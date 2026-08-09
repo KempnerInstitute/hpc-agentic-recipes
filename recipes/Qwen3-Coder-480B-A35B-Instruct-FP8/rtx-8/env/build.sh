@@ -3,7 +3,6 @@
 # Idempotent; --force rebuilds.
 # This is the only supported build path: the install needs uv flags a requirements file cannot
 # express, specifically --prerelease, --index-strategy, two extra index URLs and --no-deps for a
-# single package, plus a conda CUDA 13.0 toolkit that no Python environment can carry.
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/../../../../common/defaults.sh"
@@ -17,12 +16,7 @@ FORCE=0
 command -v uv >/dev/null || { echo "uv is required: https://docs.astral.sh/uv/" >&2; exit 1; }
 mkdir -p "$(dirname "$VENV")"
 
-# "Directory exists" is not "environment works": an interrupted install leaves a venv skeleton behind,
-# and skipping on mere existence would then serve from a broken environment.
 venv_healthy () {
-  # bin/python is the proof. An interrupted install leaves site-packages populated while the
-  # interpreter and activate script are missing, so a dist-info check passes on a venv that
-  # cannot be activated or run.
   [ -x "$VENV/bin/python" ] && [ -f "$VENV/bin/activate" ] \
     && compgen -G "$VENV"/lib/python*/site-packages/vllm-*.dist-info > /dev/null
 }
@@ -30,19 +24,11 @@ if venv_healthy && [ "$FORCE" = 0 ]; then
   echo "environment already present and complete at $VENV (pass --force to rebuild)"
 else
   [ -d "$VENV" ] && { echo "removing incomplete environment at $VENV"; rm -rf "$VENV"; }
-  # The vllm wheel comes from the nightly cu130 index rather than PyPI, because sm_120 needs the
-  # CUDA 13 build and uv's --torch-backend maxes out at cu129. The version is pinned explicitly:
-  # the installed metadata reads a plain 0.25.1 with no local version tag, so an unpinned install
-  # silently drifts, either to whatever the nightly index holds that day or to the PyPI CUDA 13
-  # wheel, and neither is the build the measured numbers in the README come from.
   uv venv --python 3.12 "$VENV"
   uv pip install --python "$VENV/bin/python" --prerelease=allow --index-strategy unsafe-best-match \
     --extra-index-url https://wheels.vllm.ai/nightly/cu130 \
     --extra-index-url https://download.pytorch.org/whl/cu130 \
     "vllm==$VLLM_VERSION"
-  # 0.6.15 accepts the kv_scale_format argument the sm_120 attention backend passes, which the 0.6.13
-  # that vLLM pins rejects at the first inference request. --no-deps keeps the resolver from ripping
-  # out torch and cudnn to satisfy the newer package's own pins.
   uv pip install --python "$VENV/bin/python" --no-deps -U "flashinfer-python==$FLASHINFER_VERSION"
 fi
 
@@ -50,9 +36,6 @@ if [ -x "$CUDA13/bin/nvcc" ] && [ "$FORCE" = 0 ]; then
   echo "CUDA 13.0 toolkit already present at $CUDA13"
 else
   [ "$FORCE" = 1 ] && rm -rf "$CUDA13"
-  # A complete, consistent CUDA 13.0 toolkit for FlashInfer's sm_120 JIT. The node's
-  # /usr/local/cuda-13 is runtime-only, and the pip nvcc wheels mix 13.0 and 13.2 between nvcc, cicc
-  # and ptxas, which surfaces as incompatible CCCL headers and then an unsupported ptx version.
   source /etc/profile.d/lmod.sh 2>/dev/null || true
   module load Mambaforge/23.3.1-fasrc01 2>/dev/null || true
   command -v mamba >/dev/null || { echo "mamba is required: module load Mambaforge/23.3.1-fasrc01" >&2; exit 1; }
@@ -62,9 +45,6 @@ fi
 
 "$VENV/bin/python" -c "import importlib.metadata as m; print('vllm', m.version('vllm'), '| torch', m.version('torch'), '| flashinfer', m.version('flashinfer-python'))"
 "$CUDA13/bin/nvcc" --version | tail -1
-# Claiming success requires all three pieces, not just the venv: a build interrupted after the
-# Python install leaves vllm present and the toolkit absent, which then fails at the sm_120 JIT.
-# verify all three
 missing=""
 compgen -G "$VENV"/lib/python*/site-packages/vllm-*.dist-info > /dev/null || missing="$missing vllm"
 compgen -G "$VENV"/lib/python*/site-packages/flashinfer_python-*.dist-info > /dev/null || missing="$missing flashinfer"

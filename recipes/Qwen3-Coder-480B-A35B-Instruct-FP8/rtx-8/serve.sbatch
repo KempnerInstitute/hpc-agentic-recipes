@@ -11,10 +11,6 @@
 # Submit from the repo root, and pass your account:
 #   sbatch --account=<acct> recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8/serve.sbatch
 #
-# All eight GPUs are used as TP4 x PP2, not TP8, because this FP8 checkpoint cannot shard eight ways.
-#
-# Slurm stages this script into its spool directory, so $0 does not point into the repo and the path
-# below is resolved against the submit directory instead. The log lands in the submit directory.
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 R=recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8
