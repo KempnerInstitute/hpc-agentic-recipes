@@ -78,27 +78,29 @@ checkpoint supports, which each recipe states.
 
 | Model | Precision | Hardware | One stream<br>tok/s | Aggregate<br>tok/s / c | Context |
 | --- | --- | --- | --- | --- | --- |
-| **GLM-5.2** | NVFP4 | [1 RTX node](recipes/GLM-5.2-NVFP4/rtx-8) | 91.1 | 1375/256, peak | 212K |
-| | FP8 | [2 H200 nodes](recipes/GLM-5.2-FP8/h200-4-nodes2) | 12.9 | 5392/512, peak | 626K |
-| **GLM-4.6** | FP8 | [1 H200 node](recipes/GLM-4.6-FP8/h200-4) | 19.1 | 8127/1024, rising | 198K |
-| **Kimi-K2.7-Code** | INT4 | [1 RTX node](recipes/Kimi-K2.7-Code/rtx-8) | 20.6 | 1833/896, saturated | 128K |
-| | INT4 | [2 H200 nodes](recipes/Kimi-K2.7-Code/h200-4-nodes2) | 30.2 | 7094/1024, rising | 256K |
-| **Kimi-K3** | MXFP4, QAT | [4 H200 nodes, SGLang](recipes/Kimi-K3/h200-4-nodes4-sglang) | 40.3 | 1067/64, capped | 374K |
-| **Qwen3-235B-A22B** | bf16 | [1 RTX node](recipes/Qwen3-235B-A22B/rtx-8) | 62.7 | 3948/512, peak | 40K |
-| **Qwen3-Coder-480B** | FP8 | [1 RTX node](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8) | 68.0 | 3197/640, peak | 256K |
-| **DeepSeek-V4-Pro** | FP8 with FP4 experts | [2 RTX nodes](recipes/DeepSeek-V4-Pro/rtx-8-nodes2) | 18.7 | 3003/1024, rising | 1M |
-| **Gemma-4-26B-A4B** | bf16 | [1 H200 GPU](recipes/gemma-4-26B-A4B-it/h200-1) | 250.5 | 10905/1024, saturated | 256K |
-| | bf16 | [1 H100 GPU](recipes/gemma-4-26B-A4B-it/h100-1) | 204.5 | 7165/640, peak | 256K |
-| | bf16 | [1 RTX GPU](recipes/gemma-4-26B-A4B-it/rtx-1) | 141.1 | 5798/1024, rising | 256K |
-| **Gemma-4-31B** | FP8 | [1 H200 GPU](recipes/gemma-4-31B-it/h200-1) | 85.0 | 3154/768, saturated | 256K |
-| | FP8 | [1 H100 GPU](recipes/gemma-4-31B-it/h100-1) | 68.7 | 2471/512, saturated | 256K |
-| | FP8 | [1 RTX GPU](recipes/gemma-4-31B-it/rtx-1) | 39.5 | 2136/768, saturated | 256K |
+| **GLM-5.2** | NVFP4 | [1 RTX node](recipes/GLM-5.2-NVFP4/rtx-8) | 91.1 | 1375/256 ⛰️ | 212K |
+| | FP8 | [2 H200 nodes](recipes/GLM-5.2-FP8/h200-4-nodes2) | 12.9 | 5392/512 ⛰️ | 626K |
+| **GLM-4.6** | FP8 | [1 H200 node](recipes/GLM-4.6-FP8/h200-4) | 19.1 | 8127/1024 📈 | 198K |
+| **Kimi-K2.7-Code** | INT4 | [1 RTX node](recipes/Kimi-K2.7-Code/rtx-8) | 20.6 | 1833/896 ➖ | 128K |
+| | INT4 | [2 H200 nodes](recipes/Kimi-K2.7-Code/h200-4-nodes2) | 30.2 | 7094/1024 📈 | 256K |
+| **Kimi-K3** | MXFP4, QAT | [4 H200 nodes, SGLang](recipes/Kimi-K3/h200-4-nodes4-sglang) | 40.3 | 1067/64 🚧 | 374K |
+| **Qwen3-235B-A22B** | bf16 | [1 RTX node](recipes/Qwen3-235B-A22B/rtx-8) | 62.7 | 3948/512 ⛰️ | 40K |
+| **Qwen3-Coder-480B** | FP8 | [1 RTX node](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8) | 68.0 | 3197/640 ⛰️ | 256K |
+| **DeepSeek-V4-Pro** | FP8 with FP4 experts | [2 RTX nodes](recipes/DeepSeek-V4-Pro/rtx-8-nodes2) | 18.7 | 3003/1024 📈 | 1M |
+| **Gemma-4-26B-A4B** | bf16 | [1 H200 GPU](recipes/gemma-4-26B-A4B-it/h200-1) | 250.5 | 10905/1024 ➖ | 256K |
+| | bf16 | [1 H100 GPU](recipes/gemma-4-26B-A4B-it/h100-1) | 204.5 | 7165/640 ⛰️ | 256K |
+| | bf16 | [1 RTX GPU](recipes/gemma-4-26B-A4B-it/rtx-1) | 141.1 | 5798/1024 📈 | 256K |
+| **Gemma-4-31B** | FP8 | [1 H200 GPU](recipes/gemma-4-31B-it/h200-1) | 85.0 | 3154/768 ➖ | 256K |
+| | FP8 | [1 H100 GPU](recipes/gemma-4-31B-it/h100-1) | 68.7 | 2471/512 ➖ | 256K |
+| | FP8 | [1 RTX GPU](recipes/gemma-4-31B-it/rtx-1) | 39.5 | 2136/768 ➖ | 256K |
 
 A node here is 8 GPUs on RTX and 4 on H200 and H100, so a 2 RTX node recipe uses 16 GPUs and a 4 H200
 node recipe uses 16. A row naming a GPU rather than a node uses that one GPU and shares the node.
 
-Every recipe here is validated on hardware. The `peak`, `saturated`, `rising` and `capped` labels on the
-aggregate rates are defined in [docs/choosing-a-model.md](docs/choosing-a-model.md).
+Aggregate labels: ⛰️ peak, 📈 rising, 🚧 capped, ➖ saturated. Each says what the sweep found at the top,
+and all four are defined in [docs/choosing-a-model.md](docs/choosing-a-model.md).
+
+Every recipe here is validated on hardware.
 
 ## Weights
 
