@@ -2,10 +2,10 @@
 #SBATCH --job-name=kimi-k3
 #SBATCH --partition=kempner_h200
 #SBATCH --nodes=4
-#SBATCH --gpus=16
+#SBATCH --gres=gpu:4
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=48
-#SBATCH --mem=500G
+#SBATCH --cpus-per-task=64
+#SBATCH --mem=1440G
 #SBATCH --time=1-00:00:00
 #SBATCH --output=%x-%j.log
 set -euo pipefail
