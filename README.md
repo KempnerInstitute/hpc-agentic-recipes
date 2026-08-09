@@ -7,6 +7,11 @@ Both vLLM and SGLang are used here, and both serve an Anthropic-compatible endpo
 to directly. vLLM runs most recipes. SGLang runs Kimi-K3 from a container. See
 [docs/engines.md](docs/engines.md).
 
+![How a recipe becomes an endpoint](docs/figures/serving-flow.svg)
+
+The engine runs on a compute node, not where you type. Everything below is either pointing a client at an
+endpoint someone already started, or starting one yourself.
+
 ## Connect to a running endpoint
 
 Set five variables:
@@ -20,8 +25,11 @@ export CLAUDE_CODE_ATTRIBUTION_HEADER=0
 claude
 ```
 
-Use `ANTHROPIC_AUTH_TOKEN`, not `ANTHROPIC_API_KEY`, or every request returns 401. Get the served model
-name from the endpoint:
+> [!IMPORTANT]
+> Use `ANTHROPIC_AUTH_TOKEN`, not `ANTHROPIC_API_KEY`. The latter sends an `x-api-key` header, which both
+> engines ignore, so every request returns 401.
+
+Get the served model name from the endpoint:
 
 ```
 curl -s -H "Authorization: Bearer $ANTHROPIC_AUTH_TOKEN" http://<node>:8000/v1/models
@@ -40,8 +48,9 @@ module load Mambaforge
 command -v uv || curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Run the build on a compute node rather than a login node. It downloads and unpacks about 12 GB across tens
-of thousands of files.
+> [!WARNING]
+> Run the build on a compute node, never a login node. It downloads and unpacks about 12 GB across tens of
+> thousands of files.
 
 First create an API key. The name is the recipe path with a hyphen, so `recipes/GLM-5.2-NVFP4/rtx-8` reads:
 
@@ -84,7 +93,7 @@ checkpoint supports, which each recipe states.
 | **Kimi-K3** | MXFP4 QAT | [4 H200 nodes](recipes/Kimi-K3/h200-4-nodes4-sglang) | 40.3 | 1067/64 🚧 | 374K |
 | **Qwen3-235B-A22B** | BF16 | [1 RTX node](recipes/Qwen3-235B-A22B/rtx-8) | 62.7 | 3948/512 ⛰️ | 40K |
 | **Qwen3-Coder-480B** | FP8 | [1 RTX node](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8) | 68.0 | 3197/640 ⛰️ | 256K |
-| **DeepSeek-V4-Pro** | FP8/FP4 | [2 RTX nodes](recipes/DeepSeek-V4-Pro/rtx-8-nodes2) | 18.7 | 3003/1024 📈 | 1M |
+| **DeepSeek-V4-Pro** | FP8/FP4 Experts | [2 RTX nodes](recipes/DeepSeek-V4-Pro/rtx-8-nodes2) | 18.7 | 3003/1024 📈 | 1M |
 | **Gemma-4-26B-A4B** | BF16 | [1 H200 GPU](recipes/gemma-4-26B-A4B-it/h200-1) | 250.5 | 10905/1024 ➖ | 256K |
 | | BF16 | [1 H100 GPU](recipes/gemma-4-26B-A4B-it/h100-1) | 204.5 | 7165/640 ➖ | 256K |
 | | BF16 | [1 RTX GPU](recipes/gemma-4-26B-A4B-it/rtx-1) | 141.1 | 5798/1024 📈 | 256K |
@@ -101,9 +110,12 @@ and all four are defined in [docs/choosing-a-model.md](docs/choosing-a-model.md)
 
 Checkpoints are read from `MODELS_DIR`, which defaults to the Kempner AI Cluster shared model repository,
 currently located at `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models`. Every model a recipe
-references is already there. That directory is read-only, so download your own copies
-anywhere you can write and point `MODELS_DIR` there; scratch also loads faster.
-[docs/downloading-weights.md](docs/downloading-weights.md) covers both.
+references is already there, and [docs/downloading-weights.md](docs/downloading-weights.md) covers fetching
+more.
+
+> [!NOTE]
+> That directory is read-only. Download your own copies anywhere you can write and point `MODELS_DIR`
+> there; scratch also loads faster.
 
 ## Hardware
 
