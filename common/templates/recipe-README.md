@@ -2,12 +2,9 @@
 
 Status: Validated - <engine and version>, protocol: slope(128,1152) at concurrency <levels>
 
-<!-- Instructions only. A recipe page carries the steps and the measured numbers, nothing else.
-     Reasoning, history, and anything that did not work belong outside the repo.
-     Prefer a table to prose. Never write a two-column table whose left cell is a label and whose
-     right cell is a sentence: that is prose with extra pipes.
-     Give an engine version rather than a calendar date, and write about the recipe rather than
-     about yourself. -->
+<!-- Steps and measured numbers only. Reasoning, history and anything that did not work stay out.
+     Prefer tables to prose. Give an engine version, never a calendar date. Write about the recipe,
+     not about yourself. -->
 
 | | |
 | --- | --- |
@@ -63,7 +60,7 @@ bash recipes/<Checkpoint-Name>/<hardware>/serve_ssh.sh <node>
 | Launch to serving | <range across launches, cold and warm> |
 | Weight load, <n> shards across <n> ranks | <seconds> |
 
-- Measure these. A `to be measured` cell under a Validated status is a defect.
+- Measure these. `to be measured` under a Validated status is a defect.
 
 ## 4. Verify
 
@@ -86,8 +83,7 @@ curl -s -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
 | `/v1/models` without a key | `401` |
 | chat completion | `content` holds the answer, `finish_reason: stop` |
 
-- A thinking model needs at least 400 output tokens, or the budget goes on reasoning and `content`
-  comes back empty.
+- A thinking model needs at least 400 output tokens, or the budget goes on reasoning and `content` is empty.
 
 ## 5. Connect a client
 
@@ -97,9 +93,8 @@ source recipes/<Checkpoint-Name>/<hardware>/client.env
 claude
 ```
 
-- `client.env` must set `CLAUDE_CODE_MAX_CONTEXT_TOKENS` to the served window, in both directions.
-  Claude Code assumes 200k for a served name it does not recognize, so a smaller endpoint overflows
-  instead of compacting and a larger one goes mostly unused.
+- `client.env` must set `CLAUDE_CODE_MAX_CONTEXT_TOKENS` to the served window. Claude Code assumes 200k
+  for a name it does not recognize, so a smaller endpoint overflows and a larger one goes mostly unused.
 - Use `ANTHROPIC_AUTH_TOKEN`. `ANTHROPIC_API_KEY` sends `x-api-key` and returns 401.
 - `client.env` also sets `ANTHROPIC_SMALL_FAST_MODEL`; without it the client reaches for a hosted Haiku.
 - OpenAI clients such as Codex: base URL `http://<node>:8000/v1`, same key, model `<served-name>`. See
@@ -116,8 +111,7 @@ bash common/tools/stop.sh <node>       # direct path
 
 ## Tunable inputs
 
-Every variable the scripts read, with the default they actually carry. Extract them from the scripts
-rather than writing them from memory; a wrong default here has slipped through review more than once.
+Every variable the scripts read. Extract the defaults from the scripts, never from memory.
 
 | Variable | Default | Effect |
 | --- | --- | --- |
@@ -150,8 +144,7 @@ Results:
 | 1 | | | | |
 | ... | | | | |
 
-Verify every cell against the sweep log mechanically, column by column, before publishing. A fabricated
-column is invisible when every other column is right.
+Verify every cell against the sweep log mechanically, column by column, before publishing.
 
 | | |
 | --- | --- |
@@ -173,6 +166,9 @@ KEY_NAME=<Checkpoint-Name>-<hardware> bash common/tools/bench.sh --host <node> -
 
 ## Known limits
 
-One bullet per failure a reader would otherwise walk into. State the symptom and the rule, not the
-investigation. Cover at least: any parallelism shape the checkpoint refuses, anything that must not be
-enabled, and any client-side limit.
+One bullet per failure a reader would otherwise walk into: the symptom and the rule, not the
+investigation. Cover at least:
+
+- Any parallelism shape the checkpoint refuses.
+- Anything that must not be enabled.
+- Any client-side limit.
