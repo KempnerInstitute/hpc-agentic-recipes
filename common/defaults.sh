@@ -55,16 +55,6 @@ export VLLM_CACHE_ROOT
 
 : "${API_PORT:=8000}"
 
-# Partitions. All nodes of a given type share one hardware spec, so only the partition matters.
-#   kempner_rtx   RTX PRO 6000 Blackwell, 8 GPUs per node, 97887 MiB each, sm_120, PCIe, CUDA 13
-#   kempner_h200  H200, 4 GPUs per node, 143771 MiB each, NVLink, CUDA 12.9
-#   kempner_h100  H100, 4 GPUs per node, 80 GB each, NVLink, CUDA 12.9
-# Per-GPU allocation limits: 16 CPUs on kempner_rtx and kempner_h200, 24 on kempner_h100.
-# Maximum wall time is 2 days on all three.
-: "${PARTITION_RTX:=kempner_rtx}"
-: "${PARTITION_H200:=kempner_h200}"
-: "${PARTITION_H100:=kempner_h100}"
-
 # Return success explicitly. A sourced file's exit status is that of its last command, and callers run
 # under set -e: ending on a failed test for an optional file would abort them silently, with no output.
 :
