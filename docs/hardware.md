@@ -19,6 +19,11 @@ Per GPU requested you may take 16 CPUs on `kempner_rtx`, `kempner_h200` and `kem
 `kempner_h100`. Host memory per GPU is 180 GB on `kempner_rtx`, 360 GB on `kempner_h200` and `kempner_h100`,
 and 240 GB on `kempner`. Maximum wall time is 2 days everywhere.
 
+Every Slurm submission needs `--account=<your-account>`. No recipe carries an account directive and this
+repo sets no default, since there is no correct one to ship. That holds however the nodes were obtained,
+because a flag that selects where a job lands supplies no account. The direct launch path in each recipe
+never reaches Slurm, so it needs no account.
+
 ## What each type is good for
 
 **RTX PRO 6000** has the most aggregate GPU memory per node, 8 times 97887 MiB, and it is Blackwell, so it

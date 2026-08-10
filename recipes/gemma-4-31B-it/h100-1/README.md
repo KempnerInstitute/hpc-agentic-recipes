@@ -127,7 +127,6 @@ bash common/tools/stop.sh <node>       # direct path
 | `VENV_DIR` | under `ENV_ROOT` | Use an environment built elsewhere |
 | `VLLM_VERSION` | 0.25.1 | Wheel version `env/build.sh` installs |
 | `UV_CACHE_DIR` | under `ENV_ROOT` | Keep it on the same filesystem as the venv, or uv copies about 13 GB instead of hardlinking |
-| `ACCOUNT` | unset | Read by `common/defaults.sh`; `serve.sbatch` has no account directive, so pass `--account` at submit time |
 | `KEY_NAME`, `KEY_FILE`, `VLLM_API_KEY` | this recipe's key | Which key `common/lib/api_key.sh` resolves; an exported `VLLM_API_KEY` wins |
 | `NODE`, `GEMMA31_H100_NODE` | unset | The node to launch on or connect to; set either, or pass the node as an argument |
 | `MODELS_DIR`, `ENV_ROOT`, `VLLM_CACHE_ROOT` | `common/defaults.sh` | Override there or in `common/site.conf` |

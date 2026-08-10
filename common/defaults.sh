@@ -65,10 +65,6 @@ export VLLM_CACHE_ROOT
 : "${PARTITION_H200:=kempner_h200}"
 : "${PARTITION_H100:=kempner_h100}"
 
-# Slurm account. There is no correct default for a public repo, so pass --account at submit time or
-# set ACCOUNT in common/site.conf.
-: "${ACCOUNT:=}"
-
 # Return success explicitly. A sourced file's exit status is that of its last command, and callers run
 # under set -e: ending on a failed test for an optional file would abort them silently, with no output.
 :

@@ -70,7 +70,8 @@ Then start with a single-GPU recipe, which needs one GPU rather than a whole nod
 [recipes/gemma-4-26B-A4B-it/h200-1](recipes/gemma-4-26B-A4B-it/h200-1/README.md). Follow it from the top.
 Runnable recipes all have the same steps: configure once, build the environment, launch, verify, connect.
 
-Each launches two ways: an sbatch submission and a direct launch on nodes you already hold.
+Each launches two ways: an sbatch submission and a direct launch on nodes you already hold. Every sbatch
+submission needs `--account=<your-account>`. The direct launch does not go through Slurm and needs none.
 
 To choose a model, see [docs/choosing-a-model.md](docs/choosing-a-model.md). The fastest model here is not
 the best coder.

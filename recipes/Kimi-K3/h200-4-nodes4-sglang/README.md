@@ -146,7 +146,6 @@ bash common/tools/stop.sh <node0> <node1> <node2> <node3>    # direct path, name
 | `K3_LOG_DIR` | `/tmp/$USER/k3` | Node-local logs and JIT caches |
 | `KEY_NAME`, `KEY_FILE`, `VLLM_API_KEY` | this recipe's key | Which key `common/lib/api_key.sh` resolves |
 | `NODE`, `K3_HEAD_NODE` | unset | The head node for the client; pass nodes as arguments to the launcher |
-| `ACCOUNT` | unset | Read by `common/defaults.sh`; pass `--account` at submit time |
 | `MODELS_DIR`, `ENV_ROOT` | `common/defaults.sh` | Override there or in `common/site.conf` |
 
 ## Benchmarking

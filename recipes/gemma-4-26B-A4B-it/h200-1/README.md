@@ -123,7 +123,6 @@ bash common/tools/stop.sh <node>       # direct path
 | `VENV_DIR` | under `ENV_ROOT` | Use an environment built elsewhere |
 | `VLLM_VERSION` | 0.25.1 | Wheel version `env/build.sh` installs |
 | `NODE`, `GEMMA26_H200_NODE` | unset | The node to launch on or connect to; set either, or pass the node as an argument |
-| `ACCOUNT` | unset | Slurm account, or pass `--account` at submit time |
 | `MODELS_DIR`, `ENV_ROOT`, `VLLM_CACHE_ROOT` | `common/defaults.sh` | Override there or in `common/site.conf` |
 | `VLLM_USE_DEEP_GEMM` | 0, set in `env/env.sh` | Must stay 0 on H200; see Known limits |
 

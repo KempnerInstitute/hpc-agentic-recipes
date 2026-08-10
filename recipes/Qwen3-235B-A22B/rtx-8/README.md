@@ -145,7 +145,6 @@ bash common/tools/stop.sh <node>       # direct path
 | `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is a small quota here |
 | `KEY_NAME`, `KEY_FILE`, `VLLM_API_KEY` | this recipe's key | Which key `common/lib/api_key.sh` resolves; an exported `VLLM_API_KEY` wins |
 | `NODE`, `QWEN3_235B_NODE` | unset | The node to launch on or connect to; set either, or pass the node as an argument |
-| `ACCOUNT` | unset | Read by `common/defaults.sh`; `serve.sbatch` has no account directive, so pass `--account` at submit time |
 | `MODELS_DIR`, `ENV_ROOT` | `common/defaults.sh` | Override there or in `common/site.conf` |
 
 ## Benchmarking

@@ -149,7 +149,6 @@ bash common/tools/stop.sh <head_node> <worker_node>    # direct path, name both
 | `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is a small quota here |
 | `KEY_NAME`, `KEY_FILE`, `VLLM_API_KEY` | this recipe's key | Which key `common/lib/api_key.sh` resolves; an exported `VLLM_API_KEY` wins |
 | `NODE`, `GLM52_HEAD`, `GLM52_WORKER` | unset | Nodes for the SSH path; pass them as arguments instead |
-| `ACCOUNT` | unset | Read by `common/defaults.sh`; `serve.sbatch` has no account directive, so pass `--account` at submit time |
 | `MODELS_DIR`, `ENV_ROOT` | `common/defaults.sh` | Override there or in `common/site.conf` |
 
 ## Benchmarking
