@@ -65,9 +65,9 @@ that route showed no defect for this patch to fix.
 
 Pinned to the commit in `UPSTREAM_SHA`, fetched from
 `raw.githubusercontent.com/sgl-project/sglang/<sha>/python/sglang/srt/...`. Both files are upstream
-Apache-2.0 code, held here only so a bind mount has a source on a filesystem every node can read. They
-are verbatim, so they carry upstream's own style and are exempt from this repository's prose rules.
-`kimik3_format.py` is needed because the parser imports three new helpers from it. The local change to
+Apache-2.0 code, held here only so a bind mount has a source on a filesystem every node can read, and they
+keep upstream's style rather than this repository's. `kimik3_format.py` is needed because the parser
+imports three new helpers from it. The local change to
 `reasoning_parser.py` is confined to `KimiK3Detector`; nothing shared with other models is touched.
 
 ## When to retire it
