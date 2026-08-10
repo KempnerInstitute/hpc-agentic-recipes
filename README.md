@@ -165,3 +165,7 @@ maintainer runs the repository checks on it and asks for whatever is missing.
 
 MIT, in [LICENSE](LICENSE). Model weights are not covered by it: each checkpoint carries its own license
 from whoever published it, and the recipe for that model names the Hugging Face repo where it is stated.
+
+Two vendored files are not covered either. `recipes/Kimi-K3/h200-4-nodes4-sglang/patches/` holds upstream
+SGLang code under Apache-2.0, with the license text, the pinned commit and the one local change recorded
+beside it.
