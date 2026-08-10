@@ -81,8 +81,9 @@ the best coder.
 Rows are grouped by model, one per hardware configuration, and the hardware cell links to that recipe.
 Rates for the vLLM recipes are measured with `common/tools/bench.sh` and Kimi-K3 with the same protocol
 under SGLang; method in [docs/benchmarking.md](docs/benchmarking.md). `c=256` means 256 concurrent
-requests. `Context` is what the recipe serves by default; raise it with `MAX_MODEL_LEN` up to what the
-checkpoint supports, which each recipe states.
+requests. `Context` is what the recipe serves by default and `MAX_MODEL_LEN` changes it, but not every
+recipe can reach its checkpoint maximum: where one request that long needs more KV cache than the hardware
+has, the engine refuses to start. Each recipe states its own ceiling in Known limits.
 
 | Model | Precision | Hardware | 1xStream<br>tok/s | Aggregate<br>tok/s / c | Context |
 | --- | --- | --- | --- | --- | --- |
