@@ -34,7 +34,7 @@ bash recipes/GLM-4.6-FP8/h200-4/env/build.sh
 - About 13 GB and 215 packages, under `ENV_ROOT`, default scratch. Set `ENV_ROOT` in `common/site.conf` to
   move it.
 - Installs the cu129 wheel. These nodes run driver 575, CUDA 12.9, and vLLM's default wheel is CUDA 13.
-- `env/requirements.lock` records the tested resolution and `env/WHEELS` the non-PyPI URLs with hashes.
+- `env/requirements.lock` records the tested resolution and `env/WHEELS` the non-PyPI wheel URL.
 
 ## 3. Launch
 

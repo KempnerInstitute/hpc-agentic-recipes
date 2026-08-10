@@ -24,9 +24,10 @@
 # ENV_ROOT points at scratch, which has a 90-day retention policy, so environments are expected to
 # disappear periodically. That is fine: they are disposable, and every recipe can rebuild its own.
 #
-# Note that not every environment is reproducible from pins alone. Recipes that install from a nightly
-# wheel index record the exact artifact URLs and hashes in env/WHEELS, because nightly wheels are
-# rotated and deleted upstream. If a rebuild fails on a missing wheel, that file is where to look.
+# Note that not every environment is reproducible from pins alone. A recipe that installs a wheel by URL
+# records that URL in env/WHEELS, which is where to look if a rebuild fails on a missing wheel. The RTX
+# recipes install from a nightly index that rotates its builds, so a rebuild there resolves to a
+# different wheel than the one the rates were measured on, and cannot be pinned back.
 set -uo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/../lib/repo_root.sh"
