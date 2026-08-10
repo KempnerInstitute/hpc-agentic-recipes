@@ -89,6 +89,8 @@ claude
 ```
 
 - No output cap is needed at 262144.
+- `client.env` sets `CLAUDE_CODE_MAX_CONTEXT_TOKENS=262144`. Claude Code does not recognize this served name
+  and assumes a 200k window, which client 2.1.223 enforces.
 - Use `ANTHROPIC_AUTH_TOKEN`. `ANTHROPIC_API_KEY` sends `x-api-key` and returns 401.
 - `client.env` also sets `ANTHROPIC_SMALL_FAST_MODEL`; without it the client reaches for a hosted Haiku.
 - OpenAI clients: base URL `http://<node>:8000/v1`, same key, model `gemma-4-26b`. See
