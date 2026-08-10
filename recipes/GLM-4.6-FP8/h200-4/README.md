@@ -117,7 +117,7 @@ bash common/tools/stop.sh <node>       # direct path
 | `MTP_TOKENS` | 1 | Speculative tokens per step |
 | `NO_MTP` | unset | Set to disable speculative decoding |
 | `PERF` | unset | Retry CUDA graphs after an engine upgrade; crashes on 0.25.1 |
-| `CUDAGRAPH_MODE` | unset | Graph capture mode, read only when `PERF` is set |
+| `CUDAGRAPH_MODE` | `NONE` | Graph mode passed through when `PERF` is set |
 | `EXTRA_ARGS` | unset | Extra flags appended to the `vllm serve` command line |
 | `TOOL_PARSER` | `glm45` | Tool call parser |
 | `REASONING_PARSER` | `glm45` | Reasoning parser |
