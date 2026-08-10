@@ -181,7 +181,7 @@ Reproduce:
 ```
 KEY_NAME=gemma-4-26B-A4B-it-rtx-1 bash common/tools/bench.sh --host <node> --model gemma-4-26b
 KEY_NAME=gemma-4-26B-A4B-it-rtx-1 bash common/tools/bench.sh --host <node> --model gemma-4-26b \
-  --sweep 1,64,256,640,1024
+  --sweep 1,64,128,256,640,1024
 ```
 
 - `KEY_NAME` is required once `secrets/` holds both this recipe's key and `vllm_api_key`. The server uses
