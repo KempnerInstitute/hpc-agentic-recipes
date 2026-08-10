@@ -155,7 +155,7 @@ Results:
 
 | | |
 | --- | --- |
-| Label | saturated. Flat within 3.8 percent from 256 to 1024, and 1024 equals `max_num_seqs`, so the sweep cannot reach past it |
+| Label | saturated. It varies 3.65 percent from 640 to 1024, under the 4 percent the rule uses, and 1024 equals `max_num_seqs`, so the sweep cannot reach past it |
 | Quote for one caller | 250.5 tok/s |
 | Quote for a shared endpoint | 10904.7 tok/s at concurrency 1024 |
 | KV cache | 2,776,615 tokens, 10.59 full-length requests at once |
