@@ -55,8 +55,8 @@ A prefix cache hit needs the prompt to match from the first token, so that line 
 behind it: the client's system prompt and every tool definition. Because it carries the client version,
 callers on different versions match on nothing, and a self-updating client drifts into that state on its
 own. Callers on the same version send an identical line, so between them this changes nothing, and the same
-holds turn to turn within one conversation. The cross-version case is the reason to set it, and the one case
-not tested here, since only one client version was installed.
+holds turn to turn within one conversation. The cross-version case is the reason to set it, and is not
+measured here.
 
 ## A small context needs the output request capped
 

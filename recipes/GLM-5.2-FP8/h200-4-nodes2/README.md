@@ -214,9 +214,8 @@ KEY_NAME=GLM-5.2-FP8-h200-4-nodes2 bash common/tools/bench.sh --host <head_node>
 - Keep tensor parallelism inside a node. TP8 across two nodes is legal by the FP8 block constraint, since
   `moe_intermediate_size` 2048 shards to 256, but it hangs at NCCL initialization.
 - Eager only. CUDA graph capture takes an illegal memory access on vLLM 0.25.1, so `serve.sh` passes
-  `--enforce-eager`. Leave `VLLM_USE_DEEP_GEMM` at 0, which `env/env.sh` sets; this model is where that
-  crash was first diagnosed.
-- A Ray worker can die and the head log will not say why. One run served intermittently for about 21 hours
-  and ended with `RayWorkerProc rank=[1] died unexpectedly`. Rank 1 is the worker stage, so look at
-  `ssh <worker_node> 'ls -t /tmp/ray/session_latest/logs | head'` before theorizing.
+  `--enforce-eager`. Leave `VLLM_USE_DEEP_GEMM` at 0, which `env/env.sh` sets.
+- A Ray worker can die and the head log will not say why, ending with `RayWorkerProc rank=[1] died
+  unexpectedly`. Rank 1 is the worker stage, so read the worker's own Ray logs before theorizing:
+  `ssh <worker_node> 'ls -t /tmp/ray/session_latest/logs | head'`.
 - Anthropic's hosted tools return HTTP 400. Use [docs/web-search.md](../../../docs/web-search.md).

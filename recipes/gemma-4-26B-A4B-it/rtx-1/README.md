@@ -168,7 +168,7 @@ Results:
 | | |
 | --- | --- |
 | Label | rising. The highest measured value is 5797.5 tok/s at 1024, the top of the sweep, but the curve is not monotonic: 256 measures 4.1 percent below 128 |
-| What binds at the top | the KV cache, not the sequence cap. One run at 1024 produced 11,070 preemptions with KV usage at 100 percent and 878 requests waiting, so raising `max_num_seqs` above 1024 would not lift this number |
+| What binds at the top | the KV cache, not the sequence cap. At 1024 there were 11,070 preemptions with KV usage at 100 percent and 878 requests waiting, so raising `max_num_seqs` above 1024 would not lift this number |
 | Quote for one caller | 141.1 tok/s |
 | Quote for a shared endpoint | 5797.5 tok/s at concurrency 1024 |
 | KV cache | 1,013,590 tokens from 32.18 GiB, 3.87 full-length requests at once |
