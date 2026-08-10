@@ -159,7 +159,7 @@ node, `h200-4-nodes2` is two H200 nodes, and `h100-1` is a single H100.
 
 [docs/adding-a-model.md](docs/adding-a-model.md) is the checklist, and `common/templates/recipe-README.md`
 is the shape a recipe README has to take. Open a pull request when your recipe launches and serves; a
-maintainer runs the repository checks on it and asks for whatever is missing.
+maintainer reviews it against that checklist and asks for whatever is missing.
 
 ## License
 
