@@ -166,7 +166,6 @@ Results:
 | KV cache | 365,231 tokens from 37.68 GiB, 1.39 full-length requests at once |
 | Speculative decoding | `SPEC_DRAFT=$MODELS_DIR/gemma-4-31B-it-assistant` measured 187.3 tok/s single stream against 68.7, a 2.7 times gain. It costs 6.0 percent of the KV pool, which drops to 343,435 tokens |
 | Cost of the larger context | 0.2 percent. Concurrency 512 measures 2476.1 tok/s at 32768 against 2471.4 at 262144 |
-| Against the previously published figures | 5 to 8 percent lower from concurrency 128 to 512, and within 1 percent at 1, 64 and 1024. The context is not the cause: concurrency 512 measures 2476.1 at 32768. The previous page recorded 512 twice itself, at 2680.3 and 2491.0, and this branch measures 2471.4, so 2680.3 is the outlier of three |
 | Long prompt, cold | 30,048 tokens in 3.7 s, 120,049 in 26.6 s, 240,049 in 86.6 s |
 
 Reproduce:
