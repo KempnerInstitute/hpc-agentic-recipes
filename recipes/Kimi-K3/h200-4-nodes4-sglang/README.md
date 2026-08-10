@@ -158,7 +158,7 @@ Conditions:
 | Input length | ISL 130 tokens for the sweeps; prompt-length sensitivity is measured separately below |
 | Output length | OSL 1152 tokens, output only |
 | Context | `MAX_MODEL_LEN=383216` for the default arm below, 262144 for the other three |
-| Allocation for the measurement | 4 nodes, 4 GPUs each, 64 cores and 1440 GB per node, `kempner_eng` |
+| Allocation for the measurement | 4 nodes, 4 GPUs each, 64 cores and 1440 GB per node, `kempner_h200` |
 | Sequence cap | each configuration is swept only to the concurrency its own engine admits |
 | Endpoint | idle, and the benchmark client ran on a separate CPU-only node |
 | Power | 700 W enforced, the card default, so not capped. Median 346 to 361 W across the four nodes and a 462 W peak, with nothing at or above 690 |

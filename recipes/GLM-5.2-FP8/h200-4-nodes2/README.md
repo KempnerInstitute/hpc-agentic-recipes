@@ -161,7 +161,7 @@ Conditions:
 | Input length | ISL 21 tokens. Rates at a long input are not measured; use `--prompt-tokens` |
 | Output length | OSL 1152 tokens, output only, `ignore_eos` |
 | Context | `MAX_MODEL_LEN=641664` |
-| Allocation for the measurement | 2 nodes, 4 GPUs each, 64 cores and 1440 GB per node, `kempner_eng` |
+| Allocation for the measurement | 2 nodes, 4 GPUs each, 64 cores and 1440 GB per node, `kempner_h200` |
 | Sequence cap | `max_num_seqs` 1024, the engine default, which equals the top sweep level |
 | Preemption | 3,500 across the sweep |
 | Endpoint | idle, and the benchmark client ran on a separate CPU-only node |
