@@ -46,8 +46,10 @@ four GPUs are fully NVLink-connected, so tensor parallelism inside a node is che
 
 ## Topology rules that are not obvious
 
-Keep tensor parallelism inside a node and use pipeline parallelism across nodes. Pure tensor parallelism
-spanning two nodes hangs at NCCL initialization rather than failing with an error.
+In vLLM, keep tensor parallelism inside a node and use pipeline parallelism across nodes: pure tensor
+parallelism spanning two nodes hangs at NCCL initialization rather than failing with an error. SGLang
+brings up its own process group and is not subject to this, and the recipe here runs TP16 across four
+nodes.
 
 Pipeline parallelism disables speculative decoding in vLLM, so any multi-node vLLM recipe gives up MTP or
 draft-model speedups even when the checkpoint ships an MTP head. SGLang has no such restriction; see
