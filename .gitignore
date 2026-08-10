@@ -12,8 +12,7 @@ secrets/
 
 # Logs. Server logs go to node-local /tmp by default; Slurm job logs land in the submit directory.
 *.log
-logs/*
-!logs/.gitkeep
+logs/
 
 __pycache__/
 .ray/
