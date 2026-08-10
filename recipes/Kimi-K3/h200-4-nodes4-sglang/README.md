@@ -68,8 +68,8 @@ Four serving configurations, selected by environment variables on either launch 
 
 | Stage | Measured |
 | --- | --- |
-| Weight load, 96 shards across 16 ranks | about 12 min |
-| Launcher to serving | 8 to 9 min here, 13 min 54 s to 15 min 35 s across four earlier launches |
+| Weight load, 96 shards across 16 ranks | about 12 min on the slower launches |
+| Launcher to serving | 8 to 16 min across five launches |
 
 - Startup is dominated by reading 1.5 TiB of weights, so a launch that appears hung is almost always still
   loading. Check the rank 0 log before killing it.
