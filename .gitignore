@@ -18,7 +18,4 @@ __pycache__/
 .ray/
 models/
 
-# Local working areas.
-repo-checks/
-internal-devenv/
-internal-notes/
+internal-*/
