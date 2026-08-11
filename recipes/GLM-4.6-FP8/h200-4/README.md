@@ -125,6 +125,7 @@ bash common/tools/stop.sh <node>       # direct path
 | `LOG_DIR` | `/tmp/$USER/vllm` | Where the SSH path writes the server log |
 | `VENV_DIR` | under `ENV_ROOT` | Use an environment built elsewhere |
 | `VLLM_VERSION` | 0.25.1 | Wheel version `env/build.sh` installs |
+| `TRANSFORMERS_VERSION` | 5.14.1 | The transformers version the rates were measured with |
 | `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is a small quota here |
 | `KEY_NAME`, `KEY_FILE`, `VLLM_API_KEY` | this recipe's key | Which key `common/lib/api_key.sh` resolves; an exported `VLLM_API_KEY` wins |
 | `NODE`, `GLM46_NODE` | unset | The node to launch on or connect to; set either, or pass the node as an argument |

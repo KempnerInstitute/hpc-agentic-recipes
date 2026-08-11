@@ -144,6 +144,7 @@ bash common/tools/stop.sh <head_node> <worker_node>    # direct path, name both
 | `TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC` | 3600 | Raised from 480 so a storage stall that resolves is survivable |
 | `NCCL_DEBUG` | `WARN` | NCCL log level; raise to `INFO` to debug a cross-node hang |
 | `VLLM_VERSION` | 0.25.1 | Release wheel version `env/build.sh` installs |
+| `TRANSFORMERS_VERSION` | 5.14.1 | The transformers version the rates were measured with |
 | `LOG_DIR` | `/tmp/$USER/vllm` | Where the SSH path writes the server log |
 | `VENV_DIR` | under `ENV_ROOT` | Use an environment built elsewhere |
 | `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is a small quota here |

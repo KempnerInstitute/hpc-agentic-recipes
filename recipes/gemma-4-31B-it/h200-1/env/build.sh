@@ -5,6 +5,7 @@ S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/../../../../common/defaults.sh"
 VENV="${VENV_DIR:-$ENV_ROOT/gemma-4-31B-it/h200-1/venv}"
 VLLM_VERSION="${VLLM_VERSION:-0.25.1}"
+TRANSFORMERS_VERSION="${TRANSFORMERS_VERSION:-5.14.1}"
 
 venv_healthy () {
   [ -x "$VENV/bin/python" ] && [ -f "$VENV/bin/activate" ] \
@@ -20,7 +21,8 @@ mkdir -p "$(dirname "$VENV")"
 
 WHEEL="https://github.com/vllm-project/vllm/releases/download/v${VLLM_VERSION}/vllm-${VLLM_VERSION}+cu129-cp38-abi3-manylinux_2_28_x86_64.whl"
 uv venv --python 3.12 "$VENV"
-uv pip install --python "$VENV/bin/python" --torch-backend=cu129 "$WHEEL" "ray[default]"
+uv pip install --python "$VENV/bin/python" --torch-backend=cu129 "$WHEEL" "ray[default]" \
+  "transformers==${TRANSFORMERS_VERSION}"
 
 "$VENV/bin/python" -c "import importlib.metadata as m; print('vllm', m.version('vllm'), '| torch', m.version('torch'), '| ray', m.version('ray'))"
 echo "built: $VENV"

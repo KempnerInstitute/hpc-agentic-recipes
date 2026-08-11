@@ -138,6 +138,7 @@ bash common/tools/stop.sh <node>       # direct path
 | `CUDA13_DIR` | under `ENV_ROOT` | Use a CUDA 13.0 toolkit built elsewhere |
 | `VLLM_VERSION` | 0.25.1 | Engine version `env/build.sh` installs |
 | `FLASHINFER_VERSION` | 0.6.15 | FlashInfer version `env/build.sh` installs |
+| `TRANSFORMERS_VERSION` | 5.14.1 | The transformers version the rates were measured with |
 | `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is a small quota here |
 | `KEY_NAME`, `KEY_FILE`, `VLLM_API_KEY` | this recipe's key | Which key `common/lib/api_key.sh` resolves; an exported `VLLM_API_KEY` wins |
 | `NODE`, `GLM52_NVFP4_NODE` | unset | The node to launch on or connect to; set either, or pass the node as an argument |

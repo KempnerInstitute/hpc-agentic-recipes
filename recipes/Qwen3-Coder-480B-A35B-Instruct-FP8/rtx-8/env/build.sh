@@ -10,6 +10,7 @@ VENV="${VENV_DIR:-$ENV_ROOT/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8/venv}"
 CUDA13="${CUDA13_DIR:-$ENV_ROOT/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8/cuda13}"
 VLLM_VERSION="${VLLM_VERSION:-0.25.1}"
 FLASHINFER_VERSION="${FLASHINFER_VERSION:-0.6.15}"
+TRANSFORMERS_VERSION="${TRANSFORMERS_VERSION:-5.14.1}"
 FORCE=0
 [ "${1:-}" = "--force" ] && FORCE=1
 
@@ -28,7 +29,7 @@ else
   uv pip install --python "$VENV/bin/python" --prerelease=allow --index-strategy unsafe-best-match \
     --extra-index-url https://wheels.vllm.ai/nightly/cu130 \
     --extra-index-url https://download.pytorch.org/whl/cu130 \
-    "vllm==$VLLM_VERSION"
+    "vllm==$VLLM_VERSION" "transformers==${TRANSFORMERS_VERSION}"
   uv pip install --python "$VENV/bin/python" --no-deps -U "flashinfer-python==$FLASHINFER_VERSION"
 fi
 

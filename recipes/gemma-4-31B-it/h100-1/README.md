@@ -126,6 +126,7 @@ bash common/tools/stop.sh <node>       # direct path
 | `LOG_DIR` | `/tmp/$USER/vllm` | Where the SSH path writes the server log |
 | `VENV_DIR` | under `ENV_ROOT` | Use an environment built elsewhere |
 | `VLLM_VERSION` | 0.25.1 | Wheel version `env/build.sh` installs |
+| `TRANSFORMERS_VERSION` | 5.14.1 | The transformers version the rates were measured with |
 | `UV_CACHE_DIR` | under `ENV_ROOT` | Keep it on the same filesystem as the venv, or uv copies about 13 GB instead of hardlinking |
 | `KEY_NAME`, `KEY_FILE`, `VLLM_API_KEY` | this recipe's key | Which key `common/lib/api_key.sh` resolves; an exported `VLLM_API_KEY` wins |
 | `NODE`, `GEMMA31_H100_NODE` | unset | The node to launch on or connect to; set either, or pass the node as an argument |
@@ -181,6 +182,9 @@ KEY_NAME=gemma-4-31B-it-h100-1 bash common/tools/bench.sh --host <node> --model 
 
 ## Known limits
 
+- Keep `TRANSFORMERS_VERSION` at 5.14.1. From 5.15.0 `head_dim` is a per-layer attribute for this
+  checkpoint and vLLM reads it globally, so the engine exits with
+  `AmbiguousGlobalPerLayerAttributeError` before it loads any weights.
 - The 26B drafter cannot be used here. It fails at engine startup with a shape mismatch, so only the 31B
   drafter named in the tunables table works.
 - Anthropic's hosted tools return HTTP 400. Use [docs/web-search.md](../../../docs/web-search.md).
