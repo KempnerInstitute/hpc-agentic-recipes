@@ -22,10 +22,6 @@ models/
 # shared skill lives in common/skills instead, so nothing here should ever be committed.
 .claude/
 
-# Scratch and planning files kept beside a recipe while working on it.
-*.local.md
-plan-new-models.md
-
 # Local working areas.
 repo-checks/
 internal-devenv/
