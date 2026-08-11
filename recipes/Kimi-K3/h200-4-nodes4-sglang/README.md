@@ -6,7 +6,7 @@ Status: Validated - SGLang 0.5.16, protocol: slope(128,1152) swept to each confi
 | --- | --- |
 | Served name | `kimi-k3` |
 | Checkpoint | `Kimi-K3`, Hugging Face `moonshotai/Kimi-K3` |
-| On disk | 1453.8 GiB across 96 shards, MXFP4 quantization-aware trained |
+| On disk | 1453.7 GiB across 96 shards, MXFP4 quantization-aware trained |
 | Served precision | MXFP4 through Marlin W4A16, 102.75 GB of weights per GPU |
 | Context | 383216. The checkpoint declares 1048576, which the engine will not accept; see Known limits |
 | Hardware | 4 H200 nodes, 16 GPUs, 143771 MiB each, TP16 x EP16, no pipeline parallelism |
@@ -71,7 +71,7 @@ Four serving configurations, selected by environment variables on either launch 
 | Weight load, 96 shards across 16 ranks | about 12 min on the slower launches |
 | Launcher to serving | 8 to 16 min across five launches |
 
-- Startup is dominated by reading 1.5 TiB of weights, so a launch that appears hung is almost always still
+- Startup is dominated by reading 1.4 TiB of weights, so a launch that appears hung is almost always still
   loading. Check the rank 0 log before killing it.
 - The rank logs are appended across launches, not truncated, so date-filter before reading anything from
   them.

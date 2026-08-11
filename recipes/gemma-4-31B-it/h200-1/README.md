@@ -6,7 +6,7 @@ Status: Validated - vLLM 0.25.1+cu129, protocol: slope(128,1152) at concurrency 
 | --- | --- |
 | Served name | `gemma-4-31b` |
 | Checkpoint | `gemma-4-31B-it`, Hugging Face `google/gemma-4-31B-it` |
-| On disk | 62.6 GB, BF16, `Gemma4ForConditionalGeneration` |
+| On disk | 62.5 GB, BF16, `Gemma4ForConditionalGeneration` |
 | Served precision | FP8, quantized on load, 31.7 GiB of weights |
 | Context | 262144, the checkpoint maximum |
 | Hardware | 1 H200, 143771 MiB, TP1 |

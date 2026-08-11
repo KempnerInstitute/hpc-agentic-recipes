@@ -6,7 +6,7 @@ Status: Validated - vLLM 0.26.0, protocol: slope(128,1152) at concurrency 1, 8, 
 | --- | --- |
 | Served name | `deepseek-v4-pro` |
 | Checkpoint | `DeepSeek-V4-Pro`, Hugging Face `deepseek-ai/DeepSeek-V4-Pro` |
-| On disk | 805.4 GiB across 64 shards, FP8 with FP4 experts |
+| On disk | 805.3 GiB across 64 shards, FP8 with FP4 experts |
 | Served precision | FP8, `weight_block_size` [128, 128], 50.95 and 52.17 GiB of weights per GPU by stage |
 | Context | 1048576, the checkpoint maximum, reached by YaRN scaling factor 16 over a native 65536 |
 | Hardware | 2 RTX PRO 6000 Blackwell nodes, 16 GPUs, 97887 MiB each, TP8 inside a node and PP2 between over Ray |
