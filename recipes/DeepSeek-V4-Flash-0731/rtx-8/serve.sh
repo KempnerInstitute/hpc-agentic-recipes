@@ -12,7 +12,11 @@ if [ -n "${PERF:-}" ]; then
 else
   EXTRA+=(--enforce-eager)
 fi
-[ -n "${SPEC_TOKENS:-}" ] && EXTRA+=(--speculative-config "{\"method\": \"deepseek_mtp\", \"num_speculative_tokens\": ${SPEC_TOKENS}}")
+# The checkpoint carries its own DSpark drafter, so dspark needs no separate model path. deepseek_mtp
+# drives the MTP head instead, from num_nextn_predict_layers. One node has no pipeline parallelism, which
+# is the only thing vLLM refuses speculation alongside.
+[ -n "${SPEC_MODE:-}" ] && EXTRA+=(--speculative-config \
+  "{\"method\": \"${SPEC_MODE}\", \"num_speculative_tokens\": ${SPEC_TOKENS:-1}}")
 [ -n "${EXTRA_ARGS:-}" ] && EXTRA+=($EXTRA_ARGS)
 
 exec vllm serve "$MODEL" \
