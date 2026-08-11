@@ -1,11 +1,8 @@
 # Optional local overrides. Copy to common/site.conf, which is gitignored.
 #
 # You do not need this file. common/defaults.sh already carries working cluster values, so a fresh
-# clone runs as is. This exists for two things that have no correct default in a shared repo: your
-# Slurm account, and the names of nodes you already hold.
-
-# Your Slurm account. Alternatively pass --account to sbatch at submit time.
-# ACCOUNT=your_account
+# clone runs as is. This exists for one thing that has no correct default in a shared repo: the names
+# of nodes you already hold. Your Slurm account is not set here; pass --account to sbatch instead.
 
 # Nodes you already hold, for the direct SSH launch path. The sbatch path needs none of these,
 # because Slurm picks the node. One variable per recipe, since each hardware variant is separate.

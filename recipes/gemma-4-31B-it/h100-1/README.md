@@ -6,7 +6,7 @@ Status: Validated - vLLM 0.25.1, protocol: slope(128,1152) at concurrency 1, 64,
 | --- | --- |
 | Served name | `gemma-4-31b` |
 | Checkpoint | `gemma-4-31B-it`, Hugging Face `google/gemma-4-31B-it` |
-| On disk | 62.6 GB, BF16, `Gemma4ForConditionalGeneration` |
+| On disk | 62.5 GB, BF16, `Gemma4ForConditionalGeneration` |
 | Served precision | FP8, quantized on load, 31.73 GiB of weights |
 | Context | 262144, the checkpoint maximum |
 | Hardware | 1 H100, 81559 MiB, TP1 |
@@ -120,14 +120,13 @@ bash common/tools/stop.sh <node>       # direct path
 | `SPEC_DRAFT` | unset | Path to the drafter checkpoint, `$MODELS_DIR/gemma-4-31B-it-assistant`. Works on this engine and measured 2.7 times faster; see Benchmarking |
 | `SPEC_TOKENS` | 3 | Speculative tokens per step, read only when `SPEC_DRAFT` is set |
 | `EXTRA_ARGS` | unset | Extra flags appended to the `vllm serve` command line |
-| `TOOL_PARSER` | `gemma4` | Tool call parser. Not forwarded by `serve_ssh.sh`, so it only applies on the Slurm path |
-| `REASONING_PARSER` | `gemma4` | Reasoning parser. Not forwarded by `serve_ssh.sh` either |
+| `TOOL_PARSER` | `gemma4` | Tool call parser |
+| `REASONING_PARSER` | `gemma4` | Reasoning parser |
 | `GPU` | unset | SSH path only: pin one device of a shared node |
 | `LOG_DIR` | `/tmp/$USER/vllm` | Where the SSH path writes the server log |
 | `VENV_DIR` | under `ENV_ROOT` | Use an environment built elsewhere |
 | `VLLM_VERSION` | 0.25.1 | Wheel version `env/build.sh` installs |
 | `UV_CACHE_DIR` | under `ENV_ROOT` | Keep it on the same filesystem as the venv, or uv copies about 13 GB instead of hardlinking |
-| `ACCOUNT` | unset | Read by `common/defaults.sh`; `serve.sbatch` has no account directive, so pass `--account` at submit time |
 | `KEY_NAME`, `KEY_FILE`, `VLLM_API_KEY` | this recipe's key | Which key `common/lib/api_key.sh` resolves; an exported `VLLM_API_KEY` wins |
 | `NODE`, `GEMMA31_H100_NODE` | unset | The node to launch on or connect to; set either, or pass the node as an argument |
 | `MODELS_DIR`, `ENV_ROOT`, `VLLM_CACHE_ROOT` | `common/defaults.sh` | Override there or in `common/site.conf` |
@@ -167,7 +166,6 @@ Results:
 | KV cache | 365,231 tokens from 37.68 GiB, 1.39 full-length requests at once |
 | Speculative decoding | `SPEC_DRAFT=$MODELS_DIR/gemma-4-31B-it-assistant` measured 187.3 tok/s single stream against 68.7, a 2.7 times gain. It costs 6.0 percent of the KV pool, which drops to 343,435 tokens |
 | Cost of the larger context | 0.2 percent. Concurrency 512 measures 2476.1 tok/s at 32768 against 2471.4 at 262144 |
-| Against the previously published figures | 5 to 8 percent lower from concurrency 128 to 512, and within 1 percent at 1, 64 and 1024. The context is not the cause: concurrency 512 measures 2476.1 at 32768. The previous page recorded 512 twice itself, at 2680.3 and 2491.0, and this branch measures 2471.4, so 2680.3 is the outlier of three |
 | Long prompt, cold | 30,048 tokens in 3.7 s, 120,049 in 26.6 s, 240,049 in 86.6 s |
 
 Reproduce:

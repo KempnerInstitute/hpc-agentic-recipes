@@ -138,7 +138,6 @@ bash common/tools/stop.sh <node>       # direct path
 | `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is a small quota here |
 | `KEY_NAME`, `KEY_FILE`, `VLLM_API_KEY` | this recipe's key | Which key `common/lib/api_key.sh` resolves; an exported `VLLM_API_KEY` wins |
 | `NODE`, `QWEN3_CODER_NODE` | unset | The node to launch on or connect to; set either, or pass the node as an argument |
-| `ACCOUNT` | unset | Read by `common/defaults.sh`; `serve.sbatch` has no account directive, so pass `--account` at submit time |
 | `MODELS_DIR`, `ENV_ROOT` | `common/defaults.sh` | Override there or in `common/site.conf` |
 
 ## Benchmarking
@@ -201,11 +200,8 @@ KEY_NAME=Qwen3-Coder-480B-A35B-Instruct-FP8-rtx-8 bash common/tools/bench.sh --h
 - No speculative decoding. vLLM rejects a speculative config whenever pipeline parallelism is active, and
   PP2 is how the other four GPUs are used. The guard is not visible in the 0.25.1 config source, so treat it
   as behavior for this version and re-check after an engine upgrade.
-- **Do not move this checkpoint to H200.** Four configurations were tried and all failed at CUDA graph
-  capture: memory utilization 0.90 and 0.96 both faulted, `VLLM_USE_DEEP_GEMM=1` gave an illegal memory
-  access, and the Triton path gave `cutlass_gemm_caller ... Error Internal`. Memory was not the constraint,
-  since the two-node runs had 65 GiB of KV per GPU. The CUTLASS w8a8 FP8 GEMM path faults on Hopper for this
-  checkpoint during capture. Eager works but costs roughly 3x, at 22.2 tok/s.
+- **Do not move this checkpoint to H200.** CUDA graph capture faults there: the CUTLASS w8a8 FP8 GEMM path
+  fails on Hopper for this checkpoint. Eager works but costs roughly 3x, at 22.2 tok/s.
 - Do not add the conda CUDA 13 toolkit to `LD_LIBRARY_PATH`. Its `libcudart` shadows torch's runtime and
   pulls in a missing `libcupti.so.13`, which breaks import; the recipe exposes it through `CPATH` and
   `LIBRARY_PATH` for compilation only.

@@ -35,7 +35,8 @@ bash common/tools/search.sh fetch    https://example.com/page
 
 Only `web` mode needs a package. On first use it builds `.venv-tools` in the repo root and installs `ddgs`
 there with `uv`, so `uv` has to be available, or set `SEARCH_PYTHON` to an interpreter that already has
-`ddgs`. The other six modes run on plain `python3` and need nothing but network access.
+`ddgs`. `SEARCH_VENV` puts that environment somewhere else, which a read-only checkout needs. The other six
+modes run on plain `python3` and need nothing but network access.
 
 ## Making the model use it
 

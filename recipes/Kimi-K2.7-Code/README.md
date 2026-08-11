@@ -18,7 +18,7 @@ expert, the dense layers, `lm_head` and the vision tower stay BF16.
 | [`h200-4-nodes2`](h200-4-nodes2/README.md) | 2 H200 nodes, 4 GPUs each, TP4 x PP2 | 30.2 tok/s | 7094 at c=1024, rising |
 
 Measured with protocol slope(128,1152) over output tokens only, 3 repeats per level, concurrency
-1 through 1024. Single stream is one request at a time; saturated is total output across all concurrent
+1 through 1024. Single stream is one request at a time; aggregate is total output across all concurrent
 streams. The two variants behave differently under load, which the labels record: the RTX node is
 `saturated`, varying under 4 percent from concurrency 512 to 1024 so more concurrency buys nothing, while
 the H200 pair is still `rising` at 1024 and its figure is a floor. So the H200 pair is 1.5x the single

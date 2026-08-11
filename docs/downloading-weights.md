@@ -19,6 +19,15 @@ Directory names are identical wherever you put it, so switching between copies o
 
 ## Fetching a checkpoint
 
+The tool drives the Hugging Face CLI, so `hf` has to be on your PATH. A built recipe environment carries
+it, but weights are usually fetched before any environment exists. Install it standalone once:
+
+```
+uv tool install huggingface-hub
+```
+
+Then fetch a checkpoint:
+
 ```
 bash common/tools/download_model.sh <hf-repo> <dest-parent-dir> [local-name]
 ```
@@ -30,9 +39,9 @@ bash common/tools/download_model.sh zai-org/GLM-5.2-FP8 /n/netscratch/<your_lab>
 ```
 
 Run it from a compute node, not a login node. These are large transfers and login nodes are shared. The
-tool refuses to start if the destination does not exist or is not writable by you, rather than failing
-several minutes into the transfer. Pass `--dry-run` first to see the resolved destination without
-transferring anything.
+tool refuses to start if `hf` is missing, or if the destination does not exist or is not writable by you,
+rather than failing several minutes into the transfer. Pass `--dry-run` first to see the resolved
+destination without transferring anything.
 
 Check that you have room before starting. The tool does not, because free space on the filesystem is not
 the limit that applies to you: what binds is your group's quota. Read it on Lustre with

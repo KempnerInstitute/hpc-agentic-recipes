@@ -1,3 +1,5 @@
+# Upstream SGLang code under Apache-2.0, from the commit in UPSTREAM_SHA, changed here: KimiK3Detector
+# re-enters the reasoning channel for a second block. See README.md and LICENSE-APACHE-2.0 beside this file.
 import inspect
 import re
 from typing import Dict, List, Optional, Tuple, Type

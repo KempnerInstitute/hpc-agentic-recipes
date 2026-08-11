@@ -6,7 +6,7 @@ Status: Validated - vLLM 0.25.1+cu129, protocol: slope(128,1152) at concurrency 
 | --- | --- |
 | Served name | `gemma-4-31b` |
 | Checkpoint | `gemma-4-31B-it`, Hugging Face `google/gemma-4-31B-it` |
-| On disk | 62.6 GB, BF16, `Gemma4ForConditionalGeneration` |
+| On disk | 62.5 GB, BF16, `Gemma4ForConditionalGeneration` |
 | Served precision | FP8, quantized on load, 31.7 GiB of weights |
 | Context | 262144, the checkpoint maximum |
 | Hardware | 1 H200, 143771 MiB, TP1 |
@@ -121,8 +121,8 @@ bash common/tools/stop.sh <node>       # direct path
 | `SPEC_DRAFT` | unset | Path to the drafter checkpoint, `$MODELS_DIR/gemma-4-31B-it-assistant`. Works on this build and measured 2.7 times faster; see Benchmarking |
 | `SPEC_TOKENS` | 3 | Speculative tokens per step, read only when `SPEC_DRAFT` is set |
 | `EXTRA_ARGS` | unset | Extra flags appended to the `vllm serve` command line |
-| `TOOL_PARSER` | `gemma4` | Tool call parser. Not forwarded by `serve_ssh.sh`, so it applies on the Slurm path |
-| `REASONING_PARSER` | `gemma4` | Reasoning parser. Not forwarded by `serve_ssh.sh` either |
+| `TOOL_PARSER` | `gemma4` | Tool call parser |
+| `REASONING_PARSER` | `gemma4` | Reasoning parser |
 | `GPU` | unset | SSH path only: pin one device of a shared node |
 | `LOG_DIR` | `/tmp/$USER/vllm` | Where the SSH path writes the server log |
 | `VENV_DIR` | under `ENV_ROOT` | Use an environment built elsewhere |
@@ -144,7 +144,7 @@ Conditions:
 | Context | `MAX_MODEL_LEN=262144` |
 | Allocation for the measurement | 1 GPU, 16 cores, 360 GB |
 | Sequence cap | `max_num_seqs` 1024, which equals the top sweep level |
-| Preemption | 124,318 across the sweep. Peak demand first exceeds the 894,418-token pool at concurrency 1024, which needs 1,199,104 slots, so the cache binds there rather than the sequence cap. The previous page reported no preemptions at any level, which this contradicts |
+| Preemption | 124,318 across the sweep. Peak demand first exceeds the 894,418-token pool at concurrency 1024, which needs 1,199,104 slots, so the cache binds there rather than the sequence cap |
 | Endpoint | idle, and the benchmark client ran on a separate CPU-only node |
 | Power | 700 W enforced, the card default, so not capped |
 
@@ -166,7 +166,6 @@ Results:
 | Quote for one caller | 85.0 tok/s |
 | Quote for a shared endpoint | 3154.3 tok/s at concurrency 768 |
 | KV cache | 894,418 tokens from 92.27 GiB, 3.41 full-length requests at once |
-| Against the previously published figures | 0.5 to 0.8 percent higher at every level from 64 upward, outside the spreads the old page recorded, and 0.12 percent lower at concurrency 1. No cause is established |
 | Speculative decoding | `SPEC_DRAFT=$MODELS_DIR/gemma-4-31B-it-assistant` measured 233.1 tok/s single stream against 85.0, a 2.7 times gain. It costs 2.5 percent of the KV pool, which drops to 872,503 tokens. Aggregate throughput with it is not measured |
 | Long prompt, cold | 30,047 tokens in 3.2 s, 120,048 in 23.4 s, 240,048 in 76.8 s |
 

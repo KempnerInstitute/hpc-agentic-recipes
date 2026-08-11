@@ -27,7 +27,7 @@ output tokens only, 3 repeats per level.
 - Checkpoint directory: `DeepSeek-V4-Pro`
 - Hugging Face repo: `deepseek-ai/DeepSeek-V4-Pro`
 - Documented path: `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/DeepSeek-V4-Pro`
-- Size: 805.4 GiB across 64 shards
+- Size: 805.3 GiB across 64 shards
 - License: MIT
 - Architecture: `DeepseekV4ForCausalLM`, native to vLLM, no `--trust-remote-code` needed
 

@@ -61,8 +61,7 @@ another. Pin the versions that matter in `env/build.sh`, as a variable the tunab
 `VLLM_VERSION` for the engine, and `FLASHINFER_VERSION` where the recipe needs a specific build.
 
 A full `uv pip freeze` lock file is optional and most recipes do not carry one. It only rebuilds an
-environment if every non-PyPI artifact also has its resolved URL and sha256 in `env/WHEELS`, so add the pair
-or neither.
+environment if every non-PyPI artifact also has its resolved URL in `env/WHEELS`.
 
 Some builds cannot be pinned at all. The sm_120 RTX wheels exist only on a nightly index that deletes old
 builds within days, so a version there resolves to something else within a week. State the build the rates

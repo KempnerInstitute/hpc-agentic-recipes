@@ -6,7 +6,7 @@ Status: Validated - SGLang 0.5.16, protocol: slope(128,1152) swept to each confi
 | --- | --- |
 | Served name | `kimi-k3` |
 | Checkpoint | `Kimi-K3`, Hugging Face `moonshotai/Kimi-K3` |
-| On disk | 1453.8 GiB across 96 shards, MXFP4 quantization-aware trained |
+| On disk | 1453.7 GiB across 96 shards, MXFP4 quantization-aware trained |
 | Served precision | MXFP4 through Marlin W4A16, 102.75 GB of weights per GPU |
 | Context | 383216. The checkpoint declares 1048576, which the engine will not accept; see Known limits |
 | Hardware | 4 H200 nodes, 16 GPUs, 143771 MiB each, TP16 x EP16, no pipeline parallelism |
@@ -68,10 +68,10 @@ Four serving configurations, selected by environment variables on either launch 
 
 | Stage | Measured |
 | --- | --- |
-| Weight load, 96 shards across 16 ranks | about 12 min |
-| Launcher to serving | 8 to 9 min here, 13 min 54 s to 15 min 35 s across four earlier launches |
+| Weight load, 96 shards across 16 ranks | about 12 min on the slower launches |
+| Launcher to serving | 8 to 16 min across five launches |
 
-- Startup is dominated by reading 1.5 TiB of weights, so a launch that appears hung is almost always still
+- Startup is dominated by reading 1.4 TiB of weights, so a launch that appears hung is almost always still
   loading. Check the rank 0 log before killing it.
 - The rank logs are appended across launches, not truncated, so date-filter before reading anything from
   them.
@@ -146,7 +146,6 @@ bash common/tools/stop.sh <node0> <node1> <node2> <node3>    # direct path, name
 | `K3_LOG_DIR` | `/tmp/$USER/k3` | Node-local logs and JIT caches |
 | `KEY_NAME`, `KEY_FILE`, `VLLM_API_KEY` | this recipe's key | Which key `common/lib/api_key.sh` resolves |
 | `NODE`, `K3_HEAD_NODE` | unset | The head node for the client; pass nodes as arguments to the launcher |
-| `ACCOUNT` | unset | Read by `common/defaults.sh`; pass `--account` at submit time |
 | `MODELS_DIR`, `ENV_ROOT` | `common/defaults.sh` | Override there or in `common/site.conf` |
 
 ## Benchmarking
@@ -159,7 +158,7 @@ Conditions:
 | Input length | ISL 130 tokens for the sweeps; prompt-length sensitivity is measured separately below |
 | Output length | OSL 1152 tokens, output only |
 | Context | `MAX_MODEL_LEN=383216` for the default arm below, 262144 for the other three |
-| Allocation for the measurement | 4 nodes, 4 GPUs each, 64 cores and 1440 GB per node, `kempner_eng` |
+| Allocation for the measurement | 4 nodes, 4 GPUs each, 64 cores and 1440 GB per node, `kempner_h200` |
 | Sequence cap | each configuration is swept only to the concurrency its own engine admits |
 | Endpoint | idle, and the benchmark client ran on a separate CPU-only node |
 | Power | 700 W enforced, the card default, so not capped. Median 346 to 361 W across the four nodes and a 462 W peak, with nothing at or above 690 |

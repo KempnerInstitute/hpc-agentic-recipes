@@ -4,7 +4,8 @@ Status: Validated - <engine and version>, protocol: slope(128,1152) at concurren
 
 <!-- Steps and measured numbers only. Reasoning, history and anything that did not work stay out.
      Prefer tables to prose. Give an engine version, never a calendar date. Write about the recipe,
-     not about yourself. -->
+     not about yourself. The ../../../ links resolve from this file's destination,
+     recipes/<model>/<hardware>/, so they do not resolve from here. -->
 
 | | |
 | --- | --- |

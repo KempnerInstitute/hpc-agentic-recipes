@@ -6,7 +6,7 @@ Status: Validated - vLLM 0.26.1rc1.dev162+g8700f86a7, protocol: slope(128,1152) 
 | --- | --- |
 | Served name | `gemma-4-31b` |
 | Checkpoint | `gemma-4-31B-it`, Hugging Face `google/gemma-4-31B-it` |
-| On disk | 62.6 GB, BF16, `Gemma4ForConditionalGeneration` |
+| On disk | 62.5 GB, BF16, `Gemma4ForConditionalGeneration` |
 | Served precision | FP8, quantized on load, 31.73 GiB of weights |
 | Context | 262144, the checkpoint maximum |
 | Hardware | 1 RTX PRO 6000 Blackwell, 97887 MiB, TP1 |
@@ -35,7 +35,7 @@ bash recipes/gemma-4-31B-it/rtx-1/env/build.sh
 - The toolkit is required: the FlashInfer sm_120 JIT needs a complete CUDA 13 install, which the pip
   wheels do not provide.
 - vLLM comes from the nightly cu130 index, because sm_120 needs a CUDA 13 build that ships nowhere else.
-  Nothing in this environment is version pinned: the index rotates, and vLLM and torch carry no constraint.
+  The index rotates, and vLLM and torch carry no version constraint.
   `env/build.sh` asks for FlashInfer 0.6.15 and got 0.6.15.post1. The build in the table above is already
   gone from the index, so a rebuild installs a newer one and its rates will differ.
 
@@ -126,8 +126,8 @@ bash common/tools/stop.sh <node>       # direct path
 | `SPEC_DRAFT` | unset | Path to the drafter checkpoint, `$MODELS_DIR/gemma-4-31B-it-assistant`. Works on this build and measured 2.6 times faster; see Benchmarking |
 | `SPEC_TOKENS` | 3 | Speculative tokens per step, read only when `SPEC_DRAFT` is set |
 | `EXTRA_ARGS` | unset | Extra flags appended to the `vllm serve` command line |
-| `TOOL_PARSER` | `gemma4` | Tool call parser. Not forwarded by `serve_ssh.sh`, so it applies on the Slurm path |
-| `REASONING_PARSER` | `gemma4` | Reasoning parser. Not forwarded by `serve_ssh.sh` either |
+| `TOOL_PARSER` | `gemma4` | Tool call parser |
+| `REASONING_PARSER` | `gemma4` | Reasoning parser |
 | `GPU` | unset | SSH path only: pin one device of a shared node |
 | `LOG_DIR` | `/tmp/$USER/vllm` | Where the SSH path writes the server log |
 | `VENV_DIR` | under `ENV_ROOT` | Use an environment built elsewhere |
@@ -147,7 +147,7 @@ Conditions:
 | Input length | ISL 19 tokens. Rates at a long input are not measured; use `--prompt-tokens` |
 | Output length | OSL 1152 tokens, output only, `ignore_eos` |
 | Context | `MAX_MODEL_LEN=262144` |
-| Allocation | 1 GPU, 16 cores, 180 GB, `kempner_rtx` |
+| Allocation for the measurement | 1 GPU, 16 cores, 180 GB, `kempner_rtx` |
 | Sequence cap | `max_num_seqs` 1024, which equals the top sweep level |
 | Preemption | 118,116 requests across the sweep, so the KV cache saturates before the sequence cap does |
 | Endpoint | idle, and the benchmark client ran on a separate CPU-only node |
@@ -188,7 +188,7 @@ KEY_NAME=gemma-4-31B-it-rtx-1 bash common/tools/bench.sh --host <node> --model g
 
 ## Known limits
 
-- Nothing in the environment is version pinned, so a rebuild installs different versions than the ones
+- vLLM and torch carry no version constraint, so a rebuild installs different versions than the ones
   measured here.
 - Do not add the conda CUDA 13 toolkit to `LD_LIBRARY_PATH`. Its `libcudart` shadows torch's runtime, so the
   recipe exposes it through `CPATH` and `LIBRARY_PATH` for compilation only. FlashInfer runs with its version

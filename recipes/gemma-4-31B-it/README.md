@@ -41,7 +41,7 @@ level. Rates are defined in [docs/benchmarking.md](../../docs/benchmarking.md), 
 | Directory | `gemma-4-31B-it` |
 | Hugging Face repo | `google/gemma-4-31B-it` |
 | Documented path | `/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/gemma-4-31B-it` |
-| Size on disk | 62.6 GB, BF16, quantized to FP8 at load time rather than from a second checkpoint |
+| Size on disk | 62.5 GB, BF16, quantized to FP8 at load time rather than from a second checkpoint |
 | Architecture | `Gemma4ForConditionalGeneration`, dense, multimodal |
 | Context | 262144, the checkpoint maximum, served by default on all three variants |
 | Drafter | `gemma-4-31B-it-assistant`, under 1 GB, wired through `SPEC_DRAFT` and usable on all three |

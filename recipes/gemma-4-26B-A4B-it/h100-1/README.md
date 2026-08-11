@@ -89,6 +89,8 @@ claude
 ```
 
 - No output cap is needed at 262144.
+- `client.env` sets `CLAUDE_CODE_MAX_CONTEXT_TOKENS=262144`. Claude Code does not recognize this served name
+  and assumes a 200k window, which client 2.1.223 enforces.
 - Use `ANTHROPIC_AUTH_TOKEN`. `ANTHROPIC_API_KEY` sends `x-api-key` and returns 401.
 - `client.env` also sets `ANTHROPIC_SMALL_FAST_MODEL`; without it the client reaches for a hosted Haiku.
 - OpenAI clients: base URL `http://<node>:8000/v1`, same key, model `gemma-4-26b`. See
@@ -123,7 +125,7 @@ bash common/tools/stop.sh <node>       # direct path
 | `VENV_DIR` | under `ENV_ROOT` | Use an environment built elsewhere |
 | `VLLM_VERSION` | 0.25.1 | Wheel version `env/build.sh` installs |
 | `NODE`, `GEMMA26_H100_NODE` | unset | The node to launch on or connect to; set either, or pass the node as an argument |
-| `ACCOUNT` | unset | Slurm account, or pass `--account` at submit time |
+| `KEY_NAME`, `KEY_FILE`, `VLLM_API_KEY` | this recipe's key | Which key `common/lib/api_key.sh` resolves; an exported `VLLM_API_KEY` wins |
 | `MODELS_DIR`, `ENV_ROOT`, `VLLM_CACHE_ROOT` | `common/defaults.sh` | Override there or in `common/site.conf` |
 
 ## Benchmarking
@@ -136,7 +138,7 @@ Conditions:
 | Input length | ISL 19 tokens. Rates at a long input are not measured; use `--prompt-tokens` |
 | Output length | OSL 1152 tokens, output only, `ignore_eos` |
 | Context | `MAX_MODEL_LEN=262144` |
-| Allocation for the measurement | 1 GPU, 24 cores, 180 GB |
+| Allocation for the measurement | 1 GPU, 24 cores, 360 GB |
 | Sequence cap | `max_num_seqs` 1024, which equals the top sweep level |
 | Endpoint | idle, no other traffic |
 | Power cap | these H100s are capped to 550 W of a 700 W default, unlike the H200 and RTX cards. At concurrency 640 the device sat at that limit for 132 of 150 samples with clocks between 1545 and 1980 MHz. At concurrency 1 it peaked at 345 W and never reached the limit |

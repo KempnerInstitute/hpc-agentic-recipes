@@ -27,8 +27,8 @@ rather than on this ordering.
 Aggregate rates carry one of four labels, shown as a symbol in the table and keyed under it:
 
 - `peak` means throughput turned over inside the sweep, so it is a measured maximum.
-- `saturated` means it varies by under 4 percent from concurrency 512 to 1024, so it is a real ceiling
-  even though no single level stands out.
+- `saturated` means it varies by under 4 percent across the levels at or above concurrency 512, so it is a
+  real ceiling even though no single level stands out.
 - `rising` means it was still climbing at 1024, the top of the sweep, so the figure is a floor and the
   true peak is higher.
 - `capped` means the engine admits fewer concurrent requests than the sweep would reach, so the figure is

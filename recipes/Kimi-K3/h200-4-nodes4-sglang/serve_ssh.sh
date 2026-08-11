@@ -24,9 +24,10 @@ for i in 0 1 2 3; do
     MEM_FRACTION='${MEM_FRACTION:-}' MAMBA_RATIO='${MAMBA_RATIO:-}' \
     MAMBA_CACHE_STRATEGY='${MAMBA_CACHE_STRATEGY:-}' WIDE='${WIDE:-0}' SIF='$SIF' \
     K3_PARSER_PATCH='${K3_PARSER_PATCH:-0}' \
+    KEY_NAME='${KEY_NAME:-}' EXTRA_ARGS='${EXTRA_ARGS:-}' \
     nohup bash '$S/serve.sh' > /dev/null 2>&1 < /dev/null & echo '  rank $i launched on ${NODES[$i]}'"
 done
 
 echo "watch:    ssh ${NODES[0]} tail -f $K3_LOG_DIR/k3-rank0.log"
 echo "endpoint: http://${NODES[0]}:$API_PORT   (served model: kimi-k3, Anthropic and OpenAI APIs)"
-echo "startup:  14 to 16 minutes, dominated by reading 1.5 TiB of weights"
+echo "startup:  8 to 16 minutes, dominated by reading 1.4 TiB of weights"

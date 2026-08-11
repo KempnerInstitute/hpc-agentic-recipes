@@ -70,7 +70,8 @@ Then start with a single-GPU recipe, which needs one GPU rather than a whole nod
 [recipes/gemma-4-26B-A4B-it/h200-1](recipes/gemma-4-26B-A4B-it/h200-1/README.md). Follow it from the top.
 Runnable recipes all have the same steps: configure once, build the environment, launch, verify, connect.
 
-Each launches two ways: an sbatch submission and a direct launch on nodes you already hold.
+Each launches two ways: an sbatch submission and a direct launch on nodes you already hold. Every sbatch
+submission needs `--account=<your-account>`. The direct launch does not go through Slurm and needs none.
 
 To choose a model, see [docs/choosing-a-model.md](docs/choosing-a-model.md). The fastest model here is not
 the best coder.
@@ -80,8 +81,9 @@ the best coder.
 Rows are grouped by model, one per hardware configuration, and the hardware cell links to that recipe.
 Rates for the vLLM recipes are measured with `common/tools/bench.sh` and Kimi-K3 with the same protocol
 under SGLang; method in [docs/benchmarking.md](docs/benchmarking.md). `c=256` means 256 concurrent
-requests. `Context` is what the recipe serves by default; raise it with `MAX_MODEL_LEN` up to what the
-checkpoint supports, which each recipe states.
+requests. `Context` is what the recipe serves by default and `MAX_MODEL_LEN` changes it, but not every
+recipe can reach its checkpoint maximum: where one request that long needs more KV cache than the hardware
+has, the engine refuses to start. Each recipe states its own ceiling in Known limits.
 
 | Model | Precision | Hardware | 1xStream<br>tok/s | Aggregate<br>tok/s / c | Context |
 | --- | --- | --- | --- | --- | --- |
@@ -157,9 +159,13 @@ node, `h200-4-nodes2` is two H200 nodes, and `h100-1` is a single H100.
 
 [docs/adding-a-model.md](docs/adding-a-model.md) is the checklist, and `common/templates/recipe-README.md`
 is the shape a recipe README has to take. Open a pull request when your recipe launches and serves; a
-maintainer runs the repository checks on it and asks for whatever is missing.
+maintainer reviews it against that checklist and asks for whatever is missing.
 
 ## License
 
 MIT, in [LICENSE](LICENSE). Model weights are not covered by it: each checkpoint carries its own license
 from whoever published it, and the recipe for that model names the Hugging Face repo where it is stated.
+
+Two vendored files are not covered either. `recipes/Kimi-K3/h200-4-nodes4-sglang/patches/` holds upstream
+SGLang code under Apache-2.0, with the license text, the pinned commit and the one local change recorded
+beside it.

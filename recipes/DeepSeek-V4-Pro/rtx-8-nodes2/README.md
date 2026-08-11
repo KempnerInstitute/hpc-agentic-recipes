@@ -6,7 +6,7 @@ Status: Validated - vLLM 0.26.0, protocol: slope(128,1152) at concurrency 1, 8, 
 | --- | --- |
 | Served name | `deepseek-v4-pro` |
 | Checkpoint | `DeepSeek-V4-Pro`, Hugging Face `deepseek-ai/DeepSeek-V4-Pro` |
-| On disk | 805.4 GiB across 64 shards, FP8 with FP4 experts |
+| On disk | 805.3 GiB across 64 shards, FP8 with FP4 experts |
 | Served precision | FP8, `weight_block_size` [128, 128], 50.95 and 52.17 GiB of weights per GPU by stage |
 | Context | 1048576, the checkpoint maximum, reached by YaRN scaling factor 16 over a native 65536 |
 | Hardware | 2 RTX PRO 6000 Blackwell nodes, 16 GPUs, 97887 MiB each, TP8 inside a node and PP2 between over Ray |
@@ -128,7 +128,8 @@ bash common/tools/stop.sh <head_node> <worker_node>    # direct path, name both
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
 | `TP` | 8 | Tensor parallel size; 8 is one node's GPU count and must stay inside a node |
 | `PP` | 2 | Pipeline parallel size; 2 is the node count |
-| `ENFORCE_EAGER` | 1 | Eager is the default and is what the rates below were measured with |
+| `PERF` | unset | Try CUDA graph capture instead of eager; the rates below are eager |
+| `CUDAGRAPH_MODE` | `NONE` | Graph mode passed through when `PERF` is set |
 | `EXTRA_ARGS` | unset | Extra flags appended to the `vllm serve` command line |
 | `TOOL_PARSER` | `deepseek_v4` | Tool call parser |
 | `REASONING_PARSER` | `deepseek_v4` | Reasoning parser |
@@ -143,7 +144,6 @@ bash common/tools/stop.sh <head_node> <worker_node>    # direct path, name both
 | `VLLM_CACHE_ROOT` | under `ENV_ROOT` | Where vLLM keeps compiled artifacts; the engine default is a small quota here |
 | `KEY_NAME`, `KEY_FILE`, `VLLM_API_KEY` | this recipe's key | Which key `common/lib/api_key.sh` resolves |
 | `NODE`, `DSV4_HEAD`, `DSV4_WORKER` | unset | Nodes for the SSH path; pass them as arguments instead |
-| `ACCOUNT` | unset | Read by `common/defaults.sh`; pass `--account` at submit time |
 | `MODELS_DIR`, `ENV_ROOT` | `common/defaults.sh` | Override there or in `common/site.conf` |
 
 ## Benchmarking

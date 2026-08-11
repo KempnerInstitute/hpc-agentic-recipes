@@ -89,6 +89,8 @@ claude
 ```
 
 - No output cap is needed at 262144.
+- `client.env` sets `CLAUDE_CODE_MAX_CONTEXT_TOKENS=262144`. Claude Code does not recognize this served name
+  and assumes a 200k window, which client 2.1.223 enforces.
 - Use `ANTHROPIC_AUTH_TOKEN`. `ANTHROPIC_API_KEY` sends `x-api-key` and returns 401.
 - `client.env` also sets `ANTHROPIC_SMALL_FAST_MODEL`; without it the client reaches for a hosted Haiku.
 - OpenAI clients: base URL `http://<node>:8000/v1`, same key, model `gemma-4-26b`. See
@@ -123,7 +125,7 @@ bash common/tools/stop.sh <node>       # direct path
 | `VENV_DIR` | under `ENV_ROOT` | Use an environment built elsewhere |
 | `VLLM_VERSION` | 0.25.1 | Wheel version `env/build.sh` installs |
 | `NODE`, `GEMMA26_H200_NODE` | unset | The node to launch on or connect to; set either, or pass the node as an argument |
-| `ACCOUNT` | unset | Slurm account, or pass `--account` at submit time |
+| `KEY_NAME`, `KEY_FILE`, `VLLM_API_KEY` | this recipe's key | Which key `common/lib/api_key.sh` resolves; an exported `VLLM_API_KEY` wins |
 | `MODELS_DIR`, `ENV_ROOT`, `VLLM_CACHE_ROOT` | `common/defaults.sh` | Override there or in `common/site.conf` |
 | `VLLM_USE_DEEP_GEMM` | 0, set in `env/env.sh` | Must stay 0 on H200; see Known limits |
 
@@ -153,7 +155,7 @@ Results:
 
 | | |
 | --- | --- |
-| Label | saturated. Flat within 3.8 percent from 256 to 1024, and 1024 equals `max_num_seqs`, so the sweep cannot reach past it |
+| Label | saturated. It varies 3.65 percent from 640 to 1024, under the 4 percent the rule uses, and 1024 equals `max_num_seqs`, so the sweep cannot reach past it |
 | Quote for one caller | 250.5 tok/s |
 | Quote for a shared endpoint | 10904.7 tok/s at concurrency 1024 |
 | KV cache | 2,776,615 tokens, 10.59 full-length requests at once |
