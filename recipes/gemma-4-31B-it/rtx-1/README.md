@@ -147,7 +147,7 @@ Conditions:
 | Input length | ISL 19 tokens. Rates at a long input are not measured; use `--prompt-tokens` |
 | Output length | OSL 1152 tokens, output only, `ignore_eos` |
 | Context | `MAX_MODEL_LEN=262144` |
-| Allocation | 1 GPU, 16 cores, 180 GB, `kempner_rtx` |
+| Allocation for the measurement | 1 GPU, 16 cores, 180 GB, `kempner_rtx` |
 | Sequence cap | `max_num_seqs` 1024, which equals the top sweep level |
 | Preemption | 118,116 requests across the sweep, so the KV cache saturates before the sequence cap does |
 | Endpoint | idle, and the benchmark client ran on a separate CPU-only node |
