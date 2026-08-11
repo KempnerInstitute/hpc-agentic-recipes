@@ -133,6 +133,7 @@ bash common/tools/stop.sh <node>       # direct path
 | `VENV_DIR` | under `ENV_ROOT` | Use an environment built elsewhere |
 | `CUDA13_DIR`, `CUDA_HOME` | under `ENV_ROOT` | The conda CUDA 13 toolkit the sm_120 JIT needs |
 | `FLASHINFER_VERSION` | 0.6.15 | FlashInfer build installed |
+| `TRANSFORMERS_VERSION` | 5.14.1 | The transformers version the rates were measured with |
 | `KEY_NAME`, `KEY_FILE`, `VLLM_API_KEY` | this recipe's key | Which key `common/lib/api_key.sh` resolves; an exported `VLLM_API_KEY` wins |
 | `NODE`, `GEMMA31_RTX_NODE` | unset | The node to launch on or connect to; set either, or pass the node as an argument |
 | `MODELS_DIR`, `ENV_ROOT`, `VLLM_CACHE_ROOT`, `UV_CACHE_DIR` | `common/defaults.sh` | Override there or in `common/site.conf` |
@@ -188,6 +189,9 @@ KEY_NAME=gemma-4-31B-it-rtx-1 bash common/tools/bench.sh --host <node> --model g
 
 ## Known limits
 
+- Keep `TRANSFORMERS_VERSION` at 5.14.1. From 5.15.0 `head_dim` is a per-layer attribute for this
+  checkpoint and vLLM reads it globally, so the engine exits with
+  `AmbiguousGlobalPerLayerAttributeError` before it loads any weights.
 - vLLM and torch carry no version constraint, so a rebuild installs different versions than the ones
   measured here.
 - Do not add the conda CUDA 13 toolkit to `LD_LIBRARY_PATH`. Its `libcudart` shadows torch's runtime, so the

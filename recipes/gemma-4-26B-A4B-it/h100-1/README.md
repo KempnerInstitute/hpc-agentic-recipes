@@ -124,6 +124,7 @@ bash common/tools/stop.sh <node>       # direct path
 | `LOG_DIR` | `/tmp/$USER/vllm` | Where the SSH path writes the server log |
 | `VENV_DIR` | under `ENV_ROOT` | Use an environment built elsewhere |
 | `VLLM_VERSION` | 0.25.1 | Wheel version `env/build.sh` installs |
+| `TRANSFORMERS_VERSION` | 5.14.1 | The transformers version the rates were measured with |
 | `NODE`, `GEMMA26_H100_NODE` | unset | The node to launch on or connect to; set either, or pass the node as an argument |
 | `KEY_NAME`, `KEY_FILE`, `VLLM_API_KEY` | this recipe's key | Which key `common/lib/api_key.sh` resolves; an exported `VLLM_API_KEY` wins |
 | `MODELS_DIR`, `ENV_ROOT`, `VLLM_CACHE_ROOT` | `common/defaults.sh` | Override there or in `common/site.conf` |
@@ -176,6 +177,9 @@ KEY_NAME=gemma-4-26B-A4B-it-h100-1 bash common/tools/bench.sh --host <node> --mo
 
 ## Known limits
 
+- Keep `TRANSFORMERS_VERSION` at 5.14.1. From 5.15.0 `head_dim` is a per-layer attribute for this
+  checkpoint and vLLM reads it globally, so the engine exits with
+  `AmbiguousGlobalPerLayerAttributeError` before it loads any weights.
 - `SPEC_DRAFT` must stay unset. `gemma4_mtp` fails at engine startup on vLLM 0.25.1 and 0.26.0, so the
   server never comes up. Retested on 0.25.1 with the same shape mismatch.
 - Anthropic's hosted tools return HTTP 400. Use [docs/web-search.md](../../../docs/web-search.md).

@@ -9,6 +9,7 @@ source "$S/../../../../common/defaults.sh"
 VENV="${VENV_DIR:-$ENV_ROOT/DeepSeek-V4-Pro/rtx-8-nodes2/venv}"
 CUDA13="${CUDA13_DIR:-$ENV_ROOT/DeepSeek-V4-Pro/rtx-8-nodes2/cuda13}"
 FLASHINFER_VERSION="${FLASHINFER_VERSION:-0.6.15}"
+TRANSFORMERS_VERSION="${TRANSFORMERS_VERSION:-5.14.1}"
 
 venv_healthy () {
   [ -x "$VENV/bin/python" ] && [ -f "$VENV/bin/activate" ] \
@@ -28,7 +29,7 @@ if [ "$build_venv" = 1 ]; then
   uv pip install --python "$VENV/bin/python" --prerelease=allow --index-strategy unsafe-best-match \
     --extra-index-url https://wheels.vllm.ai/nightly/cu130 \
     --extra-index-url https://download.pytorch.org/whl/cu130 \
-    vllm
+    vllm "transformers==${TRANSFORMERS_VERSION}"
 
   uv pip install --python "$VENV/bin/python" "ray[default]"
 
