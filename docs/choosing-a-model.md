@@ -8,8 +8,9 @@ to read it and what the published quality scores are worth.
 
 - **Interactive coding on one GPU:** Gemma-4-26B-A4B. A mixture of experts with 4B active parameters, so it
   is fast, and one GPU is the shortest queue wait.
-- **Fastest large model:** GLM-5.2-NVFP4 on one RTX node, 91.1 tok/s, helped by MTP speculative decoding
-  that works because the model fits one node with no pipeline parallelism.
+- **Fastest large model:** DeepSeek-V4-Flash on one RTX node, 106.5 tok/s. Only a small share of its
+  parameters, 13.8B, is active per token. GLM-5.2-NVFP4 is next at 91.1 tok/s on the same hardware, helped by
+  MTP speculative decoding that works because the model fits one node with no pipeline parallelism.
 - **Best quality per second on one node:** Qwen3-Coder-480B-FP8 on one RTX node, 68.0 tok/s, slightly faster
   than the much smaller Qwen3-235B on the same hardware.
 - **Highest published coding scores:** Kimi-K3, 2.8T in MXFP4, needing 4 H200 nodes and SGLang.
@@ -19,9 +20,9 @@ to read it and what the published quality scores are worth.
   case here where context is not free, costing 14 to 17 percent of aggregate throughput above concurrency
   256, though nothing at concurrency 1.
 - **A 1M window on one node:** DeepSeek-V4-Flash, which serves the same full context from a single RTX node
-  and holds 9.06 full-length requests at once. Its card also reports the strongest agentic scores of any
-  checkpoint here that fits one node. The cost is latency: 15.1 tok/s on a single stream, because the
-  speculative head it ships cannot run on this hardware.
+  and holds 8.82 full-length requests at once. Its card also reports the strongest agentic scores of any
+  checkpoint here that fits one node, and it is the fastest large model here on a single stream, so on this
+  cluster it is the one recipe that does not trade latency for context.
 
 No published source ranks all of these against each other, so pick on the scores below and on your own task
 rather than on this ordering.

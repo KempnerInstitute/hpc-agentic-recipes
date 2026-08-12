@@ -7,10 +7,11 @@ MODEL="${MODEL:-$MODELS_DIR/DeepSeek-V4-Flash-0731}"
 [ -d "$MODEL" ] || { echo "checkpoint not found: $MODEL   (set MODEL or MODELS_DIR)" >&2; exit 1; }
 
 EXTRA=()
-if [ -n "${PERF:-}" ]; then
-  EXTRA+=(--compilation-config "{\"cudagraph_mode\": \"${CUDAGRAPH_MODE:-NONE}\"}")
-else
+# CUDA graphs are worth 7x on one stream here, 106.5 tok/s against 15.1 eager, so they are the default.
+if [ -n "${ENFORCE_EAGER:-}" ]; then
   EXTRA+=(--enforce-eager)
+else
+  EXTRA+=(--compilation-config "{\"cudagraph_mode\": \"${CUDAGRAPH_MODE:-FULL_AND_PIECEWISE}\"}")
 fi
 # Leave SPEC_MODE unset. The sm120 sparse-MLA kernel needs more than 64 tokens per batch and a draft batch
 # is only num_speculative_tokens wide, so both methods abort during warmup. See Known limits.

@@ -11,7 +11,7 @@ Status: Validated - vLLM 0.25.1, protocol: slope(128,1152) at concurrency 1, 8, 
 | Served precision | FP8 dense layers with FP4 routed experts, 20.08 GiB per GPU, KV cache FP8 in sparse-MLA layout |
 | Context | 1048576, the checkpoint maximum, served in full |
 | Hardware | 1 RTX PRO 6000 Blackwell node, 8 GPUs, 96 GiB each, TP8 over PCIe with no NVLink |
-| Engine | vLLM 0.25.1, eager execution, no speculative decoding; see Known limits |
+| Engine | vLLM 0.25.1, CUDA graphs at `FULL_AND_PIECEWISE`, no speculative decoding; see Known limits |
 
 ## 1. Create the API key
 
@@ -61,12 +61,14 @@ bash recipes/DeepSeek-V4-Flash-0731/rtx-8/serve_ssh.sh <node>
 
 | Stage | Measured |
 | --- | --- |
-| Launch to serving, first time on a node | 5 min 52 s |
-| Launch to serving, caches warm | 80 s to 3 min 20 s |
-| Weight load alone | 47 to 57 s |
+| Launch to serving, caches warm | 2 min to 2 min 20 s across three launches |
+| Weight load alone | 10 s warm, 47 to 57 s cold |
+| Engine init, profiling through warmup | 56 s |
+| CUDA graph capture | 20 s, and 2.61 GiB per GPU |
 
-- The first launch on any node compiles the sm_120 kernels from source. That cache is node-local, so a
-  different node pays it again.
+- The first launch on any node is several minutes longer, because it compiles the sm_120 kernels from source.
+  That cache is node-local, so a different node pays it again. Measured at 5 min 52 s before graphs were
+  enabled; the first launch with graphs is not separately measured.
 - On the direct path the server log is node-local at `/tmp/$USER/vllm/`. Under Slurm it lands in the submit
   directory.
 - The release ships no Jinja chat template and none is needed. vLLM selects `tokenizer_mode deepseek_v4` on
@@ -140,8 +142,8 @@ bash common/tools/stop.sh <node>       # direct path
 | `MAX_MODEL_LEN` | 1048576 | Context window, the checkpoint maximum |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
 | `TP` | 8 | Tensor parallel size, and the node's GPU count |
-| `PERF` | unset, eager | Set to compile instead of running eager. The rates below are eager; compiled is not measured |
-| `CUDAGRAPH_MODE` | `NONE` | Graph mode, read only when `PERF` is set |
+| `ENFORCE_EAGER` | unset | Set to skip torch.compile and graph capture, to debug a startup failure. Costs 7x on a single stream, so leave it unset otherwise |
+| `CUDAGRAPH_MODE` | `FULL_AND_PIECEWISE` | Graph mode, ignored when `ENFORCE_EAGER` is set |
 | `SPEC_MODE` | unset | Must stay unset on this hardware; see Known limits |
 | `SPEC_TOKENS` | 1 | Draft tokens per step, read only when `SPEC_MODE` is set |
 | `EXTRA_ARGS` | unset | Extra flags appended to the `vllm serve` command line |
@@ -173,33 +175,33 @@ Conditions:
 | Sequence cap | `max_num_seqs` 1024, the engine default for this hardware, which equals the top sweep level |
 | Preemption | zero at every level |
 | Endpoint | idle, and the benchmark client ran on a separate CPU-only node |
-| Power | 600 W enforced, the card default, so not capped. Sampled on this configuration over a separate run: mean 173 W across 2088 samples and a 216 W peak, with nothing at or above 540 W, so throughput here is not power bound |
+| Power | 600 W enforced, the card default, so not capped. Mean 200 W across 2768 samples and a 256 W peak, with nothing at or above 540 W, so throughput here is not power bound |
 
 Results:
 
 | Concurrency | Aggregate | Per stream | Spread over 3 runs | TTFT median |
 | --- | --- | --- | --- | --- |
-| 1 | 15.1 tok/s | 15.1 tok/s | 15.1 to 15.1 | 201 ms |
-| 8 | 118.7 tok/s | 14.8 tok/s | 118.0 to 119.0 | |
-| 32 | 465.4 tok/s | 14.5 tok/s | 464.2 to 467.0 | |
-| 64 | 930.5 tok/s | 14.5 tok/s | 929.2 to 931.9 | |
-| 128 | 1908.7 tok/s | 14.9 tok/s | 1899.1 to 1909.0 | |
-| 256 | 3744.8 tok/s | 14.6 tok/s | 3693.2 to 3782.2 | 408 ms |
-| 512 | 5083.0 tok/s | 9.9 tok/s | 5079.6 to 5097.5 | 514 ms |
-| 640 | 5359.2 tok/s | 8.4 tok/s | 5345.8 to 5361.5 | 567 ms |
-| 768 | 5512.5 tok/s | 7.2 tok/s | 5509.8 to 5521.0 | 662 ms |
-| 896 | 5649.4 tok/s | 6.3 tok/s | 5647.3 to 5836.2 | 756 ms |
-| 1024 | 5771.9 tok/s | 5.6 tok/s | 5771.0 to 5812.4 | 846 ms |
+| 1 | 106.5 tok/s | 106.5 tok/s | 105.4 to 106.6 | 36 ms |
+| 8 | 603.7 tok/s | 75.5 tok/s | 601.3 to 608.5 | 48 ms |
+| 32 | 1546.6 tok/s | 48.3 tok/s | 1545.4 to 1548.6 | 97 ms |
+| 64 | 2076.5 tok/s | 32.4 tok/s | 2076.4 to 2091.3 | 160 ms |
+| 128 | 2783.8 tok/s | 21.7 tok/s | 2783.3 to 2795.1 | 206 ms |
+| 256 | 4283.6 tok/s | 16.7 tok/s | 4269.1 to 4289.9 | 292 ms |
+| 512 | 5160.2 tok/s | 10.1 tok/s | 5156.9 to 5162.0 | 528 ms |
+| 640 | 5316.5 tok/s | 8.3 tok/s | 5313.7 to 5318.5 | 661 ms |
+| 768 | 5484.1 tok/s | 7.1 tok/s | 5483.4 to 5488.1 | 706 ms |
+| 896 | 5621.2 tok/s | 6.3 tok/s | 5618.7 to 5626.8 | 778 ms |
+| 1024 | 5744.6 tok/s | 5.6 tok/s | 5737.1 to 5750.6 | 843 ms |
 
 | | |
 | --- | --- |
-| Label | rising. The top value is at the top of the sweep and the levels at or above 512 vary by 11.5 percent, outside the 4 percent the rule allows for `saturated`, so 5771.9 tok/s is a floor |
-| Where it bends | per stream holds 14.5 to 15.1 tok/s from concurrency 1 to 256, a 256x load increase at constant latency, then falls away above 512 |
-| Quote for one caller | 15.1 tok/s |
-| Quote for a shared endpoint | 5771.9 tok/s at concurrency 1024 |
-| KV cache | 9,502,636 tokens from 61.99 GiB per GPU, 9.06 full-length requests at once |
-| Long prompt | 180,005 tokens in 18.9 s cold; 0.41 s when the prefix is already cached |
-| Reproducibility | three launches gave the same 20.08 GiB per GPU and the same 9,502,636-token pool, and concurrency 1 repeated at 15.1 tok/s in every run |
+| Label | rising. The top value is at the top of the sweep and the levels at or above 512 vary by 10.2 percent, outside the 4 percent the rule allows for `saturated`, so 5744.6 tok/s is a floor |
+| Where it bends | per stream falls from the start, 106.5 to 75.5 tok/s by concurrency 8 and 16.7 by 256, while aggregate keeps climbing to the top of the sweep |
+| Quote for one caller | 106.5 tok/s |
+| Quote for a shared endpoint | 5744.6 tok/s at concurrency 1024 |
+| KV cache | 9,247,208 tokens from 60.33 GiB per GPU, 8.82 full-length requests at once |
+| Long prompt | 180,005 tokens in 18.9 s cold; 0.37 s when the prefix is already cached |
+| Reproducibility | every level held within 0.6 percent across its three runs, and concurrency 1 measured 106.5 tok/s in two separate launches |
 
 Reproduce:
 
@@ -221,15 +223,17 @@ KEY_NAME=DeepSeek-V4-Flash-0731-rtx-8 bash common/tools/bench.sh --host <node> -
   `deepseek_mtp` fails earlier still, at `KeyError: model.layers.43.mtp_block.main_norm.weight`, because this
   checkpoint stores its head at `mtp.0`, `mtp.1` and `mtp.2` rather than as one more layer. The vLLM recipe
   page reports the same sm_120 limitation for both methods.
-- Single stream is 15.1 tok/s, below the 18.7 tok/s of DeepSeek-V4-Pro on two nodes despite this checkpoint
-  being 5.2 times smaller. Speculative decoding is what would normally close that gap on one node, and it is
-  the thing this hardware cannot run. Flash wins here on capacity and aggregate rather than on latency.
+- Do not set `ENFORCE_EAGER` for normal serving. Eager measures 15.1 tok/s on a single stream against 106.5
+  with graphs, and 118.7 against 603.7 at concurrency 8. The cost of graphs is 2.61 GiB per GPU at capture,
+  which shrinks the KV pool from 9,502,636 tokens to 9,247,208 and full-length concurrency from 9.06 to 8.82,
+  and about 0.5 percent of aggregate at the top of the sweep. That trade is worth taking at every level below
+  512.
 - The aggregate figure is a floor twice over: throughput was still climbing at the top of the sweep, and that
   level is also the engine's own admission cap, so a ceiling would need `max_num_seqs` above 1024.
 - A default request returns no `reasoning` field; see Verify for the `chat_template_kwargs` form that does.
 - The flag set the vLLM recipe page lists for this hardware, `--enable-expert-parallel` with
-  `--kv-cache-dtype fp8` and `--block-size 256`, was measured here and is not worth adopting. It gives the
-  same 9,502,636-token pool and the same weight footprint, 15.2 against 15.1 tok/s on one stream, 5703.0
-  against 5771.9 tok/s at concurrency 1024, and a higher time to first token above concurrency 256, 501 ms
-  against 408 ms. This recipe keeps `fp8_ds_mla` and the default block size.
+  `--kv-cache-dtype fp8` and `--block-size 256`, was measured twice here and is not adopted. With graphs it
+  gives 99.7 against 106.5 tok/s on a single stream and 546.1 against 603.7 at concurrency 8, against a
+  0.9 percent gain at 256. It also resolves to the same KV pool, so `fp8` and `fp8_ds_mla` cost the same.
+  This recipe keeps `fp8_ds_mla` and the default block size.
 - Anthropic's hosted tools return HTTP 400. Use [docs/web-search.md](../../../docs/web-search.md).
