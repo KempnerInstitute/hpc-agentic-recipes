@@ -36,7 +36,9 @@ fi
 if [ -x "$CUDA13/bin/nvcc" ] && [ "$FORCE" = 0 ]; then
   echo "CUDA 13.0 toolkit already present at $CUDA13"
 else
-  [ "$FORCE" = 1 ] && rm -rf "$CUDA13"
+  # Remove whatever is there, not only on --force: reaching this branch means nvcc is absent, and
+  # mamba create refuses an existing prefix, so an interrupted build could never finish itself.
+  [ -d "$CUDA13" ] && { echo "removing incomplete or forced toolkit at $CUDA13"; rm -rf "$CUDA13"; }
   source /etc/profile.d/lmod.sh 2>/dev/null || true
   module load Mambaforge/23.3.1-fasrc01 2>/dev/null || true
   command -v mamba >/dev/null || { echo "mamba is required: module load Mambaforge/23.3.1-fasrc01" >&2; exit 1; }
