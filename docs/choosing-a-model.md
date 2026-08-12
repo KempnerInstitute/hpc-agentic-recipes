@@ -8,8 +8,9 @@ to read it and what the published quality scores are worth.
 
 - **Interactive coding on one GPU:** Gemma-4-26B-A4B. A mixture of experts with 4B active parameters, so it
   is fast, and one GPU is the shortest queue wait.
-- **Fastest large model:** GLM-5.2-NVFP4 on one RTX node, 91.1 tok/s, helped by MTP speculative decoding
-  that works because the model fits one node with no pipeline parallelism.
+- **Fastest large model:** DeepSeek-V4-Flash on one RTX node, 106.5 tok/s. Only a small share of its
+  parameters, 13.8B, is active per token. GLM-5.2-NVFP4 is next at 91.1 tok/s on the same hardware, helped by
+  MTP speculative decoding that works because the model fits one node with no pipeline parallelism.
 - **Best quality per second on one node:** Qwen3-Coder-480B-FP8 on one RTX node, 68.0 tok/s, slightly faster
   than the much smaller Qwen3-235B on the same hardware.
 - **Highest published coding scores:** Kimi-K3, 2.8T in MXFP4, needing 4 H200 nodes and SGLang.
@@ -18,6 +19,10 @@ to read it and what the published quality scores are worth.
 - **Longest context:** DeepSeek-V4-Pro on two RTX nodes, serving its full 1M window by default. It is the one
   case here where context is not free, costing 14 to 17 percent of aggregate throughput above concurrency
   256, though nothing at concurrency 1.
+- **A 1M window on one node:** DeepSeek-V4-Flash, which serves the same full context from a single RTX node
+  and holds 8.82 full-length requests at once. Its card also reports the strongest agentic scores of any
+  checkpoint here that fits one node, and it is the fastest large model here on a single stream, so on this
+  cluster it is the one recipe that does not trade latency for context.
 
 No published source ranks all of these against each other, so pick on the scores below and on your own task
 rather than on this ordering.
@@ -99,6 +104,24 @@ From the `DeepSeek-V4-Pro` card, at its `max` reasoning effort:
 
 Without reasoning effort the card shows these collapse, to 56.8 on LiveCodeBench and 73.6 on SWE Verified,
 so the headline numbers depend on spending output tokens on thinking.
+
+From the `DeepSeek-V4-Flash-0731` card, which is the second place in this document where two models served
+here appear in one table, Flash and GLM-5.2. Its DeepSeek-V4-Pro column is the Preview, not the Pro the
+recipes here serve, so it is not the same model as the table above:
+
+| Benchmark | V4-Flash-0731 | V4-Pro Preview | GLM-5.2 | Opus-4.8 |
+| --- | --- | --- | --- | --- |
+| Terminal Bench 2.1 | 82.7 | 72.1 | 81.0 | 85.0 |
+| NL2Repo | 54.2 | 38.5 | 48.9 | 69.7 |
+| Cybergym | 76.7 | 52.7 | not reported | 83.1 |
+| DeepSWE | 54.4 | 12.8 | 46.2 | 58.0 |
+| Toolathlon-Verified | 70.3 | 55.9 | 59.9 | 76.2 |
+| Agents' Last Exam | 25.2 | 16.5 | 23.8 | 25.7 |
+| AutomationBench Public | 25.1 | 12.8 | 12.9 | 27.2 |
+
+Flash leads GLM-5.2 on every row and trails Opus-4.8 on every row. Two internal DeepSeek test sets on the
+card are left out here. These are agent-harness scores, run with the `max` reasoning effort and thinking
+enabled, which is not what a default request to this endpoint does; the recipe page shows how to match it.
 
 From the shared Gemma 4 card, the one apples-to-apples comparison in this document since both models appear
 in one table:
