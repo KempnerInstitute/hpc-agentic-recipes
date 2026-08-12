@@ -173,7 +173,7 @@ Conditions:
 | Sequence cap | `max_num_seqs` 1024, the engine default for this hardware, which equals the top sweep level |
 | Preemption | zero at every level |
 | Endpoint | idle, and the benchmark client ran on a separate CPU-only node |
-| Power | 600 W enforced, the card default, so not capped. Mean 173 W across 2088 samples and a 216 W peak, with nothing at or above 540 W, so throughput here is not power bound |
+| Power | 600 W enforced, the card default, so not capped. Sampled on this configuration over a separate run: mean 173 W across 2088 samples and a 216 W peak, with nothing at or above 540 W, so throughput here is not power bound |
 
 Results:
 
@@ -227,4 +227,9 @@ KEY_NAME=DeepSeek-V4-Flash-0731-rtx-8 bash common/tools/bench.sh --host <node> -
 - The aggregate figure is a floor twice over: throughput was still climbing at the top of the sweep, and that
   level is also the engine's own admission cap, so a ceiling would need `max_num_seqs` above 1024.
 - A default request returns no `reasoning` field; see Verify for the `chat_template_kwargs` form that does.
+- The flag set the vLLM recipe page lists for this hardware, `--enable-expert-parallel` with
+  `--kv-cache-dtype fp8` and `--block-size 256`, was measured here and is not worth adopting. It gives the
+  same 9,502,636-token pool and the same weight footprint, 15.2 against 15.1 tok/s on one stream, 5703.0
+  against 5771.9 tok/s at concurrency 1024, and a higher time to first token above concurrency 256, 501 ms
+  against 408 ms. This recipe keeps `fp8_ds_mla` and the default block size.
 - Anthropic's hosted tools return HTTP 400. Use [docs/web-search.md](../../../docs/web-search.md).
