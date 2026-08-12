@@ -18,8 +18,11 @@ command -v uv >/dev/null || { echo "uv is required: https://docs.astral.sh/uv/" 
 mkdir -p "$(dirname "$VENV")"
 
 venv_healthy () {
+  # FlashInfer counts here too. It installs after vllm, so testing vllm alone would call a venv
+  # interrupted between the two healthy, skip the rebuild, then fail the check below on every rerun.
   [ -x "$VENV/bin/python" ] && [ -f "$VENV/bin/activate" ] \
-    && compgen -G "$VENV"/lib/python*/site-packages/vllm-*.dist-info > /dev/null
+    && compgen -G "$VENV"/lib/python*/site-packages/vllm-*.dist-info > /dev/null \
+    && compgen -G "$VENV"/lib/python*/site-packages/flashinfer_python-*.dist-info > /dev/null
 }
 if venv_healthy && [ "$FORCE" = 0 ]; then
   echo "environment already present and complete at $VENV (pass --force to rebuild)"
