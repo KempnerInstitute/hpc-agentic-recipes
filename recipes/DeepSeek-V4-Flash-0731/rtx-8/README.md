@@ -62,13 +62,12 @@ bash recipes/DeepSeek-V4-Flash-0731/rtx-8/serve_ssh.sh <node>
 | Stage | Measured |
 | --- | --- |
 | Launch to serving, caches warm | 2 min to 2 min 20 s across three launches |
-| Weight load alone | 10 s warm, 47 to 57 s cold |
+| Weight load alone | 10 s warm, 47 to 57 s from cold storage |
 | Engine init, profiling through warmup | 56 s |
 | CUDA graph capture | 20 s, and 2.61 GiB per GPU |
 
 - The first launch on any node is several minutes longer, because it compiles the sm_120 kernels from source.
-  That cache is node-local, so a different node pays it again. Measured at 5 min 52 s before graphs were
-  enabled; the first launch with graphs is not separately measured.
+  That cache is node-local, so a different node pays it again.
 - On the direct path the server log is node-local at `/tmp/$USER/vllm/`. Under Slurm it lands in the submit
   directory.
 - The release ships no Jinja chat template and none is needed. vLLM selects `tokenizer_mode deepseek_v4` on
@@ -142,8 +141,7 @@ bash common/tools/stop.sh <node>       # direct path
 | `MAX_MODEL_LEN` | 1048576 | Context window, the checkpoint maximum |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
 | `TP` | 8 | Tensor parallel size, and the node's GPU count |
-| `ENFORCE_EAGER` | unset | Set to skip torch.compile and graph capture, to debug a startup failure. Costs 7x on a single stream, so leave it unset otherwise |
-| `CUDAGRAPH_MODE` | `FULL_AND_PIECEWISE` | Graph mode, ignored when `ENFORCE_EAGER` is set |
+| `CUDAGRAPH_MODE` | `FULL_AND_PIECEWISE` | CUDA graph mode passed to `--compilation-config` |
 | `SPEC_MODE` | unset | Must stay unset on this hardware; see Known limits |
 | `SPEC_TOKENS` | 1 | Draft tokens per step, read only when `SPEC_MODE` is set |
 | `EXTRA_ARGS` | unset | Extra flags appended to the `vllm serve` command line |
@@ -223,17 +221,12 @@ KEY_NAME=DeepSeek-V4-Flash-0731-rtx-8 bash common/tools/bench.sh --host <node> -
   `deepseek_mtp` fails earlier still, at `KeyError: model.layers.43.mtp_block.main_norm.weight`, because this
   checkpoint stores its head at `mtp.0`, `mtp.1` and `mtp.2` rather than as one more layer. The vLLM recipe
   page reports the same sm_120 limitation for both methods.
-- Do not set `ENFORCE_EAGER` for normal serving. Eager measures 15.1 tok/s on a single stream against 106.5
-  with graphs, and 118.7 against 603.7 at concurrency 8. The cost of graphs is 2.61 GiB per GPU at capture,
-  which shrinks the KV pool from 9,502,636 tokens to 9,247,208 and full-length concurrency from 9.06 to 8.82,
-  and about 0.5 percent of aggregate at the top of the sweep. That trade is worth taking at every level below
-  512.
 - The aggregate figure is a floor twice over: throughput was still climbing at the top of the sweep, and that
   level is also the engine's own admission cap, so a ceiling would need `max_num_seqs` above 1024.
 - A default request returns no `reasoning` field; see Verify for the `chat_template_kwargs` form that does.
 - The flag set the vLLM recipe page lists for this hardware, `--enable-expert-parallel` with
-  `--kv-cache-dtype fp8` and `--block-size 256`, was measured twice here and is not adopted. With graphs it
-  gives 99.7 against 106.5 tok/s on a single stream and 546.1 against 603.7 at concurrency 8, against a
-  0.9 percent gain at 256. It also resolves to the same KV pool, so `fp8` and `fp8_ds_mla` cost the same.
+  `--kv-cache-dtype fp8` and `--block-size 256`, is measurably slower where it matters and is not adopted:
+  99.7 tok/s on a single stream against this recipe's 106.5, and 546.1 against 603.7 at concurrency 8, for a
+  0.9 percent gain at 256. It resolves to the same KV pool, so `fp8` and `fp8_ds_mla` cost the same here.
   This recipe keeps `fp8_ds_mla` and the default block size.
 - Anthropic's hosted tools return HTTP 400. Use [docs/web-search.md](../../../docs/web-search.md).
