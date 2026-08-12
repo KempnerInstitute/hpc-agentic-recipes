@@ -8,7 +8,11 @@ MODEL="${MODEL:-$MODELS_DIR/Kimi-K2.7-Code}"
 
 [ -n "${ATTN_BACKEND:-}" ] && export VLLM_ATTENTION_BACKEND="$ATTN_BACKEND"
 EXTRA=()
-[ -n "${ENFORCE_EAGER-1}" ] && EXTRA+=(--enforce-eager)
+if [ -n "${CUDA_GRAPHS:-}" ]; then
+  EXTRA+=(--compilation-config "{\"cudagraph_mode\": \"${CUDAGRAPH_MODE:-FULL_AND_PIECEWISE}\"}")
+else
+  EXTRA+=(--enforce-eager)
+fi
 [ -n "${EXTRA_ARGS:-}" ] && EXTRA+=($EXTRA_ARGS)
 
 exec vllm serve "$MODEL" \

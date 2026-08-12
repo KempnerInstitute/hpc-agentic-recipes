@@ -122,7 +122,8 @@ bash common/tools/stop.sh <node>       # direct path
 | `MAX_MODEL_LEN` | 131072 | Context window. The KV pool holds 137,664 tokens, so this is 5 percent below the hardware ceiling |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
 | `TP` | 8 | Tensor parallel size, and the node's GPU count |
-| `ENFORCE_EAGER` | 1 | Eager is the default and is what the rates below were measured with. Pass an explicitly empty value to try CUDA graphs |
+| `CUDA_GRAPHS` | unset, eager | Set to serve with CUDA graphs, which needs `GPU_UTIL=0.93`. Trades aggregate for single stream; see Choosing eager or CUDA graphs |
+| `CUDAGRAPH_MODE` | `FULL_AND_PIECEWISE` | Graph mode, read only when `CUDA_GRAPHS` is set |
 | `EXTRA_ARGS` | unset | Extra flags appended to the `vllm serve` command line. Unlike the two-node variant, this one appends rather than replaces |
 | `TOOL_PARSER` | `kimi_k2` | Tool call parser |
 | `REASONING_PARSER` | `kimi_k2` | Reasoning parser |
@@ -189,6 +190,30 @@ KEY_NAME=Kimi-K2.7-Code-rtx-8 bash common/tools/bench.sh --host <node> --model k
 
 - `KEY_NAME` is required once `secrets/` holds more than one key, otherwise `bench.sh` resolves the shared
   key and every request returns 401.
+
+## Choosing eager or CUDA graphs
+
+Eager is the default and the table above is measured with it. CUDA graphs triple the single-stream rate and
+cost about 40 percent of the aggregate, so the right choice depends on how the endpoint is used. Both were
+measured on one node at 131072 context, concurrency 1, 8, 256 and 1024, 3 repeats.
+
+```
+CUDA_GRAPHS=1 GPU_UTIL=0.93 sbatch --account=<your-account> recipes/Kimi-K2.7-Code/rtx-8/serve.sbatch
+```
+
+| | Eager | CUDA graphs |
+| --- | --- | --- |
+| One caller | 20.8 tok/s | 64.6 tok/s |
+| Concurrency 8 | 162.3 tok/s | 289.1 tok/s |
+| Concurrency 256 | 1821.0 tok/s | 1021.0 tok/s |
+| Concurrency 1024 | 2007.3 tok/s | 1215.5 tok/s |
+| KV cache | 181,200 tokens | 152,608 tokens |
+
+- `GPU_UTIL=0.93` is required. Graph capture takes 2.13 GiB per GPU, and at 0.90 the pool falls to 7.14 GiB
+  against the 8.58 GiB one full-length request needs, so the engine refuses to start.
+- Both figures in this table were measured at `GPU_UTIL=0.93`, which is also why the eager column is above the
+  0.90 numbers in the table further up.
+- Answers were checked on five prompts with known answers before and after the sweep, and matched in both.
 
 ## Known limits
 
