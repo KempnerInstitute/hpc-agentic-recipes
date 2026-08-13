@@ -5,6 +5,7 @@ S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/../../../../common/defaults.sh"
 VENV="${VENV_DIR:-$ENV_ROOT/gemma-4-31B-it/rtx-1/venv}"
 CU13="${CUDA13_DIR:-$ENV_ROOT/gemma-4-31B-it/rtx-1/cuda13}"
+VLLM_VERSION="${VLLM_VERSION:-0.26.1rc1}"
 FLASHINFER_VERSION="${FLASHINFER_VERSION:-0.6.15}"
 TRANSFORMERS_VERSION="${TRANSFORMERS_VERSION:-5.14.1}"
 
@@ -26,7 +27,7 @@ if [ "$build_venv" = 1 ]; then
   uv pip install --python "$VENV/bin/python" --prerelease=allow --index-strategy unsafe-best-match \
     --extra-index-url https://wheels.vllm.ai/nightly/cu130 \
     --extra-index-url https://download.pytorch.org/whl/cu130 \
-    vllm "transformers==${TRANSFORMERS_VERSION}"
+    "vllm==$VLLM_VERSION" "transformers==${TRANSFORMERS_VERSION}"
 
   uv pip install --python "$VENV/bin/python" --no-deps -U "flashinfer-python==$FLASHINFER_VERSION"
 fi
