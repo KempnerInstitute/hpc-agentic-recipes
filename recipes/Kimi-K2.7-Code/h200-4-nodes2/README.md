@@ -10,7 +10,7 @@ Status: Validated - vLLM 0.25.1+cu129, protocol: slope(128,1152) at concurrency 
 | Served precision | INT4 pack-quantized at group size 32, attention and shared experts left unquantized |
 | Context | 262144, the checkpoint maximum |
 | Hardware | 2 H200 nodes, 8 GPUs, 143771 MiB each, TP4 inside a node and PP2 between over Ray |
-| Engine | vLLM 0.25.1+cu129, eager, no speculative decoding |
+| Engine | vLLM 0.25.1+cu129, CUDA graphs at `FULL_AND_PIECEWISE`, no speculative decoding |
 
 ## 1. Create the API key
 
@@ -57,8 +57,9 @@ bash recipes/Kimi-K2.7-Code/h200-4-nodes2/serve_ssh.sh <head_node> <worker_node>
 
 | Stage | Measured |
 | --- | --- |
-| Launcher to serving | 14 min 42 s to 30 min 16 s, across three launches on one node pair |
-| Weight load, 64 shards across 8 ranks | 821 s worker stage, 1328 s head stage |
+| Launcher to serving | 12 min 1 s |
+| Weight load, 64 shards across 8 ranks | 505 s and 518 s by stage |
+| CUDA graph capture | 12 s, and 2.75 GiB per GPU |
 
 - The launcher prints `cluster GPUs: 8.0` before loading any weights. If it says 4, the worker did not
   join; stop there rather than discovering it twenty minutes into a weight load.
@@ -132,7 +133,8 @@ bash common/tools/stop.sh <head_node> <worker_node>    # direct path, name both
 | `TP` | 4 | Tensor parallel size; 4 is one node's GPU count and must stay inside a node |
 | `PP` | 2 | Pipeline parallel size; 2 is the node count |
 | `EXTRA_ARGS` | `--skip-mm-profiling --mm-processor-cache-gb 0` | **Replaces** this default rather than adding to it. Anything you pass must repeat both flags, or startup hangs at multimodal profiling forever |
-| `ENFORCE_EAGER` | 1 | Eager is the default and is what the rates below were measured with. Pass an explicitly empty value to try CUDA graphs, which has never been attempted for this model on this hardware |
+| `ENFORCE_EAGER` | unset | Set to fall back to eager, which measures 30.2 tok/s on one stream against 103.0 with graphs |
+| `CUDAGRAPH_MODE` | `FULL_AND_PIECEWISE` | Graph mode, ignored when `ENFORCE_EAGER` is set |
 | `ATTN_BACKEND` | unset | Override vLLM's attention backend selection |
 | `TOOL_PARSER` | `kimi_k2` | Tool call parser |
 | `REASONING_PARSER` | `kimi_k2` | Reasoning parser |
@@ -173,25 +175,25 @@ Results:
 
 | Concurrency | Aggregate | Per stream | Spread over 3 runs | TTFT median |
 | --- | --- | --- | --- | --- |
-| 1 | 30.2 tok/s | 30.2 tok/s | 29.7 to 30.3 | 100 ms |
-| 8 | 239.8 tok/s | 30.0 tok/s | 239.7 to 240.1 | 101 ms |
-| 32 | 925.1 tok/s | 28.9 tok/s | 922.4 to 926.4 | 176 ms |
-| 64 | 1750.9 tok/s | 27.4 tok/s | 1749.6 to 1763.9 | 229 ms |
-| 128 | 2633.8 tok/s | 20.6 tok/s | 2626.9 to 2642.1 | 297 ms |
-| 256 | 3624.5 tok/s | 14.2 tok/s | 3619.7 to 3638.0 | 415 ms |
-| 512 | 5661.9 tok/s | 11.1 tok/s | 5661.3 to 5667.4 | 637 ms |
-| 640 | 6125.7 tok/s | 9.6 tok/s | 6121.8 to 6129.9 | 760 ms |
-| 768 | 6139.5 tok/s | 8.0 tok/s | 6137.5 to 6154.6 | 816 ms |
-| 896 | 6532.1 tok/s | 7.3 tok/s | 6531.7 to 6548.9 | 959 ms |
-| 1024 | 7094.3 tok/s | 6.9 tok/s | 6902.4 to 7101.6 | 1058 ms |
+| 1 | 103.0 tok/s | 103.0 tok/s | 102.9 to 103.0 | 38 ms |
+| 8 | 541.1 tok/s | 67.6 tok/s | 536.0 to 545.5 | 52 ms |
+| 32 | 1250.4 tok/s | 39.1 tok/s | 1234.8 to 1255.9 | 121 ms |
+| 64 | 1861.6 tok/s | 29.1 tok/s | 1852.5 to 1867.9 | 185 ms |
+| 128 | 2730.7 tok/s | 21.3 tok/s | 2724.3 to 2738.1 | 270 ms |
+| 256 | 3713.3 tok/s | 14.5 tok/s | 3704.7 to 3720.2 | 380 ms |
+| 512 | 5741.6 tok/s | 11.2 tok/s | 5741.5 to 5753.3 | 619 ms |
+| 640 | 6081.1 tok/s | 9.5 tok/s | 6073.3 to 6084.2 | 710 ms |
+| 768 | 6097.7 tok/s | 7.9 tok/s | 6092.1 to 6115.2 | 823 ms |
+| 896 | 6486.6 tok/s | 7.2 tok/s | 6483.9 to 6487.0 | 886 ms |
+| 1024 | 7033.4 tok/s | 6.9 tok/s | 7033.0 to 7039.5 | 928 ms |
 
 | | |
 | --- | --- |
-| Label | rising. The highest value is at 1024, the top of the sweep, so 7094.3 tok/s is a floor rather than a ceiling. Finding the peak needs `max_num_seqs` above 1024, a different serving configuration |
-| Quote for one caller | 30.2 tok/s |
-| Quote for a shared endpoint | 7094.3 tok/s at concurrency 1024 |
-| KV cache | 1,555,488 tokens, 5.93 full-length requests at once. The pool is the same at 32768, where it holds 47.47, so the context costs nothing and only divides the same pool differently |
-| Long prompt | 247,704 tokens in 27 s cold; 1.6 s when the prefix is already cached |
+| Label | rising. The highest value is at 1024, the top of the sweep, so 7033.4 tok/s is a floor rather than a ceiling. Finding the peak needs `max_num_seqs` above 1024, a different serving configuration |
+| Quote for one caller | 103.0 tok/s |
+| Quote for a shared endpoint | 7033.4 tok/s at concurrency 1024 |
+| KV cache | 1,466,752 tokens, 5.60 full-length requests at once. Graph capture takes 2.75 GiB per GPU, which is why the pool is 88,736 tokens smaller than eager's 1,555,488 |
+| Long prompt | 180,011 tokens in 17.0 s cold; 0.31 s when the prefix is already cached |
 
 Reproduce:
 
@@ -206,6 +208,9 @@ KEY_NAME=Kimi-K2.7-Code-h200-4-nodes2 bash common/tools/bench.sh --host <head_no
 
 ## Known limits
 
+- Graph capture needs the allreduce and RMSNorm fusion pass disabled, which `serve.sh` does through
+  `--compilation-config`. With the pass on, capture takes an illegal memory access and a CUBLAS failure and the
+  engine never starts. If you replace the compilation config, keep `"pass_config": {"fuse_allreduce_rms": false}`.
 - Do not set `EXTRA_ARGS` without repeating `--skip-mm-profiling --mm-processor-cache-gb 0`. It replaces the
   default rather than adding to it, and without those flags a multimodal checkpoint on more than one node
   completes weight loading and then hangs at multimodal profiling with no error and no timeout.

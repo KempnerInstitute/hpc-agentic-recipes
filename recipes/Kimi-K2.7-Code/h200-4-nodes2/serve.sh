@@ -10,7 +10,14 @@ HEAD_IP="${1:-${RAY_HEAD_IP:-}}"
 export RAY_ADDRESS="$HEAD_IP:${2:-${RAY_PORT:-6379}}"
 
 EXTRA=()
-[ -n "${ENFORCE_EAGER-1}" ] && EXTRA+=(--enforce-eager)
+# Graph capture needs the allreduce and RMSNorm fusion pass off across nodes, or it takes an illegal
+# memory access.
+if [ -n "${ENFORCE_EAGER:-}" ]; then
+  EXTRA+=(--enforce-eager)
+else
+  EXTRA+=(--compilation-config \
+    "{\"cudagraph_mode\": \"${CUDAGRAPH_MODE:-FULL_AND_PIECEWISE}\", \"pass_config\": {\"fuse_allreduce_rms\": false}}")
+fi
 [ -n "${ATTN_BACKEND:-}" ] && export VLLM_ATTENTION_BACKEND="$ATTN_BACKEND"
 EXTRA+=(${EXTRA_ARGS:---skip-mm-profiling --mm-processor-cache-gb 0})
 
