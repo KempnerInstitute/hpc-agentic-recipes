@@ -7,15 +7,14 @@ proxy.
 
 This is the long-context endpoint in this repo. The checkpoint's `max_position_embeddings` is 1048576,
 a million tokens, which DeepSeek-V4-Pro, DeepSeek-V4-Flash, the NVFP4 build of this same base model, and
-Kimi-K3 also reach. The price is speed: at 756 GB the weights need
-two H200 nodes, two nodes need pipeline parallelism, and a two-stage pipeline with one request in flight
-is the slowest configuration in this repo.
+Kimi-K3 also reach. The price is hardware: at 756 GB the weights need two H200 nodes, and two nodes need
+pipeline parallelism.
 
 ## Hardware variants
 
 | Variant | Engine | Shape | Single stream | Aggregate | Status |
 | --- | --- | --- | --- | --- | --- |
-| [`h200-4-nodes2`](h200-4-nodes2/README.md) | vLLM | 2 H200 nodes, 4 GPUs each, TP4 x PP2 | 12.9 tok/s | 5392 at c=512, peak | Validated |
+| [`h200-4-nodes2`](h200-4-nodes2/README.md) | vLLM | 2 H200 nodes, 4 GPUs each, TP4 x PP2 | 68.9 tok/s | 5606 at c=512, peak | Validated |
 
 The checkpoint ships an MTP speculative head, `num_nextn_predict_layers` 1, which this configuration
 cannot use: vLLM rejects a speculative config whenever pipeline parallelism is active, and 704 GiB of

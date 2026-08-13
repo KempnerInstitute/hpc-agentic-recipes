@@ -10,7 +10,7 @@ Status: Validated - vLLM 0.25.1+cu129, protocol: slope(128,1152) at concurrency 
 | Served precision | FP8 with dynamic activations, `weight_block_size` [128, 128] |
 | Context | 641664. The checkpoint declares 1048576, which does not fit; see Known limits |
 | Hardware | 2 H200 nodes, 8 GPUs, 143771 MiB each, TP4 inside a node and PP2 between over Ray |
-| Engine | vLLM 0.25.1+cu129, eager, no speculative decoding |
+| Engine | vLLM 0.25.1+cu129, CUDA graphs at `FULL_AND_PIECEWISE`, no speculative decoding |
 
 ## 1. Create the API key
 
@@ -58,9 +58,9 @@ bash recipes/GLM-5.2-FP8/h200-4-nodes2/serve_ssh.sh <head_node> <worker_node>
 
 | Stage | Measured |
 | --- | --- |
-| Launcher to serving, first time on a node pair | 13 min 49 s |
-| Launcher to serving, caches warm | 5 min 22 s |
+| Launcher to serving | 15 min 21 s |
 | Weight load, 141 shards across 8 ranks | 342 s worker stage, 373 s head stage |
+| CUDA graph capture | 22 s, and 5.62 GiB per GPU |
 
 - The launcher prints `cluster GPUs: 8.0` before loading any weights. If it says 4, the worker did not
   join; stop there rather than discovering it minutes into a weight load.
@@ -129,11 +129,11 @@ bash common/tools/stop.sh <head_node> <worker_node>    # direct path, name both
 | `MODEL` | `$MODELS_DIR/GLM-5.2-FP8` | Serve a different copy of the checkpoint |
 | `API_PORT` | 8000 | Listening port |
 | `MAX_MODEL_LEN` | 641664 | Context window, the ceiling this hardware allows |
-| `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
+| `GPU_UTIL` | 0.94 | Fraction of VRAM for weights plus KV cache. Graph capture does not fit at 0.90; see Known limits |
 | `TP` | 4 | Tensor parallel size; 4 is one node's GPU count and must stay inside a node |
 | `PP` | 2 | Pipeline parallel size; 2 is the node count |
-| `PERF` | unset | Retry CUDA graph capture instead of eager; crashes on 0.25.1 |
-| `CUDAGRAPH_MODE` | `NONE` | Graph mode passed through when `PERF` is set |
+| `ENFORCE_EAGER` | unset | Set to fall back to eager, which measures 13.0 tok/s on one stream against 68.8 with graphs |
+| `CUDAGRAPH_MODE` | `FULL_AND_PIECEWISE` | Graph mode, ignored when `ENFORCE_EAGER` is set |
 | `EXTRA_ARGS` | unset | Extra flags appended to the `vllm serve` command line |
 | `TOOL_PARSER` | `glm45` | Tool call parser |
 | `REASONING_PARSER` | `glm45` | Reasoning parser |
@@ -172,26 +172,25 @@ Results:
 
 | Concurrency | Aggregate | Per stream | Spread over 3 runs | TTFT median |
 | --- | --- | --- | --- | --- |
-| 1 | 12.9 tok/s | 12.9 tok/s | 12.9 to 12.9 | 236 ms |
-| 8 | 100.9 tok/s | 12.6 tok/s | 99.6 to 101.6 | 240 ms |
-| 32 | 396.7 tok/s | 12.4 tok/s | 392.1 to 396.8 | 242 ms |
-| 64 | 789.4 tok/s | 12.3 tok/s | 788.6 to 790.9 | 429 ms |
-| 128 | 1572.1 tok/s | 12.3 tok/s | 1566.6 to 1575.8 | 414 ms |
-| 256 | 3066.3 tok/s | 12.0 tok/s | 3043.2 to 3097.8 | 596 ms |
-| 512 | 5392.0 tok/s | 10.5 tok/s | 5379.9 to 5392.7 | 843 ms |
-| 640 | 5118.7 tok/s | 8.0 tok/s | 5116.9 to 5123.6 | 980 ms |
-| 768 | 4853.2 tok/s | 6.3 tok/s | 4852.5 to 4879.0 | 1110 ms |
-| 896 | 4669.6 tok/s | 5.2 tok/s | 4613.8 to 4862.4 | 1257 ms |
-| 1024 | 5162.8 tok/s | 5.0 tok/s | 5118.2 to 5168.8 | 1350 ms |
+| 1 | 68.9 tok/s | 68.9 tok/s | 68.9 to 68.9 | 62 ms |
+| 8 | 329.0 tok/s | 41.1 tok/s | 328.7 to 329.6 | 80 ms |
+| 32 | 870.4 tok/s | 27.2 tok/s | 861.4 to 870.5 | 169 ms |
+| 64 | 1410.8 tok/s | 22.0 tok/s | 1403.4 to 1451.7 | 215 ms |
+| 128 | 2382.9 tok/s | 18.6 tok/s | 2382.3 to 2384.1 | 343 ms |
+| 256 | 3730.6 tok/s | 14.6 tok/s | 3669.5 to 3731.3 | 526 ms |
+| 512 | 5605.8 tok/s | 10.9 tok/s | 5596.9 to 5610.8 | 764 ms |
+| 640 | 5337.1 tok/s | 8.3 tok/s | 5332.8 to 5390.6 | 939 ms |
+| 768 | 5130.3 tok/s | 6.7 tok/s | 5105.7 to 5132.8 | 1064 ms |
+| 896 | 5015.3 tok/s | 5.6 tok/s | 4992.8 to 5028.4 | 1200 ms |
+| 1024 | 5194.4 tok/s | 5.1 tok/s | 5192.0 to 5208.8 | 1255 ms |
 
 | | |
 | --- | --- |
-| Label | peak. Throughput turns over at 512 and varies 13.4 percent across 512 to 1024, well past the 4 percent that would make it saturated. The curve is not monotonic above the peak: 1024 recovers to 5162.8, above 768 and 896 |
-| Quote for one caller | 12.9 tok/s |
-| Quote for a shared endpoint | 5392.0 tok/s at concurrency 512 |
-| KV cache | 659,584 tokens, 1.03 full-length requests at once. Split unevenly by stage: the head rank has 36.59 GiB and the worker rank less, and the worker is what binds |
-| Cost of the context | measured against 131072 on the same nodes: pool falls 5.5 percent from 698,176, peak aggregate falls 0.6 percent from 5422.1, and the peak moves from concurrency 640 to 512. At 640 itself the larger window measures 5.6 percent lower |
-| Long prompt | 612,672 tokens in 74 s cold; 3.5 s when the prefix is already cached |
+| Label | peak. Throughput turns over at 512 and varies 10.5 percent across 512 to 1024, well past the 4 percent that would make it saturated. The curve is not monotonic above the peak: 1024 recovers to 5194.4, above 768 and 896 |
+| Quote for one caller | 68.9 tok/s |
+| Quote for a shared endpoint | 5605.8 tok/s at concurrency 512 |
+| KV cache | 686,527 tokens, 1.07 full-length requests at once. Split unevenly by stage: the head rank has 36.59 GiB and the worker rank less, and the worker is what binds |
+| Long prompt | 180,013 tokens in 13.2 s cold; 0.36 s when the prefix is already cached |
 
 Reproduce:
 
@@ -214,8 +213,11 @@ KEY_NAME=GLM-5.2-FP8-h200-4-nodes2 bash common/tools/bench.sh --host <head_node>
   a speculative config whenever pipeline parallelism is active, and 704 GiB of weights needs two nodes.
 - Keep tensor parallelism inside a node. TP8 across two nodes is legal by the FP8 block constraint, since
   `moe_intermediate_size` 2048 shards to 256, but it hangs at NCCL initialization.
-- Eager only. CUDA graph capture takes an illegal memory access on vLLM 0.25.1, so `serve.sh` passes
-  `--enforce-eager`. Leave `VLLM_USE_DEEP_GEMM` at 0, which `env/env.sh` sets.
+- Graph capture needs two things, both of which `serve.sh` sets. The allreduce and RMSNorm fusion pass must be
+  off through `--compilation-config`, or capture takes an illegal memory access. `GPU_UTIL` must be 0.94,
+  because capture takes 5.62 GiB per GPU and at 0.90 the pool cannot hold the 27.56 GiB one full-length request
+  needs. If you replace the compilation config, keep `"pass_config": {"fuse_allreduce_rms": false}`.
+- Leave `VLLM_USE_DEEP_GEMM` at 0, which `env/env.sh` sets.
 - A Ray worker can die and the head log will not say why, ending with `RayWorkerProc rank=[1] died
   unexpectedly`. Rank 1 is the worker stage, so read the worker's own Ray logs before theorizing:
   `ssh <worker_node> 'ls -t /tmp/ray/session_latest/logs | head'`.
