@@ -21,8 +21,8 @@ cannot use: vLLM rejects a speculative config whenever pipeline parallelism is a
 weights needs two nodes.
 
 The checkpoint declares a 1048576 context. It does not fit: one request that long needs 45.42 GiB of
-KV against 26.33 available on the binding pipeline stage. The vLLM recipe serves 641664, which is the
-fixed point of the engine's own estimate, from a 659,584-token pool.
+KV against 29.49 available on the binding pipeline stage. The vLLM recipe serves 641664, which is the
+fixed point of the engine's own estimate, from a 686,527-token pool.
 
 There is no single-node H200 variant, and there cannot be one: 756 GB of weights does not fit a 4-GPU
 node, which holds 562 GiB. If you want GLM-5.2 on one node, use the separately quantized NVFP4
