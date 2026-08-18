@@ -132,6 +132,7 @@ bash common/tools/stop.sh <node>       # direct path
 | `LOG_DIR` | `/tmp/$USER/vllm` | Where the SSH path writes the server log |
 | `VENV_DIR` | under `ENV_ROOT` | Use an environment built elsewhere |
 | `CUDA13_DIR`, `CUDA_HOME` | under `ENV_ROOT` | The conda CUDA 13 toolkit the sm_120 JIT needs |
+| `VLLM_VERSION` | 0.26.1rc1 | Engine version `env/build.sh` installs, and the version the rates were measured with |
 | `FLASHINFER_VERSION` | 0.6.15 | FlashInfer build installed |
 | `TRANSFORMERS_VERSION` | 5.14.1 | The transformers version the rates were measured with |
 | `KEY_NAME`, `KEY_FILE`, `VLLM_API_KEY` | this recipe's key | Which key `common/lib/api_key.sh` resolves; an exported `VLLM_API_KEY` wins |
