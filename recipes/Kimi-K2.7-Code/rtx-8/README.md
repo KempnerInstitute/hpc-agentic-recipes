@@ -178,7 +178,7 @@ Results:
 | Quote for a shared endpoint | 1832.6 tok/s at concurrency 896 |
 | KV cache | 137,664 tokens from 9.01 GiB per GPU, 1.05 full-length requests at once |
 | Long prompt | 123,863 tokens in 33 s cold; 1.4 s when the prefix is already cached |
-| Against the two-node H200 variant | the same weights leave 9.01 GiB of KV per GPU here against 52.16 there, so the pool is 137,664 tokens against 1,555,488, which is why that variant serves 262144 and this one cannot |
+| Against the two-node H200 variant | the same weights leave 9.01 GiB of KV per GPU here against 47.76 there, so the pool is 137,664 tokens against 1,466,752, which is why that variant serves 262144 and this one cannot |
 
 Reproduce:
 
