@@ -8,8 +8,9 @@ to read it and what the published quality scores are worth.
 
 - **Interactive coding on one GPU:** Gemma-4-26B-A4B. A mixture of experts with 4B active parameters, so it
   is fast, and one GPU is the shortest queue wait.
-- **Coding scores on one GPU:** Qwen3.8-27B, a dense 27B serving its full 262144 context on one H200 GPU
-  at 122.1 tok/s. It decodes about half as fast as Gemma-4-26B-A4B on the same hardware, and it is the only
+- **Coding scores on one GPU:** Qwen3.8-27B, a dense 27B serving its full 262144 context on one H200 GPU.
+  The FP8 build is the faster of the two, 170.6 tok/s against 122.1, and holds 9.32 full-length requests at
+  once against 6.88. Both decode slower than Gemma-4-26B-A4B on the same hardware, and this is the only
   single-GPU model here whose card scores it against a frontier model.
 - **Fastest large model:** DeepSeek-V4-Flash on one RTX node, 106.5 tok/s. Only a small share of its
   parameters, 13.8B, is active per token. GLM-5.2-NVFP4 is next at 91.1 tok/s on the same hardware, helped by
@@ -153,7 +154,9 @@ and a frontier model. Higher is better.
 
 It leads Opus 4.6 Max on SWE-bench Pro, QwenSWEBench and LiveCodeBench v6, and trails it on Terminal Bench,
 NL2Repo-Bench and GPQA Diamond. QwenSWEBench is the vendor's own benchmark. The card's vision scores are
-left out because this recipe is validated for text.
+left out because this recipe is validated for text. The FP8 build reprints the same table and states that
+its metrics are nearly identical, without publishing a comparison, so read these as an upper bound for that
+recipe.
 
 ### No published scores
 
