@@ -8,6 +8,9 @@ to read it and what the published quality scores are worth.
 
 - **Interactive coding on one GPU:** Gemma-4-26B-A4B. A mixture of experts with 4B active parameters, so it
   is fast, and one GPU is the shortest queue wait.
+- **Coding scores on one GPU:** Qwen3.8-27B, a dense 27B serving its full 262144 context on one H200 GPU
+  at 122.1 tok/s. It decodes about half as fast as Gemma-4-26B-A4B on the same hardware, and it is the only
+  single-GPU model here whose card scores it against a frontier model.
 - **Fastest large model:** DeepSeek-V4-Flash on one RTX node, 106.5 tok/s. Only a small share of its
   parameters, 13.8B, is active per token. GLM-5.2-NVFP4 is next at 91.1 tok/s on the same hardware, helped by
   MTP speculative decoding that works because the model fits one node with no pipeline parallelism.
@@ -135,6 +138,22 @@ in one table:
 
 The 26B model with 4B active parameters lands within 3 points on every row while decoding about 2.9x faster
 here, which is why it is the recommended default.
+
+From the [Qwen3.8-27B card](https://huggingface.co/Qwen/Qwen3.8-27B), scored against its own predecessor
+and a frontier model. Higher is better.
+
+| Benchmark | Qwen3.8-27B | Qwen3.6-27B | Opus 4.6 Max |
+| --- | --- | --- | --- |
+| Terminal Bench 2.1 | 73.0 | 63.4 | 78.2 |
+| SWE-bench Pro | 61.7 | 53.5 | 53.4 |
+| NL2Repo-Bench | 42.3 | 36.2 | 47.6 |
+| QwenSWEBench | 79.0 | 49.3 | 63.8 |
+| LiveCodeBench v6 | 90.3 | 83.9 | 88.8 |
+| GPQA Diamond | 89.2 | 87.8 | 91.3 |
+
+It leads Opus 4.6 Max on SWE-bench Pro, QwenSWEBench and LiveCodeBench v6, and trails it on Terminal Bench,
+NL2Repo-Bench and GPQA Diamond. QwenSWEBench is the vendor's own benchmark. The card's vision scores are
+left out because this recipe is validated for text.
 
 ### No published scores
 
