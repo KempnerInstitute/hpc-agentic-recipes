@@ -23,10 +23,10 @@ bash common/tools/bench.sh --host <node> --model <name> --sweep 1,8,32,128     f
 ## Sweep until throughput turns over
 
 A sweep that stops early reports a floor, not a ceiling, and the two look identical. That same GLM-5.2-NVFP4
-endpoint reports 674 tok/s if the sweep stops at concurrency 32, half its actual capacity at 256. Of the 17
+endpoint reports 674 tok/s if the sweep stops at concurrency 32, half its actual capacity at 256. Of the 15
 rates the labeling rule covers, 4 turn over at a peak, 7 stay flat to within the rule's 4 percent across the
-top of their sweep, and 6 were still climbing at the highest level measured, so those figures are floors.
-Sixteen sweeps ran to 1024 and one stopped at 512.
+top of their sweep, and 4 were still climbing at the highest level measured, so those figures are floors.
+Fourteen sweeps ran to 1024 and one stopped at 512.
 
 **Report the sequence cap next to the rate.** vLLM sets `max_num_seqs` from device memory when the flag is
 absent, and that resolves to 1024 on every GPU here. It binds: every vLLM recipe that swept to 1024 reached
@@ -35,8 +35,8 @@ rate is labeled capped. A rate quoted without its cap is not reproducible, and f
 throttles the result.
 
 **What binds first is model-dependent, so measure it.** KV cache usage reached 100 percent in most recipes,
-so requests queue on KV blocks. It reached only 78 percent for DeepSeek-V4-Pro across two RTX nodes and 73
-percent for Kimi-K2.7-Code across two H200 nodes, where the sequence cap alone is the limit.
+so requests queue on KV blocks. It reached only 73 percent for Kimi-K2.7-Code across two H200 nodes, where
+the sequence cap alone is the limit.
 
 Preemption depends on the recipe, and the gemma recipes now preempt heavily at a 262144 context. The 31B on
 H100 reached 110,565 preemptions across one sweep, with the cache at 100 percent from concurrency 256 upward,
