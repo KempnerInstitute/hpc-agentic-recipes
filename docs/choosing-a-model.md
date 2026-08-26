@@ -12,21 +12,15 @@ to read it and what the published quality scores are worth.
   The FP8 build is the faster of the two, 170.6 tok/s against 122.1, and holds 9.32 full-length requests at
   once against 6.88. Both decode slower than Gemma-4-26B-A4B on the same hardware, and this is the only
   single-GPU model here whose card scores it against a frontier model.
-- **Fastest large model:** DeepSeek-V4-Flash on one RTX node, 106.5 tok/s. Only a small share of its
-  parameters, 13.8B, is active per token. GLM-5.2-NVFP4 is next at 91.1 tok/s on the same hardware, helped by
-  MTP speculative decoding that works because the model fits one node with no pipeline parallelism.
+- **Fastest large model:** Kimi-K2.7-Code on two H200 nodes, 103.0 tok/s. GLM-5.2-NVFP4 is the fastest that
+  fits a single node, 91.1 tok/s on one RTX node, helped by MTP speculative decoding that works because the
+  model fits one node with no pipeline parallelism.
 - **Best quality per second on one node:** Qwen3-Coder-480B-FP8 on one RTX node, 68.0 tok/s, slightly faster
   than the much smaller Qwen3-235B on the same hardware.
 - **Highest published coding scores:** Kimi-K3, 2.8T in MXFP4, needing 4 H200 nodes and SGLang.
   Kimi-K2.7-Code, 1T in INT4, is the largest coding-specialized checkpoint that fits one RTX node. Both cost
   latency for it: 40.3 and 20.6 tok/s.
-- **Longest context:** DeepSeek-V4-Pro on two RTX nodes, serving its full 1M window by default. It is the one
-  case here where context is not free, costing 14 to 17 percent of aggregate throughput above concurrency
-  256, though nothing at concurrency 1.
-- **A 1M window on one node:** DeepSeek-V4-Flash, which serves the same full context from a single RTX node
-  and holds 8.82 full-length requests at once. Its card also reports the strongest agentic scores of any
-  checkpoint here that fits one node, and it is the fastest large model here on a single stream, so on this
-  cluster it is the one recipe that does not trade latency for context.
+- **Longest context:** GLM-5.2-FP8 on two H200 nodes, serving 626K by default.
 
 No published source ranks all of these against each other, so pick on the scores below and on your own task
 rather than on this ordering.
@@ -95,37 +89,6 @@ From the [Kimi K2.7-Code card](https://huggingface.co/moonshotai/Kimi-K2.7-Code)
 
 The same card puts GPT-5.5 and Claude Opus 4.8 ahead on most rows, so treat it as the strongest open coder
 here rather than the strongest available.
-
-From the `DeepSeek-V4-Pro` card, at its `max` reasoning effort:
-
-| Benchmark | DeepSeek-V4-Pro |
-| --- | --- |
-| LiveCodeBench (Pass@1) | 93.5 |
-| SWE Verified (Resolved) | 80.6 |
-| SWE Multilingual (Resolved) | 76.2 |
-| SWE Pro (Resolved) | 55.4 |
-| Codeforces (Rating) | 3206 |
-
-Without reasoning effort the card shows these collapse, to 56.8 on LiveCodeBench and 73.6 on SWE Verified,
-so the headline numbers depend on spending output tokens on thinking.
-
-From the `DeepSeek-V4-Flash-0731` card, which is the second place in this document where two models served
-here appear in one table, Flash and GLM-5.2. Its DeepSeek-V4-Pro column is the Preview, not the Pro the
-recipes here serve, so it is not the same model as the table above:
-
-| Benchmark | V4-Flash-0731 | V4-Pro Preview | GLM-5.2 | Opus-4.8 |
-| --- | --- | --- | --- | --- |
-| Terminal Bench 2.1 | 82.7 | 72.1 | 81.0 | 85.0 |
-| NL2Repo | 54.2 | 38.5 | 48.9 | 69.7 |
-| Cybergym | 76.7 | 52.7 | not reported | 83.1 |
-| DeepSWE | 54.4 | 12.8 | 46.2 | 58.0 |
-| Toolathlon-Verified | 70.3 | 55.9 | 59.9 | 76.2 |
-| Agents' Last Exam | 25.2 | 16.5 | 23.8 | 25.7 |
-| AutomationBench Public | 25.1 | 12.8 | 12.9 | 27.2 |
-
-Flash leads GLM-5.2 on every row and trails Opus-4.8 on every row. Two internal DeepSeek test sets on the
-card are left out here. These are agent-harness scores, run with the `max` reasoning effort and thinking
-enabled, which is not what a default request to this endpoint does; the recipe page shows how to match it.
 
 From the shared Gemma 4 card, the one apples-to-apples comparison in this document since both models appear
 in one table:

@@ -6,8 +6,6 @@
 
 # Nodes you already hold, for the direct SSH launch path. The sbatch path needs none of these,
 # because Slurm picks the node. One variable per recipe, since each hardware variant is separate.
-# DSV4_HEAD=            # DeepSeek-V4-Pro/rtx-8-nodes2
-# DSV4_WORKER=          # DeepSeek-V4-Pro/rtx-8-nodes2
 # GLM46_NODE=           # GLM-4.6-FP8/h200-4
 # GLM52_HEAD=           # GLM-5.2-FP8/h200-4-nodes2
 # GLM52_WORKER=         # GLM-5.2-FP8/h200-4-nodes2
