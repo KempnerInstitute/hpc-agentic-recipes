@@ -94,6 +94,7 @@ has, the engine refuses to start. Each recipe states its own ceiling in Known li
 | | INT4 | [2 H200 nodes](recipes/Kimi-K2.7-Code/h200-4-nodes2) | 103.0 | 7033/1024 📈 | 256K |
 | **Kimi-K3** | MXFP4 QAT | [4 H200 nodes](recipes/Kimi-K3/h200-4-nodes4-sglang) | 40.3 | 1067/64 🚧 | 374K |
 | **Qwen3-235B-A22B** | BF16 | [1 RTX node](recipes/Qwen3-235B-A22B/rtx-8) | 62.7 | 3948/512 ⛰️ | 40K |
+| **Qwen3.8-27B** | BF16 | [1 H200 GPU](recipes/Qwen3.8-27B/h200-1) | 122.1 | 3957/1024 📈 | 256K |
 | **Qwen3-Coder-480B** | FP8 | [1 RTX node](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8) | 68.0 | 3197/640 ⛰️ | 256K |
 | **DeepSeek-V4-Pro** | FP8/FP4 Experts | [2 RTX nodes](recipes/DeepSeek-V4-Pro/rtx-8-nodes2) | 18.7 | 3003/1024 📈 | 1M |
 | **DeepSeek-V4-Flash** | FP8/FP4 Experts | [1 RTX node](recipes/DeepSeek-V4-Flash-0731/rtx-8) | 106.5 | 5745/1024 📈 | 1M |
