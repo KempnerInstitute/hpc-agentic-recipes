@@ -34,7 +34,8 @@ any answer is emitted.
 
 ## Codex
 
-Codex needs two settings beyond the three above. In `~/.codex/config.toml`:
+Install it with `curl -fsSL https://chatgpt.com/codex/install.sh | sh`. Codex needs two settings beyond
+the three above. In `~/.codex/config.toml`:
 
 ```
 model = "glm-5.2"

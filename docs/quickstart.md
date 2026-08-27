@@ -2,6 +2,8 @@
 
 Using an endpoint someone else runs needs no environment build and no queue wait.
 
+Install the client with `curl -fsSL https://claude.ai/install.sh | bash`, which puts it in `~/.local/bin`.
+
 Get three things from whoever is serving it: the node name, the port (8000 unless they say otherwise), and
 the API key.
 
