@@ -12,6 +12,17 @@ to directly. vLLM runs most recipes. SGLang runs Kimi-K3 from a container. See
 The engine runs on a compute node, not where you type. Everything below is either pointing a client at an
 endpoint someone already started, or starting one yourself.
 
+## Install a client
+
+```
+# Claude Code
+command -v claude || curl -fsSL https://claude.ai/install.sh | bash
+# Codex
+command -v codex || curl -fsSL https://chatgpt.com/codex/install.sh | sh
+```
+
+Both install to `~/.local/bin`; put it on your PATH.
+
 ## Connect to a running endpoint
 
 Set five variables:
