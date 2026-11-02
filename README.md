@@ -100,6 +100,7 @@ has, the engine refuses to start. Each recipe states its own ceiling in Known li
 | --- | --- | --- | --- | --- | --- |
 | **GLM-5.2** | NVFP4 | [1 RTX node](recipes/GLM-5.2-NVFP4/rtx-8) | 91.1 | 1375/256 ⛰️ | 212K |
 | | FP8 | [2 H200 nodes](recipes/GLM-5.2-FP8/h200-4-nodes2) | 68.9 | 5606/512 ⛰️ | 626K |
+| **GLM-5.3** | FP8 | [2 H200 nodes](recipes/GLM-5.3/h200-4-nodes2) | not measured | not measured | 626K |
 | **GLM-4.6** | FP8 | [1 H200 node](recipes/GLM-4.6-FP8/h200-4) | 19.1 | 8127/1024 📈 | 198K |
 | **Kimi-K2.7-Code** | INT4 | [1 RTX node](recipes/Kimi-K2.7-Code/rtx-8) | 20.6 | 1833/896 ➖ | 128K |
 | | INT4 | [2 H200 nodes](recipes/Kimi-K2.7-Code/h200-4-nodes2) | 103.0 | 7033/1024 📈 | 256K |
