@@ -6,7 +6,7 @@ source "$S/../../../../common/defaults.sh"
 VENV="${VENV_DIR:-$ENV_ROOT/GLM-5.3-NVFP4/rtx-8/venv}"
 CUDA13="${CUDA13_DIR:-$ENV_ROOT/GLM-5.3-NVFP4/rtx-8/cuda13}"
 VLLM_VERSION="${VLLM_VERSION:-0.32.0}"
-FLASHINFER_VERSION="${FLASHINFER_VERSION:-0.6.15}"
+FLASHINFER_VERSION="${FLASHINFER_VERSION:-0.7.0.post1}"
 TRANSFORMERS_VERSION="${TRANSFORMERS_VERSION:-5.19.0}"
 FORCE=0
 [ "${1:-}" = "--force" ] && FORCE=1
@@ -40,6 +40,11 @@ else
   mamba create -y -p "$CUDA13" -c nvidia \
     cuda-nvcc=13.0 cuda-cudart-dev=13.0 cuda-cccl=13.0 cuda-nvrtc-dev=13.0 cuda-libraries-dev=13.0
 fi
+
+# torchcodec arrives as a vllm dependency and fails at import here: it needs FFmpeg 4 to 7 shared
+# libraries, which this cluster does not provide. Nothing in this recipe needs it, because only text
+# is served, so it is removed rather than worked around.
+uv pip uninstall --python "$VENV/bin/python" torchcodec 2>/dev/null || true
 
 "$VENV/bin/python" -c "import importlib.metadata as m; print('vllm', m.version('vllm'), '| torch', m.version('torch'), '| flashinfer', m.version('flashinfer-python'))"
 "$CUDA13/bin/nvcc" --version | tail -1

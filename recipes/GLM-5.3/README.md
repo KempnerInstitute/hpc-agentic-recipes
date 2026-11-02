@@ -11,7 +11,7 @@ suffixed repo and an NVFP4 re-quantization is published by Inferact for Blackwel
 
 | Variant | Engine | Shape | Single stream | Aggregate | Status |
 | --- | --- | --- | --- | --- | --- |
-| [`h200-4-nodes2`](h200-4-nodes2/README.md) | vLLM | 2 H200 nodes, 4 GPUs each, TP4 x PP2 | not measured | not measured | Untested |
+| [`h200-4-nodes2`](h200-4-nodes2/README.md) | vLLM | 2 H200 nodes, 4 GPUs each, TP4 x PP2 | 142.3 tok/s | 3597.4 at c=1024, rising | Validated |
 
 At 703.5 GiB the weights do not fit one H200 node, which holds 562 GiB, so two nodes and pipeline
 parallelism are required exactly as for GLM-5.2-FP8. They do not fit one RTX node either, which holds

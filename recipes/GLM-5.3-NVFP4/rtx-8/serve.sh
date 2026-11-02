@@ -15,7 +15,7 @@ exec vllm serve "$MODEL" \
   --served-model-name glm-5.3 \
   --tensor-parallel-size "${TP:-8}" \
   --quantization modelopt_fp4 \
-  --kv-cache-dtype fp8_ds_mla \
+  --kv-cache-dtype "${KV_DTYPE:-fp8_e4m3}" \
   --trust-remote-code \
   --host 0.0.0.0 --port "${API_PORT:-8000}" \
   --max-model-len "${MAX_MODEL_LEN:-217344}" \

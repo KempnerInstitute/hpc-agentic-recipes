@@ -1,6 +1,6 @@
 # GLM-5.3-NVFP4 on one RTX node
 
-Status: Untested - vLLM 0.32.0, not yet measured on this cluster
+Status: Validated - vLLM 0.32.0, protocol: slope(128,1152) at concurrency 1, 8, 32, 64, 128 and 256
 
 | | |
 | --- | --- |
@@ -8,9 +8,9 @@ Status: Untested - vLLM 0.32.0, not yet measured on this cluster
 | Checkpoint | `GLM-5.3-NVFP4`, Hugging Face `Inferact/GLM-5.3-NVFP4` |
 | On disk | 432.9 GiB across 88 shards, NVFP4, `GlmMoeDsaForCausalLM` |
 | Served precision | NVFP4 via modelopt, group size 16, no excluded modules |
-| Context | Not yet fixed; the scripts default to 217344 and the ceiling is a KV budget question |
+| Context | 217344 |
 | Hardware | 1 RTX PRO 6000 Blackwell node, 8 GPUs, 97887 MiB each, TP8 |
-| Engine | vLLM 0.32.0 with torch cu130 and FlashInfer 0.6.15, CUDA graphs, MTP speculative decoding |
+| Engine | vLLM 0.32.0 with torch cu130 and FlashInfer 0.7.0.post1, CUDA graphs, no speculative decoding |
 | Allocation for the measurement | 1 node, 8 GPUs, 128 cores and 1440 GB, `kempner_rtx` |
 
 This is the four-bit build of GLM-5.3, re-quantized by Inferact. It fits one node, which the native FP8
@@ -107,14 +107,46 @@ Confirm the GPUs are released before relaunching, because workers that outlive t
 
 ## Benchmarking
 
-Nothing is measured yet. When it is, the rate is taken with `common/tools/bench.sh` against an endpoint
-this recipe's own scripts launched, using `slope(128,1152)` so the figure is comparable with every other
-recipe here.
+Conditions:
+
+| | |
+| --- | --- |
+| Protocol | slope(128,1152), 3 repeats per level, median reported |
+| Input length | ISL 21 tokens. Rates at a long input are not measured; use `--prompt-tokens` |
+| Output length | OSL 1152 tokens, output only, `ignore_eos` |
+| Context | `MAX_MODEL_LEN=217344` |
+| Allocation for the measurement | 1 node, 8 GPUs, 128 cores and 1440 GB, `kempner_rtx` |
+| Sweep ceiling | 256. The engine dies above it; see Known limits |
+| Endpoint | idle, and the benchmark client ran on the serving node |
+
+Results:
+
+| Concurrency | Aggregate | Per stream | Spread over 3 runs |
+| --- | --- | --- | --- |
+| 1 | 50.2 tok/s | 50.2 tok/s | 49.1 to 50.4 |
+| 8 | 247.5 tok/s | 30.9 tok/s | 247.4 to 247.6 |
+| 32 | 586.1 tok/s | 18.3 tok/s | 586.0 to 586.4 |
+| 64 | 812.7 tok/s | 12.7 tok/s | 812.3 to 813.4 |
+| 128 | 1060.2 tok/s | 8.3 tok/s | 1058.0 to 1060.3 |
+| 256 | 1711.9 tok/s | 6.7 tok/s | 1711.8 to 1715.8 |
+
+| | |
+| --- | --- |
+| Engine facts | KV cache 463,808 tokens, 2.13 full-length requests at once; graph capture 28 s and 1.25 GiB per GPU |
+| Label | rising. The curve is still climbing at 256, which is the highest level this endpoint survives, so 1711.9 is a floor |
 
 ## Known limits
 
-- Not yet measured on this cluster, so no rate, context ceiling or startup time is published. The Status
-  line stays `Untested` until it is.
+- The engine dies above concurrency 256. At 512 the first run returned HTTP 500 and the engine core then
+  stopped answering, with `RPC call to sample_tokens timed out` and `EngineDeadError` in the log, after
+  which every higher level refused connections. The sweep therefore stops at 256 and that figure is a
+  floor, not a ceiling.
+- Speculative decoding is unavailable. The checkpoint declares NVFP4 with an empty ignore list, but the
+  MTP draft head's `parallel_lm_head` is stored in BF16, so the engine fails to load it with
+  `NVFP4 weight_scale ... was never loaded (still NaN)`. Upstream's own command for this variant carries
+  no speculative config either.
+- FlashInfer autotuning must be off. With it on, a worker dies during kernel warmup on sm_120, so the
+  scripts pass `--kernel-config` to disable it.
 - NVFP4 arithmetic needs Blackwell. There is no H200 variant of this checkpoint and there cannot be one;
   on Hopper it would fall back to emulation and lose the point of four-bit weights.
 - The quantization is third party, not from the model author, so published quality scores for GLM-5.3

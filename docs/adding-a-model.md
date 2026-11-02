@@ -94,7 +94,8 @@ Candidates to consider: attention backend, `VLLM_USE_DEEP_GEMM`, `NCCL_P2P_DISAB
   A model with no reasoning parser that gets one will have its plain output silently parsed as reasoning.
 - TP must divide the model cleanly. For a block-quantized MoE, each shard of `moe_intermediate_size` must
   be a multiple of the quantization block, or the engine refuses to start.
-- Keep TP inside a node and use PP across nodes. Note that PP disables speculative decoding.
+- Keep TP inside a node and use PP across nodes. Whether PP also disables speculative decoding depends on
+  the vLLM version, so test it rather than assuming.
 
 ## Launch, verify, then measure
 

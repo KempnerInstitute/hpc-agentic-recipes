@@ -11,7 +11,7 @@ so a client moves between them by changing only the host.
 
 | Variant | Engine | Shape | Single stream | Aggregate | Status |
 | --- | --- | --- | --- | --- | --- |
-| [`rtx-8`](rtx-8/README.md) | vLLM | 1 RTX node, 8 GPUs, TP8 | not measured | not measured | Untested |
+| [`rtx-8`](rtx-8/README.md) | vLLM | 1 RTX node, 8 GPUs, TP8 | 50.2 tok/s | 1711.9 at c=256, rising | Validated |
 
 There is no Hopper variant of this checkpoint. NVFP4 execution needs Blackwell; on H200 it would fall
 back to emulation. The native FP8 build of the same base model is a separate checkpoint with its own

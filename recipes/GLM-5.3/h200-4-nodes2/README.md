@@ -1,6 +1,7 @@
 # GLM-5.3 on two H200 nodes
 
-Status: Untested - vLLM 0.32.0+cu129, not yet measured on this cluster
+Status: Validated - vLLM 0.32.0+cu129, protocol: slope(128,1152) at concurrency 1, 8, 32, 64, 128, 256,
+512, 640, 768, 896 and 1024
 
 | | |
 | --- | --- |
@@ -8,9 +9,9 @@ Status: Untested - vLLM 0.32.0+cu129, not yet measured on this cluster
 | Checkpoint | `GLM-5.3`, Hugging Face `zai-org/GLM-5.3` |
 | On disk | 703.5 GiB across 141 shards, FP8 e4m3, `GlmMoeDsaForCausalLM` |
 | Served precision | FP8 with dynamic activations, `weight_block_size` [128, 128] |
-| Context | Not yet fixed. The checkpoint declares 1048576; the ceiling this hardware allows is a KV budget question answered by the first bring-up |
+| Context | 262144. The checkpoint declares 1048576; MTP needs about 14.7 GiB per GPU, which comes out of the KV pool |
 | Hardware | 2 H200 nodes, 8 GPUs, 143771 MiB each, TP4 inside a node and PP2 between over Ray |
-| Engine | vLLM 0.32.0+cu129, CUDA graphs at `FULL_AND_PIECEWISE` |
+| Engine | vLLM 0.32.0+cu129, CUDA graphs at `FULL_AND_PIECEWISE`, MTP speculative decoding at 5 draft tokens |
 | Allocation for the measurement | 2 nodes, 4 GPUs each, 64 cores and 1440 GB per node, `kempner_h200` |
 
 GLM-5.3 is a 743B-parameter mixture-of-experts with 39B active per token, 78 layers and 256 routed experts,
@@ -82,7 +83,7 @@ claude
 ```
 
 `client.env` exports the base URL, the key, the served model name, and
-`CLAUDE_CODE_MAX_CONTEXT_TOKENS=641664`, without which Claude Code assumes and enforces a 200k window. Use `ANTHROPIC_AUTH_TOKEN`, not
+`CLAUDE_CODE_MAX_CONTEXT_TOKENS=262144`, without which Claude Code assumes and enforces a 200k window. Use `ANTHROPIC_AUTH_TOKEN`, not
 `ANTHROPIC_API_KEY`, which sends a header the engine ignores and yields 401 on every request.
 
 ## 6. Stop it
@@ -100,7 +101,7 @@ workers that outlive the job hold VRAM and the next launch then fails to allocat
 | --- | --- | --- |
 | `MODEL` | `$MODELS_DIR/GLM-5.3` | Serve a different copy of the checkpoint |
 | `API_PORT` | 8000 | Listening port |
-| `MAX_MODEL_LEN` | 641664 | Context window; the ceiling this hardware allows is not yet measured |
+| `MAX_MODEL_LEN` | 262144 | Context window. MTP takes about 14.7 GiB per GPU out of the KV pool, so the ceiling is lower than the FP8 sibling's |
 | `GPU_UTIL` | 0.94 | Fraction of VRAM for weights plus KV cache |
 | `TP` | 4 | Tensor parallel size; 4 is one node's GPU count and must stay inside a node |
 | `PP` | 2 | Pipeline parallel size; 2 is the node count |
@@ -115,15 +116,61 @@ workers that outlive the job hold VRAM and the next launch then fails to allocat
 
 ## Benchmarking
 
-Nothing is measured yet. When it is, the rate is taken with `common/tools/bench.sh` against an endpoint
-this recipe's own scripts launched, using `slope(128,1152)` so the figure is comparable with every other
-recipe here.
+Conditions:
+
+| | |
+| --- | --- |
+| Protocol | slope(128,1152), 3 repeats per level, median reported |
+| Input length | ISL 21 tokens. Rates at a long input are not measured; use `--prompt-tokens` |
+| Output length | OSL 1152 tokens, output only, `ignore_eos` |
+| Context | `MAX_MODEL_LEN=262144` |
+| Allocation for the measurement | 2 nodes, 4 GPUs each, 64 cores and 1440 GB per node, `kempner_h200` |
+| Sequence cap | `max_num_seqs` 1024, the engine default, which equals the top sweep level |
+| Endpoint | idle, and the benchmark client ran on the serving node |
+
+Results:
+
+| Concurrency | Aggregate | Per stream | Spread over 3 runs |
+| --- | --- | --- | --- |
+| 1 | 142.3 tok/s | 142.3 tok/s | 142.3 to 142.3 |
+| 8 | 349.3 tok/s | 43.7 tok/s | 344.1 to 349.3 |
+| 32 | 991.9 tok/s | 31.0 tok/s | 857.8 to 996.2 |
+| 64 | 1288.7 tok/s | 20.1 tok/s | 1285.9 to 1298.9 |
+| 128 | 1890.1 tok/s | 14.8 tok/s | 1786.3 to 1933.3 |
+| 256 | 2305.4 tok/s | 9.0 tok/s | 2227.3 to 2544.5 |
+| 512 | 2783.4 tok/s | 5.4 tok/s | 2711.7 to 2843.6 |
+| 640 | 2847.2 tok/s | 4.4 tok/s | 2759.4 to 3304.8 |
+| 768 | 3404.5 tok/s | 4.4 tok/s | 2938.2 to 3511.0 |
+| 896 | 3040.9 tok/s | 3.4 tok/s | 2981.8 to 3547.1 |
+| 1024 | 3597.4 tok/s | 3.5 tok/s | 3061.3 to 3677.5 |
+
+| | |
+| --- | --- |
+| Engine facts | KV cache 1,297,152 tokens, 4.95 full-length requests at once; graph capture 15 s and 1.60 GiB per GPU |
+| Label | rising. The curve is still climbing at 1024, the engine's own sequence cap, so 3597.4 is a floor |
+
+## Choosing MTP or plain decoding
+
+MTP is on by default because it nearly doubles the rate a single caller sees. It costs aggregate
+throughput above roughly concurrency 256, so set `MTP_TOKENS=0` for a busy shared endpoint. Both columns
+were measured at the same 262144 context, so the difference is speculation alone.
+
+| | MTP 5, the default | `MTP_TOKENS=0` |
+| --- | --- | --- |
+| One caller | 142.3 tok/s | 75.1 tok/s |
+| Concurrency 8 | 349.3 tok/s | 195.7 tok/s |
+| Concurrency 256 | 2305.4 tok/s | 2041.7 tok/s |
+| Concurrency 1024 | 3597.4 tok/s | 4108.8 tok/s |
+| KV cache | 1,297,152 tokens | 1,567,552 tokens |
 
 ## Known limits
 
-- Not yet measured on this cluster, so no rate, context ceiling or startup time is published. The Status
-  line stays `Untested` until it is.
-- The checkpoint ships a 5-token MTP head. `MTP_TOKENS` defaults to 0 because speculative decoding under
-  pipeline parallelism is not yet confirmed working on this engine version, and the sibling GLM-5.2-FP8
-  recipe serves without it.
+- Aggregate throughput is noisy at the top of the sweep, varying up to 29 percent across the levels at or
+  above 512, and the curve is not monotonic: 3404.5 at 768, 3040.9 at 896, 3597.4 at 1024. Treat any single
+  high-concurrency figure here as approximate, and prefer the three-run spread column.
+- MTP is served by default and does run under pipeline parallelism on this engine version, which the
+  GLM-5.2-FP8 sibling could not do. It costs about 14.7 GiB per GPU and roughly 270,000 tokens of KV pool,
+  which is why this recipe serves 262144 rather than the 641664 the FP8 sibling reaches.
+- Weight load is dominated by the filesystem. Reading 703.5 GiB from scratch took 37 minutes cold at about
+  34 seconds per shard, falling to 1.6 seconds per shard once the page cache was warm.
 - NVFP4 is a separate checkpoint and a separate recipe; it needs Blackwell and will not run here.

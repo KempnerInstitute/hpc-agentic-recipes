@@ -27,6 +27,11 @@ uv venv --python 3.12 "$VENV"
 uv pip install --python "$VENV/bin/python" --torch-backend=cu129 "$WHEEL" "ray[default]" \
   "transformers==${TRANSFORMERS_VERSION}"
 
+# torchcodec arrives as a vllm dependency and fails at import here: it needs FFmpeg 4 to 7 shared
+# libraries, which this cluster does not provide. Nothing in this recipe needs it, because only text
+# is served, so it is removed rather than worked around.
+uv pip uninstall --python "$VENV/bin/python" torchcodec 2>/dev/null || true
+
 "$VENV/bin/python" -c "import importlib.metadata as m; print('vllm', m.version('vllm'), '| torch', m.version('torch'), '| ray', m.version('ray'))"
 echo "built: $VENV"
 echo "the same environment must be reachable at this path from BOTH nodes; ENV_ROOT is shared scratch"

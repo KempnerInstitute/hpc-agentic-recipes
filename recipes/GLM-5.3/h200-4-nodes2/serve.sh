@@ -30,7 +30,7 @@ exec vllm serve "$MODEL" \
   --disable-custom-all-reduce \
   --trust-remote-code \
   --host 0.0.0.0 --port "${API_PORT:-8000}" \
-  --max-model-len "${MAX_MODEL_LEN:-641664}" \
+  --max-model-len "${MAX_MODEL_LEN:-262144}" \
   --gpu-memory-utilization "${GPU_UTIL:-0.94}" \
   --enable-auto-tool-choice \
   --kv-cache-dtype "${KV_DTYPE:-fp8_e4m3}" \
