@@ -5,7 +5,7 @@ the choice follows the model rather than a preference.
 
 ## Pick by what the model needs
 
-**Use vLLM when it supports the checkpoint.** It is the better-trodden path here: sixteen of the seventeen
+**Use vLLM when it supports the checkpoint.** It is the better-trodden path here: seventeen of the eighteen
 serve scripts run it, so its failure modes are the ones this repo documents. Both engines serve an
 OpenAI-compatible `/v1` and an Anthropic-compatible `/v1/messages`, so the client story is the same
 either way.
