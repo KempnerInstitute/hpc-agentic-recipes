@@ -102,7 +102,7 @@ claude
   32000-token output request for an unrecognized model. Raising the output request needs the context
   variable lowered to match.
 - Use `ANTHROPIC_AUTH_TOKEN`. `ANTHROPIC_API_KEY` sends `x-api-key` and returns 401.
-- `client.env` also sets `ANTHROPIC_SMALL_FAST_MODEL`; without it the client reaches for a hosted Haiku.
+- `client.env` also sets `ANTHROPIC_DEFAULT_HAIKU_MODEL`; without it the client reaches for a hosted Haiku.
 - OpenAI clients: base URL `http://<node>:8000/v1`, same key, model `gemma-4-26b`. See
   [docs/clients.md](../../../docs/clients.md).
 

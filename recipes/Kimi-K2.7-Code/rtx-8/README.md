@@ -102,7 +102,7 @@ claude
   name it does not recognize, which is **above** what this endpoint serves, so without the pin it overflows
   the context and requests fail with `maximum context length is 131072` rather than compacting.
 - Use `ANTHROPIC_AUTH_TOKEN`. `ANTHROPIC_API_KEY` sends `x-api-key` and returns 401.
-- `client.env` also sets `ANTHROPIC_SMALL_FAST_MODEL`; without it the client reaches for a hosted Haiku.
+- `client.env` also sets `ANTHROPIC_DEFAULT_HAIKU_MODEL`; without it the client reaches for a hosted Haiku.
 - OpenAI clients such as Codex: base URL `http://<node>:8000/v1`, same key, model `kimi-k2.7-code`. See
   [docs/clients.md](../../../docs/clients.md).
 
