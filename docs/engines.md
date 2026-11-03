@@ -5,18 +5,23 @@ the choice follows the model rather than a preference.
 
 ## Pick by what the model needs
 
-**Use vLLM when it supports the checkpoint.** It is the better-trodden path here: seventeen of the eighteen
+**Use vLLM when it supports the checkpoint.** It is the better-trodden path here: nineteen of the twenty-one
 serve scripts run it, so its failure modes are the ones this repo documents. Both engines serve an
 OpenAI-compatible `/v1` and an Anthropic-compatible `/v1/messages`, so the client story is the same
 either way.
 
-**Use SGLang when vLLM cannot load the model.** Kimi-K3 is that case: no vLLM release available here
+**Use SGLang when vLLM cannot load or run the model.** Kimi-K3 is that case: no vLLM release available here
 implements `KimiK3ForConditionalGeneration`, while SGLang serves it from a container, which is what
 `recipes/Kimi-K3/h200-4-nodes4-sglang` runs. Measured on 4 H200 nodes it gives 40.3 tok/s single stream by
 default, up to 94.1 with the DSpark draft and the wider pool, and 1442.6 tok/s aggregate at concurrency 156,
 holding 38.9 tok/s at an input of 115,292 tokens. SGLang serves an Anthropic-compatible `/v1/messages` as
 well as the OpenAI `/v1`, so Claude Code reaches it directly, provided the launcher passes a tool call
 parser. Without one, tool calls arrive as raw text the client cannot execute.
+
+Muse Spark Open NVFP4 is a second case, and a different one. vLLM implements the architecture, but for
+this checkpoint's packed NVFP4 experts it selects a FlashInfer TRT-LLM MoE backend and then refuses it on
+sm120, where that kernel family ships no cubins. SGLang serves the same checkpoint on one RTX node
+through its Marlin MoE path, which `recipes/Muse-Spark-Open-816B-A42B-NVFP4/rtx-8-sglang` runs.
 
 Whether speculative decoding survives pipeline parallelism depends on the vLLM version. Older releases
 refused a speculative config whenever PP was in use, which is why GLM-5.2-FP8 on two H200 nodes serves
