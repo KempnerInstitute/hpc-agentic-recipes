@@ -36,9 +36,16 @@ chmod 600 secrets/Muse-Spark-Open-816B-A42B-NVFP4-rtx-8-sglang.key
 
 ## 2. Get the container
 
-The engine is a prebuilt SGLang image carrying a Muse fork at `/sgl-workspace/sglang-muse-spark`. Place it
-at `$MODELS_DIR/Muse-Spark-Open-816B-A42B-NVFP4/container/sglang-muse-spark-rtxpro6000.sif`, or point
-`SIF` at your own copy. There is no venv to build for this recipe.
+The engine is a prebuilt SGLang image carrying a Muse fork at `/sgl-workspace/sglang-muse-spark`. There is
+no venv to build for this recipe.
+
+`env/env.sh` resolves the image in the same order as the Kimi-K3 recipe: an exported `SIF` wins, then
+`$MODELS_DIR/Muse-Spark-Open-816B-A42B-NVFP4/container/sglang-muse-spark-rtxpro6000.sif`, then the copy
+under the shared testbed. So pointing `MODELS_DIR` at a scratch copy that holds only weights still finds
+the shared image rather than failing.
+
+A copy of this checkpoint therefore needs the `container/` subdirectory alongside the weights, 9.8 GiB on
+top of the 497 GiB.
 
 ## 3. Launch
 
