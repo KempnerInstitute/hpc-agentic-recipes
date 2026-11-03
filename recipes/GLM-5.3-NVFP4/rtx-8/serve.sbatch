@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+#SBATCH --job-name=glm53-nvfp4
+#SBATCH --partition=kempner_rtx
+#SBATCH --nodes=1
+#SBATCH --gres=gpu:8
+#SBATCH --cpus-per-task=128
+#SBATCH --mem=1440G
+#SBATCH --time=1-00:00:00
+#SBATCH --output=%x-%j.log
+set -euo pipefail
+cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
+R=recipes/GLM-5.3-NVFP4/rtx-8
+echo "serving glm-5.3 on $(hostname): http://$(hostname):${API_PORT:-8000}/v1"
+exec bash "$R/serve.sh"

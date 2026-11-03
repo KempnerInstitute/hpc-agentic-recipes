@@ -5,7 +5,7 @@ the choice follows the model rather than a preference.
 
 ## Pick by what the model needs
 
-**Use vLLM when it supports the checkpoint.** It is the better-trodden path here: fifteen of the sixteen
+**Use vLLM when it supports the checkpoint.** It is the better-trodden path here: seventeen of the eighteen
 serve scripts run it, so its failure modes are the ones this repo documents. Both engines serve an
 OpenAI-compatible `/v1` and an Anthropic-compatible `/v1/messages`, so the client story is the same
 either way.
@@ -18,11 +18,11 @@ holding 38.9 tok/s at an input of 115,292 tokens. SGLang serves an Anthropic-com
 well as the OpenAI `/v1`, so Claude Code reaches it directly, provided the launcher passes a tool call
 parser. Without one, tool calls arrive as raw text the client cannot execute.
 
-SGLang is also the only way to combine speculative decoding with a model that must span nodes. vLLM rejects
-a speculative config whenever pipeline parallelism is in use, so a checkpoint needing PP to fit loses its MTP
-or draft-model speedup. SGLang can run TP8 across two nodes with EAGLE speculative decoding instead, which is why GLM-5.2-FP8 on
-two H200 nodes serves without speculative decoding under vLLM even though its checkpoint ships an MTP
-head.
+Whether speculative decoding survives pipeline parallelism depends on the vLLM version. Older releases
+refused a speculative config whenever PP was in use, which is why GLM-5.2-FP8 on two H200 nodes serves
+without it even though its checkpoint ships an MTP head. vLLM 0.32.0 refuses only a short list of methods,
+and MTP is not among them: GLM-5.3 runs MTP at 5 draft tokens across two H200 nodes at TP4 x PP2, worth
+1.89x on a single stream. Check the engine version before assuming either way.
 
 The two coexist. Each recipe builds its own environment, so an SGLang environment never disturbs a vLLM one.
 

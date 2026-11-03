@@ -51,6 +51,6 @@ parallelism spanning two nodes hangs at NCCL initialization rather than failing 
 brings up its own process group and is not subject to this, and the recipe here runs TP16 across four
 nodes.
 
-Pipeline parallelism disables speculative decoding in vLLM, so any multi-node vLLM recipe gives up MTP or
-draft-model speedups even when the checkpoint ships an MTP head. SGLang has no such restriction; see
-[engines.md](engines.md).
+Older vLLM releases disabled speculative decoding under pipeline parallelism, so multi-node recipes gave
+up MTP even when the checkpoint shipped an MTP head. That is no longer true from 0.32.0, where GLM-5.3
+runs MTP across two H200 nodes; see [engines.md](engines.md).
