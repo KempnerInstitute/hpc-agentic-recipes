@@ -4,7 +4,7 @@ Recipes for serving open-weight models on the Kempner AI Cluster and driving the
 OpenAI-compatible client.
 
 Both vLLM and SGLang are used here, and both serve an Anthropic-compatible endpoint that Claude Code talks
-to directly. vLLM runs most recipes. SGLang runs Kimi-K3 from a container. See
+to directly. vLLM runs most recipes. SGLang runs Kimi-K3 and Muse Spark NVFP4 from containers. See
 [docs/engines.md](docs/engines.md).
 
 ![How a recipe becomes an endpoint](docs/figures/serving-flow.svg)
@@ -103,6 +103,8 @@ has, the engine refuses to start. Each recipe states its own ceiling in Known li
 | **GLM-5.3** | FP8 | [2 H200 nodes](recipes/GLM-5.3/h200-4-nodes2) | 142.3 | 3597/1024 📈 | 256K |
 | | NVFP4 | [1 RTX node](recipes/GLM-5.3-NVFP4/rtx-8) | 50.2 | 1712/256 📈 | 212K |
 | **GLM-4.6** | FP8 | [1 H200 node](recipes/GLM-4.6-FP8/h200-4) | 19.1 | 8127/1024 📈 | 198K |
+| **Muse-Spark-Open-816B-A42B** | BF16 | [4 H200 nodes](recipes/Muse-Spark-Open-816B-A42B/h200-4-nodes4) | 83.0 | 9459/1024 📈 | 256K |
+| | NVFP4 | [1 RTX node](recipes/Muse-Spark-Open-816B-A42B-NVFP4/rtx-8-sglang) | 102.3 | 1084/48 🚧 | 256K |
 | **Kimi-K2.7-Code** | INT4 | [1 RTX node](recipes/Kimi-K2.7-Code/rtx-8) | 20.6 | 1833/896 ➖ | 128K |
 | | INT4 | [2 H200 nodes](recipes/Kimi-K2.7-Code/h200-4-nodes2) | 103.0 | 7033/1024 📈 | 256K |
 | **Kimi-K3** | MXFP4 QAT | [4 H200 nodes](recipes/Kimi-K3/h200-4-nodes4-sglang) | 40.3 | 1067/64 🚧 | 374K |
