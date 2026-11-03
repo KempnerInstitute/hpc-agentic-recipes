@@ -38,7 +38,6 @@ exec >> "$LOG" 2>&1
 
 exec singularity exec --nv \
   "${BINDS[@]}" \
-  --env NCCL_P2P_DISABLE="$NCCL_P2P_DISABLE" \
   --env TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC="$TORCH_NCCL_HEARTBEAT_TIMEOUT_SEC" \
   --env HF_HUB_OFFLINE="$HF_HUB_OFFLINE" \
   --env HF_HOME="$HF_HOME" \

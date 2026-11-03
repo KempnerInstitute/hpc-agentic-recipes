@@ -10,9 +10,9 @@ NVFP4 experts and then refuses it on sm120, so there is no working vLLM path on 
 
 | Variant | Engine | Shape | Single stream | Aggregate | Status |
 | --- | --- | --- | --- | --- | --- |
-| [`rtx-8-sglang`](rtx-8-sglang/README.md) | SGLang | 1 RTX node, 8 GPUs, TP8 with EP8 | 102.3 tok/s | 1084.2 at c=48, capped | Validated |
+| [`rtx-8-sglang`](rtx-8-sglang/README.md) | SGLang | 1 RTX node, 8 GPUs, TP8 with EP8 | 104.1 tok/s | 1265.5 at c=48, capped | Validated |
 
-One RTX node is faster for a single caller than four H200 nodes on BF16, 102.3 against 83.0, helped by
+One RTX node is faster for a single caller than four H200 nodes on BF16, 104.1 against 83.0, helped by
 DFlash speculative decoding and by having no pipeline-parallel hop between nodes. It admits only 48
 concurrent requests against the BF16 recipe's 1024, so it suits one or a few interactive users rather than
 a busy shared endpoint. See [Muse-Spark-Open-816B-A42B](../Muse-Spark-Open-816B-A42B/README.md).

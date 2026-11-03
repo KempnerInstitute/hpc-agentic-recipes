@@ -131,7 +131,7 @@ Conditions:
 | Protocol | slope(128,1152), 3 repeats per level, median reported |
 | Input length | ISL 151 tokens. Rates at a long input are not measured; use `--prompt-tokens` |
 | Output length | OSL 1152 tokens, output only, `ignore_eos` |
-| Context | `MAX_MODEL_LEN=262144`, `MEM_FRACTION=0.93`, `NCCL_P2P_DISABLE=1` |
+| Context | `MAX_MODEL_LEN=262144`, `MEM_FRACTION=0.93` |
 | Allocation for the measurement | 1 node, 8 GPUs, 128 cores and 1440 GB, `kempner_rtx` |
 | Sequence cap | `max_running_requests` 48, which the engine derives from the KV pool and which caps the sweep |
 | Endpoint | idle; the benchmark client ran on a different node |
@@ -140,14 +140,14 @@ Results:
 
 | Concurrency | Aggregate | Per stream | Spread over 3 runs |
 | --- | --- | --- | --- |
-| 1 | 102.3 tok/s | 102.3 tok/s | 97.6 to 104.3 |
-| 8 | 411.3 tok/s | 51.4 tok/s | 402.4 to 420.3 |
-| 32 | 936.8 tok/s | 29.3 tok/s | 921.2 to 961.5 |
-| 48 | 1084.2 tok/s | 22.6 tok/s | 1080.4 to 1102.5 |
+| 1 | 104.1 tok/s | 104.1 tok/s | 100.8 to 111.9 |
+| 8 | 427.2 tok/s | 53.4 tok/s | 422.7 to 428.9 |
+| 32 | 969.8 tok/s | 30.3 tok/s | 969.8 to 999.0 |
+| 48 | 1265.5 tok/s | 26.4 tok/s | 1257.6 to 1294.1 |
 
 | | |
 | --- | --- |
-| Engine facts | KV cache 295,552 tokens, 1.13 full-length requests at once; `max_running_requests` 48 |
+| Engine facts | KV cache 292,352 tokens, 1.12 full-length requests at once; `max_running_requests` 48 |
 | Label | capped. The sweep stops at 48 because the engine admits no more, not because throughput plateaued |
 
 ## Choosing this recipe or the four-node BF16 one
@@ -157,10 +157,10 @@ callers at once. Both were measured at the same 262144 context.
 
 | | NVFP4, 1 RTX node | BF16, 4 H200 nodes |
 | --- | --- | --- |
-| One caller | 102.3 tok/s | 83.0 tok/s |
-| Concurrency 8 | 411.3 tok/s | 382.5 tok/s |
-| Concurrency 32 | 936.8 tok/s | 727.2 tok/s |
-| Highest measured | 1084.2 tok/s at 48 | 9458.8 tok/s at 1024 |
+| One caller | 104.1 tok/s | 83.0 tok/s |
+| Concurrency 8 | 427.2 tok/s | 382.5 tok/s |
+| Concurrency 32 | 969.8 tok/s | 727.2 tok/s |
+| Highest measured | 1265.5 tok/s at 48 | 9458.8 tok/s at 1024 |
 | Concurrent request cap | 48 | 1024 |
 
 ## Known limits
@@ -185,10 +185,14 @@ callers at once. Both were measured at the same 262144 context.
   fine, and the same prompt at temperature 0.6 answered in 31 and 40 tokens. The BF16 sibling shows the
   same nondeterminism on different hardware and a different engine with no speculative decoding, so this is
   a model trait, not a fault of Marlin, DFlash or NVFP4. Prefer sampling over greedy decoding.
-- `NCCL_P2P_DISABLE=1` costs throughput, and is set anyway. `env/env.sh` exports it because RTX multi-GPU
-  NCCL init can hang without it, which is why every RTX recipe here sets it. This recipe does run without
-  it, and measurably faster: 1265.5 tok/s at concurrency 48 against 1084.2 with it, about 14 percent, and
-  2 to 4 percent at the lower levels. The figures above are the slower, safer configuration that ships.
+- This recipe does not set `NCCL_P2P_DISABLE=1`, which every vLLM recipe on RTX here does. SGLang disables
+  the P2P-dependent collectives itself on these GPUs: custom allreduce on PCIe-only GPUs, FlashInfer
+  allreduce at world size 8, and SymmMem on capability 12.0. Setting it anyway costs about 14 percent at
+  concurrency 48, 1084.2 tok/s against 1265.5, and 2 to 4 percent at the lower levels. If NCCL init ever
+  hangs on a node, set it and expect that cost.
+- Single stream varies run to run here, unlike the BF16 sibling which repeated to within 0.1 tok/s. The
+  sweep gave 104.1 tok/s over 100.8 to 111.9, and an independent 3-repeat check on the same build gave
+  101.9 over 98.7 to 105.9. Treat the single-stream figure as about 102 to 104, not an exact value.
 - Throughput above concurrency 48 is unmeasured, because the engine admits no more at this pool size.
 - Decode rate at a long input is not measured. Every figure here uses a 151-token input.
 - The vision and audio towers are loaded but not exercised. This recipe is validated for text only.
