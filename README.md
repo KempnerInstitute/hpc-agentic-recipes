@@ -103,8 +103,11 @@ has, the engine refuses to start. Each recipe states its own ceiling in Known li
 | **GLM-5.3** | FP8 | [2 H200 nodes](recipes/GLM-5.3/h200-4-nodes2) | 142.3 | 3597/1024 📈 | 256K |
 | | NVFP4 | [1 RTX node](recipes/GLM-5.3-NVFP4/rtx-8) | 50.2 | 1712/256 📈 | 212K |
 | **GLM-4.6** | FP8 | [1 H200 node](recipes/GLM-4.6-FP8/h200-4) | 19.1 | 8127/1024 📈 | 198K |
-| **Muse-Spark-Open-816B-A42B** | BF16 | [4 H200 nodes](recipes/Muse-Spark-Open-816B-A42B/h200-4-nodes4) | 83.0 | 9459/1024 📈 | 256K |
+| **Muse-Spark-816B** | BF16 | [4 H200 nodes](recipes/Muse-Spark-Open-816B-A42B/h200-4-nodes4) | 83.0 | 9459/1024 📈 | 256K |
 | | NVFP4 | [1 RTX node](recipes/Muse-Spark-Open-816B-A42B-NVFP4/rtx-8-sglang) | 104.1 | 1266/48 🚧 | 256K |
+| **Mistral-Large-4-1T** | FP8 | [4 H200 nodes](recipes/Mistral-Large-4-1T-A52B/h200-4-nodes4-sglang) | 67.1 | 1518/48 🚧 | 256K |
+| | NVFP4 | [1 RTX node](recipes/Mistral-Large-4-1T-A52B-NVFP4/rtx-8) | 129.7 | 826/48 📈 | 96K |
+| **Muse-Glimmer-30B** | BF16 | [1 H200 GPU](recipes/Muse-Glimmer-30B/h200-1) | 61.0 | 8925/256 📈 | 128K |
 | **MiMo-V2.6-Pro-RL** | FP8 | [1 RTX node](recipes/MiMo-V2.6-Pro-RL/rtx-8) | 84.9 | 1136/128 📈 | 64K |
 | **Kimi-K2.7-Code** | INT4 | [1 RTX node](recipes/Kimi-K2.7-Code/rtx-8) | 20.6 | 1833/896 ➖ | 128K |
 | | INT4 | [2 H200 nodes](recipes/Kimi-K2.7-Code/h200-4-nodes2) | 103.0 | 7033/1024 📈 | 256K |

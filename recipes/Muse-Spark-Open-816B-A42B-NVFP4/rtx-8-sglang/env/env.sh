@@ -3,8 +3,14 @@
 [ -n "${REPO_ROOT:-}" ] || source "$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)/common/lib/repo_root.sh"
 source "$REPO_ROOT/common/defaults.sh"
 
-_MUSE_SHARED=$MODELS_DIR/Muse-Spark-Open-816B-A42B-NVFP4/container/sglang-muse-spark-rtxpro6000.sif
-SIF="${SIF:-$_MUSE_SHARED}"
+_MUSE_SHARED=/n/holylfs06/LABS/kempner_shared/Everyone/testbed/models/Muse-Spark-Open-816B-A42B-NVFP4/container/sglang-muse-spark-rtxpro6000.sif
+if [ -z "${SIF:-}" ]; then
+  if [ -f "$MODELS_DIR/Muse-Spark-Open-816B-A42B-NVFP4/container/sglang-muse-spark-rtxpro6000.sif" ]; then
+    SIF="$MODELS_DIR/Muse-Spark-Open-816B-A42B-NVFP4/container/sglang-muse-spark-rtxpro6000.sif"
+  else
+    SIF="$_MUSE_SHARED"
+  fi
+fi
 
 : "${MUSE_LOG_DIR:=/tmp/$USER/muse}"
 
