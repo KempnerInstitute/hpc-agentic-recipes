@@ -94,7 +94,7 @@ claude
 - `client.env` sets `CLAUDE_CODE_MAX_CONTEXT_TOKENS=202752`. Claude Code assumes and enforces a 200k window
   for a served name it does not recognize, which is below what this endpoint serves.
 - Use `ANTHROPIC_AUTH_TOKEN`. `ANTHROPIC_API_KEY` sends `x-api-key` and returns 401.
-- `client.env` also sets `ANTHROPIC_SMALL_FAST_MODEL`; without it the client reaches for a hosted Haiku.
+- `client.env` also sets `ANTHROPIC_DEFAULT_HAIKU_MODEL`; without it the client reaches for a hosted Haiku.
 - OpenAI clients such as Codex: base URL `http://<node>:8000/v1`, same key, model `glm-4.6`. See
   [docs/clients.md](../../../docs/clients.md).
 

@@ -11,7 +11,7 @@ the API key.
 export ANTHROPIC_BASE_URL=http://<node>:8000
 export ANTHROPIC_AUTH_TOKEN=<the api key>
 export ANTHROPIC_MODEL=<served model name>
-export ANTHROPIC_SMALL_FAST_MODEL=<the same name>
+export ANTHROPIC_DEFAULT_HAIKU_MODEL=<the same name>
 export CLAUDE_CODE_ATTRIBUTION_HEADER=0
 claude
 ```
@@ -32,7 +32,7 @@ API. For an OpenAI-compatible client instead, see [clients.md](clients.md).
 `Authorization: Bearer`. `ANTHROPIC_API_KEY` makes Claude Code send `x-api-key` instead, which the
 engine ignores, so every request returns 401.
 
-**Set `ANTHROPIC_SMALL_FAST_MODEL`.** Without it the client reaches for a hosted Haiku model that your
+**Set `ANTHROPIC_DEFAULT_HAIKU_MODEL`.** Without it the client reaches for a hosted Haiku model that your
 local endpoint does not serve.
 
 **Web search will not work.** Claude Code's built-in web search sends a tool definition with no
