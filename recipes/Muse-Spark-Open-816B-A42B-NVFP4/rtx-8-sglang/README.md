@@ -34,10 +34,18 @@ chmod 600 secrets/Muse-Spark-Open-816B-A42B-NVFP4-rtx-8-sglang.key
   appends `--api-key` inside the process. SGLang accepts a key only as a flag, and a flag lands in
   `/proc/<pid>/cmdline`, which any user on the node can read.
 
-## 2. Get the container
+## 2. Build the environment
 
 The engine is a prebuilt SGLang image carrying a Muse fork at `/sgl-workspace/sglang-muse-spark`. There is
 no venv to build for this recipe.
+
+```
+bash recipes/Muse-Spark-Open-816B-A42B-NVFP4/rtx-8-sglang/env/build.sh
+```
+
+That verifies the staged image and reports its SGLang version, failing if `sglang` does not import
+inside it. It does not pull: the Muse fork is in no upstream release, so a staged copy is the only
+source.
 
 `env/env.sh` resolves the image in the same order as the Kimi-K3 recipe: an exported `SIF` wins, then
 `$MODELS_DIR/Muse-Spark-Open-816B-A42B-NVFP4/container/sglang-muse-spark-rtxpro6000.sif`, then the copy

@@ -31,10 +31,18 @@ chmod 600 secrets/Mistral-Large-4-1T-A52B-NVFP4-rtx-8.key
 - Requests without the key receive HTTP 401.
 - The key is passed to the container in the environment as `VLLM_API_KEY`, never on the command line.
 
-## 2. Get the container
+## 2. Build the environment
 
 No vLLM release or nightly wheel carries Mistral Large 4, so the engine is the published image. There is
 no venv to build.
+
+```
+bash recipes/Mistral-Large-4-1T-A52B-NVFP4/rtx-8/env/build.sh
+```
+
+That verifies the staged image and reports its vLLM version, failing if `vllm` does not import
+inside it. It does not pull: no release carries this model, so the image cannot be rebuilt from a
+version number.
 
 `env/env.sh` resolves it in order: an exported `SIF`, then
 `$MODELS_DIR/Mistral-Large-4-1T-A52B-NVFP4/container/vllm-mistral-large-4.sif`, then the FP8 sibling's
