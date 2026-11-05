@@ -33,6 +33,11 @@ Thinking models return their reasoning in a separate field rather than inside `c
 any answer is emitted.
 
 ## Codex
+Both clients are verified against a local endpoint: Claude Code and Codex each completed a request
+against the Ripple-65B-Preview two GPU recipe, and Codex also ran a shell command through its agentic
+loop and reported the result correctly. `/v1/responses` answered with HTTP 200 and a Responses API
+payload, which is what `wire_api = "responses"` needs.
+
 
 Install it with `curl -fsSL https://chatgpt.com/codex/install.sh | sh`. Codex needs two settings beyond
 the three above. In `~/.codex/config.toml`:

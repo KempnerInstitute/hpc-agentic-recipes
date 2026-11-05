@@ -127,6 +127,11 @@ claude
 A 32768 token window is small for agentic coding. Expect compaction on long sessions, and prefer
 `h200-2` for work that carries a large context.
 
+- OpenAI clients such as Codex: base URL `http://<node>:8000/v1`, same key, model `ripple`, and
+  `wire_api = "responses"`, which recent versions require. See [docs/clients.md](../../../docs/clients.md).
+- Codex does not read a context limit from a custom provider, so it will not manage the
+  window on this endpoint's 32768 token context. Keep sessions short or use a longer-context variant.
+
 ## 6. Stop it
 
 ```

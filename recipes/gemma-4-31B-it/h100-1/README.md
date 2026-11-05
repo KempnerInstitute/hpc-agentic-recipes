@@ -95,8 +95,8 @@ claude
   and assumes a 200k window, which client 2.1.223 enforces.
 - Use `ANTHROPIC_AUTH_TOKEN`. `ANTHROPIC_API_KEY` sends `x-api-key` and returns 401.
 - `client.env` also sets `ANTHROPIC_DEFAULT_HAIKU_MODEL`; without it the client reaches for a hosted Haiku.
-- OpenAI clients: base URL `http://<node>:8000/v1`, same key, model `gemma-4-31b`. See
-  [docs/clients.md](../../../docs/clients.md).
+- OpenAI clients such as Codex: base URL `http://<node>:8000/v1`, same key, model `gemma-4-31b`, and
+  `wire_api = "responses"`, which recent versions require. See [docs/clients.md](../../../docs/clients.md).
 
 ## 6. Stop it
 
