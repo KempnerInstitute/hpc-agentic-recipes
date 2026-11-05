@@ -17,26 +17,31 @@ HEAD_IB="$(timeout 60 ssh -n -o BatchMode=yes -o ConnectTimeout=10 "${NODES[0]}"
 [ -n "$HEAD_IB" ] || { echo "could not read ib0 on ${NODES[0]}" >&2; exit 1; }
 echo "head ${NODES[0]} at $HEAD_IB, serving kimi-k3.1-pro on ${NODES[0]}:$API_PORT"
 
-# Values are quoted with printf %q so an embedded apostrophe or space, for instance in a JSON
-# EXTRA_ARGS, cannot break out of the remote command.
-ENVS=""
-for v in API_PORT DIST_PORT SIF MODELS_DIR MODEL MAX_MODEL_LEN MEM_FRACTION TP EP NNODES \
-         KV_DTYPE MOE_RUNNER ATTN KEY_NAME KEY_FILE K31_LOG_DIR EXTRA_ARGS; do
-  ENVS+=" $v=$(printf '%q' "${!v-}")"
-done
-ENVS+=" HEAD_IB=$(printf '%q' "$HEAD_IB")"
+q() { printf '%s' "${1//\'/\'\\\'\'}"; }
 
 FAILED=0
 for i in 0 1 2 3; do
   n="${NODES[$i]}"
-  # The whole list is wrapped in a group whose streams go to /dev/null. Backgrounding an AND-list
-  # alone spawns a subshell that still holds the ssh channel, so ssh would wait for the rank to exit.
+  # q() escapes single quotes so a value containing an apostrophe cannot break out of the remote
+  # single quoting. The assignments are written out explicitly so the repo's forwarding check can
+  # see every tunable that serve.sh reads.
+  # The whole list runs in a group redirected to /dev/null: backgrounding an AND-list alone spawns a
+  # subshell that still holds the ssh channel, and ssh would then wait for the rank to exit.
   timeout 120 ssh -n -o BatchMode=yes -o ConnectTimeout=10 "$n" \
-    "{ mkdir -p $(printf '%q' "$K31_LOG_DIR") && cd $(printf '%q' "$REPO_ROOT") && \
-       RANK=$i$ENVS setsid bash $(printf '%q' "$S/serve.sh") ; } > /dev/null 2>&1 < /dev/null &" \
+    "{ mkdir -p '$(q "$K31_LOG_DIR")' && cd '$(q "$REPO_ROOT")' && \
+       RANK=$i HEAD_IB='$(q "$HEAD_IB")' API_PORT='$(q "${API_PORT:-}")' \
+       DIST_PORT='$(q "${DIST_PORT:-}")' SIF='$(q "$SIF")' MODELS_DIR='$(q "$MODELS_DIR")' \
+       MODEL='$(q "$MODEL")' MAX_MODEL_LEN='$(q "${MAX_MODEL_LEN:-}")' \
+       MEM_FRACTION='$(q "${MEM_FRACTION:-}")' TP='$(q "${TP:-}")' EP='$(q "${EP:-}")' \
+       NNODES='$(q "${NNODES:-}")' KV_DTYPE='$(q "${KV_DTYPE:-}")' \
+       MOE_RUNNER='$(q "${MOE_RUNNER:-}")' ATTN='$(q "${ATTN:-}")' \
+       KEY_NAME='$(q "${KEY_NAME:-}")' KEY_FILE='$(q "${KEY_FILE:-}")' \
+       K31_LOG_DIR='$(q "$K31_LOG_DIR")' EXTRA_ARGS='$(q "${EXTRA_ARGS:-}")' \
+       setsid bash '$(q "$S/serve.sh")' ; } > /dev/null 2>&1 &" \
     && echo "  rank $i launched on $n" \
     || { echo "  rank $i FAILED to launch on $n" >&2; FAILED=1; }
 done
+
 [ "$FAILED" = 0 ] || { echo "at least one rank did not launch; check the logs before retrying" >&2; exit 1; }
 
 # A rank that dies during startup leaves nothing behind, so confirm each one is alive.
