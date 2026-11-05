@@ -206,7 +206,7 @@ serve a small group with little latency cost to each caller.
 - One GPU works, but not at this recipe's defaults, and it is slower. An H200 is 140.4 GiB and the
   weights are 121 GiB, so the default `MEM_FRACTION=0.80` gives a 112.3 GiB budget and cannot load the
   model at all. Measured at `TP=1 MEM_FRACTION=0.93 MAX_MODEL_LEN=32768`, it serves correctly at
-  **25.0 tok/s** single stream against 40.5 at TP2, with a 33,728-token KV pool and 9.40 GB free. The
+  **25.1 tok/s** single stream against 40.5 at TP2, with a 33,728-token KV pool and 9.37 GB free. The
   model's hybrid attention is what makes it fit: the engine reports a sliding window memory pool with
   `full_layer_tokens=33728` and `swa_layer_tokens=26944`, so the 1024-token window layers cost far
   less KV than full attention layers would. Two GPUs remain the recommended shape, for the 262144

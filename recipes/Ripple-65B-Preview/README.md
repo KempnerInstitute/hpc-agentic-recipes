@@ -15,7 +15,7 @@ The release is Apache 2.0.
 Pick by context, not by rate. One card serves a real endpoint at 25.1 tok/s, but its KV pool caps the
 usable context near 33,000 tokens however high `--context-length` is set, because SGLang sizes the
 pool from the memory left after the weights. Two cards give a 392,960-token pool, the full 262144
-context, twice the concurrency and 62 percent more single stream throughput. The model fits on one
+context, twice the concurrency and about 61 percent more single stream throughput. The model fits on one
 card at all only because of its hybrid attention: the 1024-token sliding window layers cost far less
 KV than full attention layers would.
 

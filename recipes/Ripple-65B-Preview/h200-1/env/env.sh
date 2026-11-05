@@ -12,7 +12,7 @@ if [ -z "${SIF:-}" ]; then
   fi
 fi
 
-: "${RIPPLE_LOG_DIR:=/tmp/$USER/ripple}"
+: "${RIPPLE_LOG_DIR:=/tmp/$USER/ripple-1}"
 
 # serve.py raises this itself, but set it here too so an ssh launch cannot lose it: SGLang sizes the
 # draft's positional cache for the full target context even with a windowed draft.

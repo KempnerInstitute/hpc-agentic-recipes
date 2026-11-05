@@ -17,7 +17,9 @@ if [ -f "$SIF" ]; then
     }
     echo "  sglang $_v"
   else
-    echo "  singularity not on PATH here, so the version was not read"
+    echo "  singularity is not on PATH here, so the image could not be verified" >&2
+    echo "  run this on a node that has it, or set SIF and verify by hand" >&2
+    exit 1
   fi
   exit 0
 fi

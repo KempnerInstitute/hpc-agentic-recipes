@@ -8,6 +8,9 @@ source "$S/env/env.sh"
 [ $# -ge 1 ] || { echo "usage: $(basename "$0") <node> [gpu, default 0]" >&2; exit 2; }
 [ $# -le 2 ] || { echo "too many arguments: this takes a node and an optional GPU index only" >&2; exit 2; }
 NODE="$1"; GPUS="${2:-0}"
+case "$GPUS" in
+  ''|*[!0-9]*) echo "this recipe is TP1: give a single GPU index, not '$GPUS'" >&2; exit 2 ;;
+esac
 API_PORT="${API_PORT:-8000}"
 MODEL="${MODEL:-$MODELS_DIR/Ripple-65B-Preview}"
 DRAFT="${DRAFT:-$MODELS_DIR/Ripple-65B-Preview-DFlash2}"
@@ -17,13 +20,13 @@ DRAFT="${DRAFT:-$MODELS_DIR/Ripple-65B-Preview-DFlash2}"
 
 # The other GPUs of this node may belong to someone else, so refuse a list that is already busy.
 BUSY="$(ssh -o BatchMode=yes "$NODE" "
-  for i in \$(echo '$GPUS' | tr ',' ' '); do
-    u=\$(nvidia-smi -i \$i --query-compute-apps=used_memory --format=csv,noheader 2>/dev/null | head -1)
-    [ -n \"\$u\" ] && echo \"\$i(\$u)\"
-  done | tr '\n' ' '")"
+  nvidia-smi -i $GPUS --query-compute-apps=used_memory --format=csv,noheader 2>/dev/null | head -1")" || {
+  echo "could not read GPU $GPUS on $NODE; refusing to launch blind" >&2
+  exit 1
+}
 if [ -n "${BUSY// /}" ]; then
-  echo "GPUs already in use on $NODE: $BUSY" >&2
-  echo "pick a free list, or stop that process first" >&2
+  echo "GPU $GPUS on $NODE is already in use: $BUSY" >&2
+  echo "pick a free GPU, or stop that process first" >&2
   exit 1
 fi
 

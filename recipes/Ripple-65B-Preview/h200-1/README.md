@@ -73,7 +73,9 @@ bash recipes/Ripple-65B-Preview/h200-1/serve_ssh.sh <node> 0
 
 It refuses to start if that GPU already has a compute process, since the rest of the node may belong
 to someone else. Startup is about 100 seconds with a warm page cache. The log is
-`$RIPPLE_LOG_DIR/ripple-sglang.log`, default under `/tmp/$USER/ripple`.
+`$RIPPLE_LOG_DIR/ripple-sglang.log`, default under `/tmp/$USER/ripple-1`, kept separate from the
+two GPU recipe's directory. Both variants default to port 8000, so only one of them can run on a node
+at a time; set `API_PORT` to run both.
 
 ## 4. Verify
 

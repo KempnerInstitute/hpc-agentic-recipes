@@ -31,8 +31,9 @@ and one at 48, which is all its engine admits.
 
 **Report the sequence cap next to the rate.** vLLM sets `max_num_seqs` from device memory when the flag is
 absent, and that resolves to 1024 on every GPU here. It binds: every vLLM recipe that swept to 1024 reached
-a running batch of 1024 there. The SGLang recipe is the exception, admitting 67 requests, which is why its
-rate is labeled capped. A rate quoted without its cap is not reproducible, and forcing the cap down
+a running batch of 1024 there. The SGLang recipes are the exception and are labeled capped for it: one admits
+67 requests, and the two Ripple variants admit 16 on two GPUs and 8 on one, where the cap follows from a KV
+pool sized out of the memory left after the weights. A rate quoted without its cap is not reproducible, and forcing the cap down
 throttles the result.
 
 **What binds first is model-dependent, so measure it.** KV cache usage reached 100 percent in most recipes,

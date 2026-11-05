@@ -6,6 +6,11 @@ S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/env/env.sh"
 KEY_NAME="${KEY_NAME:-Ripple-65B-Preview-h200-2}"
 source "$REPO_ROOT/common/lib/api_key.sh"
+[ -n "$(printf '%s' "${VLLM_API_KEY:-}" | tr -d '[:space:]')" ] || {
+  echo "no API key resolved: this endpoint would accept unauthenticated requests. Create" >&2
+  echo "secrets/$KEY_NAME.key or set VLLM_API_KEY, then retry." >&2
+  exit 1
+}
 MODEL="${MODEL:-$MODELS_DIR/Ripple-65B-Preview}"
 DRAFT="${DRAFT:-$MODELS_DIR/Ripple-65B-Preview-DFlash2}"
 API_PORT="${API_PORT:-8000}"
