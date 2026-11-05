@@ -25,6 +25,17 @@ if [ -f "$SIF" ] && [ "$FORCE" = 0 ]; then
 fi
 
 command -v singularity >/dev/null 2>&1 || { echo "singularity is required to pull the image" >&2; exit 1; }
+
+# Never pull into the shared repository. MODELS_DIR points there by default, so a missing image would
+# otherwise write 12.7 GiB into a directory every cluster user reads. A Kempner user finds the image
+# already staged; anyone else points MODELS_DIR at their own space first.
+case "$SIF" in
+  /n/holylfs06/LABS/kempner_shared/*)
+    echo "refusing to pull into the shared repository: $SIF" >&2
+    echo "The staged copy is missing there. Set MODELS_DIR to your own space, or SIF to a writable" >&2
+    echo "path, and run this again." >&2
+    exit 1 ;;
+esac
 DEST="$(dirname "$SIF")"
 mkdir -p "$DEST"
 [ -w "$DEST" ] || { echo "destination is not writable by $USER: $DEST" >&2; exit 1; }

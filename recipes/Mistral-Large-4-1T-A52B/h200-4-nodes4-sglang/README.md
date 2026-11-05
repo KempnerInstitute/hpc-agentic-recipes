@@ -32,10 +32,17 @@ chmod 600 secrets/Mistral-Large-4-1T-A52B-h200-4-nodes4.key
 - The key reaches SGLang through `common/tools/sglang_launch.py`, which reads it from the environment and
   appends `--api-key` inside the process, keeping it out of `/proc/<pid>/cmdline`.
 
-## 2. Get the container
+## 2. Build the environment
 
 A prebuilt SGLang image carrying Mistral Large 4 support and mistral-common 1.13.0 or later, which is
 required to read the checkpoint's `tekken.json`. There is no venv to build.
+
+```
+bash recipes/Mistral-Large-4-1T-A52B/h200-4-nodes4-sglang/env/build.sh
+```
+
+That verifies the staged image and reports its SGLang version, failing if `sglang` does not import
+inside it. It does not pull: the image is prebuilt and cannot be reconstructed from a version number.
 
 `env/env.sh` resolves it in order: an exported `SIF`, then
 `$MODELS_DIR/Mistral-Large-4-1T-A52B/container/sglang-mistral-large-4.sif`, then the NVFP4 sibling's
