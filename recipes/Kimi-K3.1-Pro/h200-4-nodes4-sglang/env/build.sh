@@ -7,6 +7,8 @@ source "$REPO_ROOT/common/defaults.sh"
 source "$S/env.sh"
 
 IMAGE="${IMAGE:-docker://lmsysorg/sglang:dev-kimi-k31-pro}"
+# The tag moves, so record what the recipe's numbers were measured against and warn on a mismatch.
+MEASURED_SGLANG="0.0.0.dev1+g41208373c"
 FORCE=0
 [ "${1:-}" = "--force" ] && FORCE=1
 
@@ -14,10 +16,15 @@ if [ -f "$SIF" ] && [ "$FORCE" = 0 ]; then
   echo "container present: $SIF"
   echo "  $(stat -c %s "$SIF") bytes"
   if command -v singularity >/dev/null 2>&1; then
-    singularity exec "$SIF" python3 -c "import sglang,torch; print('  sglang',sglang.__version__,'torch',torch.__version__)" || {
+    _v="$(singularity exec "$SIF" python3 -c "import sglang,torch; print(sglang.__version__, torch.__version__)" 2>/dev/null)" || {
       echo "  the image is present but sglang does not import inside it: treat it as unusable" >&2
       exit 1
     }
+    echo "  sglang ${_v% *}, torch ${_v#* }"
+    case "${_v% *}" in
+      "$MEASURED_SGLANG"*) : ;;
+      *) echo "  note: measured against sglang $MEASURED_SGLANG; this image reports ${_v% *}" ;;
+    esac
   else
     echo "  singularity not on PATH here, so the version was not read"
   fi

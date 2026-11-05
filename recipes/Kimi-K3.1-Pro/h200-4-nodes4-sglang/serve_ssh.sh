@@ -13,6 +13,17 @@ MODEL="${MODEL:-$MODELS_DIR/Kimi-K3.1-Pro}"
 [ -f "$SIF" ] || { echo "container not found: $SIF" >&2; exit 1; }
 [ -d "$MODEL" ] || { echo "checkpoint not found: $MODEL" >&2; exit 1; }
 
+# These are whole-node allocations, so refuse any node whose GPUs are already busy rather than
+# contending with another user's work.
+for n in "${NODES[@]}"; do
+  BUSY="$(timeout 30 ssh -n -o BatchMode=yes -o ConnectTimeout=10 "$n" \
+    "nvidia-smi --query-compute-apps=pid --format=csv,noheader | wc -l" 2>/dev/null)"
+  if [ "${BUSY:-0}" != 0 ]; then
+    echo "$n already has ${BUSY} GPU compute process(es); refusing to launch" >&2
+    exit 1
+  fi
+done
+
 HEAD_IB="$(timeout 60 ssh -n -o BatchMode=yes -o ConnectTimeout=10 "${NODES[0]}" "ip -o -4 addr show ib0 | awk '{print \$4}' | cut -d/ -f1")"
 [ -n "$HEAD_IB" ] || { echo "could not read ib0 on ${NODES[0]}" >&2; exit 1; }
 echo "head ${NODES[0]} at $HEAD_IB, serving kimi-k3.1-pro on ${NODES[0]}:$API_PORT"
@@ -48,7 +59,8 @@ done
 sleep 20
 for i in 0 1 2 3; do
   n="${NODES[$i]}"
-  if timeout 45 ssh -n -o BatchMode=yes -o ConnectTimeout=10 "$n" "pgrep -u \$USER -f sglang_launch.py >/dev/null" 2>/dev/null; then
+  if timeout 45 ssh -n -o BatchMode=yes -o ConnectTimeout=10 "$n" \
+       "p=\$(cat '$(q "$K31_LOG_DIR")/k31-rank$i.pid' 2>/dev/null); [ -n \"\$p\" ] && kill -0 \"\$p\" 2>/dev/null" 2>/dev/null; then
     echo "  rank $i alive on $n"
   else
     echo "  rank $i is NOT running on $n, see $K31_LOG_DIR/k31-rank$i.log" >&2; FAILED=1

@@ -5,7 +5,7 @@ S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/env/env.sh"
 KEY_NAME="${KEY_NAME:-Kimi-K3.1-Pro-h200-4-nodes4}"
 source "$REPO_ROOT/common/lib/api_key.sh"
-[ -n "${VLLM_API_KEY:-}" ] || {
+[ -n "$(printf '%s' "${VLLM_API_KEY:-}" | tr -d '[:space:]')" ] || {
   echo "no API key resolved: this endpoint would accept unauthenticated requests. Create" >&2
   echo "secrets/$KEY_NAME.key or set VLLM_API_KEY, then retry." >&2
   exit 1
@@ -26,6 +26,8 @@ LOG="$K31_LOG_DIR/k31-rank$RANK.log"
 umask 077
 : > "$LOG" || { echo "cannot create $LOG" >&2; exit 1; }
 chmod 600 "$LOG" || { echo "cannot restrict $LOG; refusing to log the API key into a readable file" >&2; exit 1; }
+# This rank's own pid, so serve_ssh.sh checks this process rather than any same-user launcher.
+echo $$ > "$K31_LOG_DIR/k31-rank$RANK.pid"
 
 _hca=""
 for _d in /sys/class/infiniband/*; do

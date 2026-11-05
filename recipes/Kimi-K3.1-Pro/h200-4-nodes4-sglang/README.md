@@ -23,8 +23,7 @@ default. See Known limits before changing `KV_DTYPE`, `MOE_RUNNER`, or the conta
 
 ```
 mkdir -p secrets
-printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/Kimi-K3.1-Pro-h200-4-nodes4.key
-chmod 600 secrets/Kimi-K3.1-Pro-h200-4-nodes4.key
+( umask 077; printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/Kimi-K3.1-Pro-h200-4-nodes4.key )
 ```
 
 - `secrets/vllm_api_key` is read when this file is absent.
@@ -45,7 +44,14 @@ bash recipes/Kimi-K3.1-Pro/h200-4-nodes4-sglang/env/build.sh
 ```
 
 `env/env.sh` resolves the image in order: an exported `SIF`, then
-`$MODELS_DIR/Kimi-K3.1-Pro/container/sglang-kimi-k31-pro.sif`, then the shared testbed copy.
+`$MODELS_DIR/Kimi-K3.1-Pro/container/sglang-kimi-k31-pro.sif`, then the shared testbed copy. Since
+`MODELS_DIR` defaults to the shared testbed, a Kempner cluster user gets the staged image with no
+configuration, and anyone else builds their own copy beside their own weights.
+
+**Prefer the staged copy.** `dev-kimi-k31-pro` is a moving development tag, not a release, so a
+rebuilt image is not guaranteed to match the one these numbers came from. `build.sh` reports the
+SGLang version it finds and warns when it differs from the measured
+`0.0.0.dev1+g41208373c`.
 
 **The layers must be unpacked on node-local disk.** The image carries a `.wh.rust` whiteout whose
 removal walks `rust/target/release/build` recursively, and on a parallel filesystem the rapid
@@ -72,8 +78,8 @@ sbatch --account=<your-account> recipes/Kimi-K3.1-Pro/h200-4-nodes4-sglang/serve
 ```
 
 The first node is the head: it is read for its `ib0` address, which becomes `--dist-init-addr`, and
-it serves the endpoint. `serve_ssh.sh` launches each rank, then confirms all four are alive rather
-than reporting success unconditionally.
+it serves the endpoint. `serve_ssh.sh` refuses any node whose GPUs are already busy, launches each rank, then confirms all
+four are alive by the pid each rank records, so a stale process cannot mask a rank that failed.
 
 Startup is about 26 minutes: 808 seconds to load the weights, then graph capture. The logs are
 `$K31_LOG_DIR/k31-rank<N>.log` on each node, default under `/tmp/$USER/k31`.
@@ -96,6 +102,10 @@ curl -s -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
   http://$NODE:8000/v1/chat/completions \
   -d '{"model":"kimi-k3.1-pro","messages":[{"role":"user","content":"Write a Python function that returns the n-th Fibonacci number iteratively."}],"max_tokens":700,"temperature":0.6}'
 ```
+
+Those `curl -H` lines put the key in curl's own argv, which other users on the node can see in
+`ps`. That is acceptable for a one-off check on nodes you hold alone; use `curl -K <file>` with a
+mode 600 file otherwise.
 
 | Command | Expected |
 | --- | --- |
@@ -176,7 +186,7 @@ Results:
 | | |
 | --- | --- |
 | Engine facts | KV cache 426,688 tokens, 1.63 full-length requests at once; 102.93 GB of weights per GPU and 20.44 GB free after sizing |
-| Label | climbing. Aggregate throughput was still rising at 32, and the engine admits 51, so the ceiling is unmeasured |
+| Label | rising. Aggregate throughput was still climbing at 32, and the engine admits 51, so the ceiling is unmeasured |
 
 Throughput is within a few percent of the sibling Kimi-K3 recipe on the same hardware, which reaches
 40.3 tok/s single stream and 709.0 at concurrency 32. The two models cost the same to serve.
