@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+#SBATCH --job-name=ripple-65b
+#SBATCH --partition=kempner_h200
+#SBATCH --nodes=1
+#SBATCH --gres=gpu:2
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=720G
+#SBATCH --time=1-00:00:00
+#SBATCH --output=%x-%j.log
+set -euo pipefail
+R="${SLURM_SUBMIT_DIR:-$PWD}/recipes/Ripple-65B-Preview/h200-2"
+[ -f "$R/serve.sh" ] || { echo "submit from the repo root: sbatch --account=<acct> recipes/Ripple-65B-Preview/h200-2/serve.sbatch" >&2; exit 2; }
+source "$R/env/env.sh"
+[ -f "$SIF" ] || { echo "container not found: $SIF" >&2; exit 1; }
+echo "serving ripple on $(hostname -s):${API_PORT:-8000}"
+exec bash "$R/serve.sh"
