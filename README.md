@@ -110,6 +110,7 @@ has, the engine refuses to start. Each recipe states its own ceiling in Known li
 | **Muse-Glimmer-30B** | BF16 | [1 H200 GPU](recipes/Muse-Glimmer-30B/h200-1) | 61.0 | 8925/256 📈 | 128K |
 | **MiMo-V2.6-Pro-RL** | FP8 | [1 RTX node](recipes/MiMo-V2.6-Pro-RL/rtx-8) | 84.9 | 1136/128 📈 | 64K |
 | **Ripple-65B-Preview** | BF16 | [2 H200 GPUs](recipes/Ripple-65B-Preview/h200-2) | 40.5 | 588/16 🚧 | 256K |
+| **Ripple-65B-Preview** | BF16 | [1 H200 GPU](recipes/Ripple-65B-Preview/h200-1) | 25.1 | 189/8 🚧 | 32K |
 | **Kimi-K2.7-Code** | INT4 | [1 RTX node](recipes/Kimi-K2.7-Code/rtx-8) | 20.6 | 1833/896 ➖ | 128K |
 | | INT4 | [2 H200 nodes](recipes/Kimi-K2.7-Code/h200-4-nodes2) | 103.0 | 7033/1024 📈 | 256K |
 | **Kimi-K3** | MXFP4 QAT | [4 H200 nodes](recipes/Kimi-K3/h200-4-nodes4-sglang) | 40.3 | 1067/64 🚧 | 374K |
