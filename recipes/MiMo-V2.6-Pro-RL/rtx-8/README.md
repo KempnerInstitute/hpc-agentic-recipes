@@ -99,6 +99,11 @@ claude
 `CLAUDE_CODE_MAX_CONTEXT_TOKENS=65536`, matching what this recipe serves. Use `ANTHROPIC_AUTH_TOKEN`, not
 `ANTHROPIC_API_KEY`.
 
+- OpenAI clients such as Codex: base URL `http://<node>:8000/v1`, same key, model `mimo-v2.6-pro`, and
+  `wire_api = "responses"`, which recent versions require. See [docs/clients.md](../../../docs/clients.md).
+- Codex does not read a context limit from a custom provider, so it will not manage the
+  window on this endpoint's 65536 token context.
+
 ## 6. Stop it
 
 ```

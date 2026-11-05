@@ -104,6 +104,9 @@ claude
 `CLAUDE_CODE_MAX_CONTEXT_TOKENS=262144`, without which Claude Code assumes and enforces a 200k window.
 Use `ANTHROPIC_AUTH_TOKEN`, not `ANTHROPIC_API_KEY`.
 
+- OpenAI clients such as Codex: base URL `http://<node>:8000/v1`, same key, model `mistral-large-4`, and
+  `wire_api = "responses"`, which recent versions require. See [docs/clients.md](../../../docs/clients.md).
+
 ## 6. Stop it
 
 ```
