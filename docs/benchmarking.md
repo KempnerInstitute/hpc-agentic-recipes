@@ -23,9 +23,9 @@ bash common/tools/bench.sh --host <node> --model <name> --sweep 1,8,32,128     f
 ## Sweep until throughput turns over
 
 A sweep that stops early reports a floor, not a ceiling, and the two look identical. That same GLM-5.2-NVFP4
-endpoint reports 674 tok/s if the sweep stops at concurrency 32, half its actual capacity at 256. Of the 21
+endpoint reports 674 tok/s if the sweep stops at concurrency 32, half its actual capacity at 256. Of the 22
 rates the labeling rule covers, 4 turn over at a peak, 7 stay flat to within the rule's 4 percent across the
-top of their sweep, and 10 were still climbing at the highest level measured, so those figures are floors.
+top of their sweep, and 11 were still climbing at the highest level measured, so those figures are floors.
 Sixteen sweeps ran to 1024 and one stopped at 512. One more stopped at 256, where that endpoint dies,
 and one at 48, which is all its engine admits.
 
