@@ -136,7 +136,7 @@ GPU: the other two GPUs on the node may belong to someone else.
 | `API_PORT` | 8000 | Listening port |
 | `MAX_MODEL_LEN` | 262144 | Context window, fixed at init |
 | `MEM_FRACTION` | 0.80 | Static VRAM fraction for weights plus KV |
-| `TP` | 2 | Tensor parallel size. One GPU cannot hold this model, see Known limits |
+| `TP` | 2 | Tensor parallel size. `TP=1` works only with a raised `MEM_FRACTION` and a smaller context, see Known limits |
 | `ATTN` | `fa3` | Attention backend. Do not change without reading Known limits |
 | `PAGE_SIZE` | 64 | Tokens per KV page |
 | `MAX_RUNNING` | 16 | Concurrent request cap, which also caps the sweep |
@@ -203,8 +203,14 @@ serve a small group with little latency cost to each caller.
   `if __name__ == "__main__"`. SGLang spawns its scheduler as a separate process that re-imports the
   module as `__mp_main__` and skips a `__main__` block, which leaves the children without the
   registration and fails with `ValueError: Unsupported model type: ripple`.
-- One GPU is not enough. The 121 GiB of weights against about 129 GiB usable leaves no room for the
-  KV cache, and at the 0.80 memory fraction the budget is smaller than the weights.
+- One GPU works, but not at this recipe's defaults, and it is slower. An H200 is 140.4 GiB and the
+  weights are 121 GiB, so the default `MEM_FRACTION=0.80` gives a 112.3 GiB budget and cannot load the
+  model at all. Measured at `TP=1 MEM_FRACTION=0.93 MAX_MODEL_LEN=32768`, it serves correctly at
+  **25.0 tok/s** single stream against 40.5 at TP2, with a 33,728-token KV pool and 9.40 GB free. The
+  model's hybrid attention is what makes it fit: the engine reports a sliding window memory pool with
+  `full_layer_tokens=33728` and `swa_layer_tokens=26944`, so the 1024-token window layers cost far
+  less KV than full attention layers would. Two GPUs remain the recommended shape, for the 262144
+  context and the higher rate.
 - Throughput above concurrency 16 is unmeasured, because the engine admits no more.
 - Decode rate at a long input is not measured. Every figure here uses a 23-token input.
 - Context is served at 262144 rather than the checkpoint's 2097152, which is untested here.

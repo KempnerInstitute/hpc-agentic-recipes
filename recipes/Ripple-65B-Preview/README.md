@@ -11,9 +11,10 @@ The release is Apache 2.0.
 | --- | --- | --- | --- | --- | --- |
 | [`h200-2`](h200-2/README.md) | SGLang | 2 H200 GPUs of one node, TP2 | 40.5 tok/s | 587.7 at c=16, capped | Validated |
 
-At 121 GiB the weights need two H200 GPUs, not one: a single card has about 129 GiB usable, which
-leaves no room for the KV cache. Two give a 392,960-token pool at a 262144 context, and per-stream
-throughput falls only from 40.5 to 36.7 tok/s out to sixteen concurrent callers.
+Two H200 GPUs give a 392,960-token pool at a 262144 context, and per-stream throughput falls only
+from 40.5 to 36.7 tok/s out to sixteen concurrent callers. A single card also works, measured at 25.0
+tok/s with a 32768 context once `MEM_FRACTION` is raised to 0.93, since the default 0.80 budget of
+112.3 GiB is smaller than the 121 GiB of weights.
 
 Neither vLLM nor SGLang ships a recipe for this model, and `RicursiveForCausalLM` is in no vLLM
 release. The checkpoint carries its own SGLang implementation under `inference/server`, which this
