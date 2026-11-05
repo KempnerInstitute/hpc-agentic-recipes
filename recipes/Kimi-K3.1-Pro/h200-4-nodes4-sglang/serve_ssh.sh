@@ -13,7 +13,7 @@ MODEL="${MODEL:-$MODELS_DIR/Kimi-K3.1-Pro}"
 [ -f "$SIF" ] || { echo "container not found: $SIF" >&2; exit 1; }
 [ -d "$MODEL" ] || { echo "checkpoint not found: $MODEL" >&2; exit 1; }
 
-HEAD_IB="$(ssh -o BatchMode=yes "${NODES[0]}" "ip -o -4 addr show ib0 | awk '{print \$4}' | cut -d/ -f1")"
+HEAD_IB="$(timeout 60 ssh -n -o BatchMode=yes -o ConnectTimeout=10 "${NODES[0]}" "ip -o -4 addr show ib0 | awk '{print \$4}' | cut -d/ -f1")"
 [ -n "$HEAD_IB" ] || { echo "could not read ib0 on ${NODES[0]}" >&2; exit 1; }
 echo "head ${NODES[0]} at $HEAD_IB, serving kimi-k3.1-pro on ${NODES[0]}:$API_PORT"
 
@@ -29,8 +29,11 @@ ENVS+=" HEAD_IB=$(printf '%q' "$HEAD_IB")"
 FAILED=0
 for i in 0 1 2 3; do
   n="${NODES[$i]}"
-  ssh -o BatchMode=yes "$n" "mkdir -p $(printf '%q' "$K31_LOG_DIR") && cd $(printf '%q' "$REPO_ROOT") && \
-    RANK=$i$ENVS nohup bash $(printf '%q' "$S/serve.sh") > /dev/null 2>&1 < /dev/null & " \
+  # The whole list is wrapped in a group whose streams go to /dev/null. Backgrounding an AND-list
+  # alone spawns a subshell that still holds the ssh channel, so ssh would wait for the rank to exit.
+  timeout 120 ssh -n -o BatchMode=yes -o ConnectTimeout=10 "$n" \
+    "{ mkdir -p $(printf '%q' "$K31_LOG_DIR") && cd $(printf '%q' "$REPO_ROOT") && \
+       RANK=$i$ENVS setsid bash $(printf '%q' "$S/serve.sh") ; } > /dev/null 2>&1 < /dev/null &" \
     && echo "  rank $i launched on $n" \
     || { echo "  rank $i FAILED to launch on $n" >&2; FAILED=1; }
 done
@@ -40,7 +43,7 @@ done
 sleep 20
 for i in 0 1 2 3; do
   n="${NODES[$i]}"
-  if ssh -o BatchMode=yes "$n" "pgrep -u \$USER -f sglang_launch.py >/dev/null" 2>/dev/null; then
+  if timeout 45 ssh -n -o BatchMode=yes -o ConnectTimeout=10 "$n" "pgrep -u \$USER -f sglang_launch.py >/dev/null" 2>/dev/null; then
     echo "  rank $i alive on $n"
   else
     echo "  rank $i is NOT running on $n, see $K31_LOG_DIR/k31-rank$i.log" >&2; FAILED=1
