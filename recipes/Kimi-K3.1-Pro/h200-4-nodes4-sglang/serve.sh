@@ -40,6 +40,9 @@ if [ -n "${VLLM_API_KEY:-}" ]; then
   export APPTAINERENV_VLLM_API_KEY="$VLLM_API_KEY"
 fi
 
+# The KV cache dtype is not a free choice here: the engine validates it per model and refuses
+# anything but fp8_e4m3, the reference fp8_ds_mla format, even though argparse accepts bf16 and the
+# sibling Kimi-K3 recipe serves bf16 happily.
 # Marlin is mandatory on Hopper, not a tuning knob: MXFP4 is Blackwell-native, and the auto backend
 # dequantizes every expert to BF16 and runs out of memory. The Kimi-K3 recipe pins it for the same
 # reason. Override only to experiment.
@@ -79,6 +82,6 @@ exec singularity exec --nv \
     --host 0.0.0.0 --port "$API_PORT" \
     --context-length "$MAX_MODEL_LEN" \
     --mem-fraction-static "$MEM_FRACTION" \
-    --kv-cache-dtype "${KV_DTYPE:-bf16}" \
+    --kv-cache-dtype "${KV_DTYPE:-fp8_e4m3}" \
     --weight-loader-disable-mmap \
     "${MOE[@]}" "${ATTNA[@]}" ${EXTRA_ARGS:-}
