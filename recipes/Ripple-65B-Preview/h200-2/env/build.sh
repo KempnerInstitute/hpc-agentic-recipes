@@ -13,9 +13,14 @@ FORCE=0
 if [ -f "$SIF" ] && [ "$FORCE" = 0 ]; then
   echo "container present: $SIF"
   echo "  $(stat -c %s "$SIF") bytes"
-  command -v singularity >/dev/null 2>&1 \
-    && singularity exec "$SIF" python3 -c "import sglang; print('  sglang', sglang.__version__)" \
-    || echo "  singularity not on PATH here, so the version was not read"
+  if command -v singularity >/dev/null 2>&1; then
+    singularity exec "$SIF" python3 -c "import sglang; print('  sglang', sglang.__version__)" || {
+      echo "  the image is present but sglang does not import inside it: treat it as unusable" >&2
+      exit 1
+    }
+  else
+    echo "  singularity not on PATH here, so the version was not read"
+  fi
   exit 0
 fi
 

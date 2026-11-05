@@ -17,6 +17,9 @@ MEM_FRACTION="${MEM_FRACTION:-0.80}"
 SERVE="$MODEL/inference/server/model.py"
 [ -f "$SERVE" ] || { echo "the checkpoint model implementation is missing: $SERVE" >&2; exit 1; }
 mkdir -p "$RIPPLE_LOG_DIR/hf" "$RIPPLE_LOG_DIR/triton" "$RIPPLE_LOG_DIR/inductor"
+# SGLang logs the parsed server_args, the API key among them, so the log must not be world readable.
+# The default /tmp location is on a shared node and would otherwise be mode 644 under mode 755.
+chmod 700 "$RIPPLE_LOG_DIR" 2>/dev/null || true
 
 LAUNCHER="$REPO_ROOT/common/tools/ripple_launch.py"
 if [ -n "${VLLM_API_KEY:-}" ]; then
@@ -38,7 +41,15 @@ if [ "${SPEC_MODE:-none}" = dflash ]; then
         --speculative-draft-attention-backend triton)
 fi
 
+# The draft is bound into the container only when speculation is on, so a missing draft checkpoint
+# does not stop the server from starting without it.
+DRAFT_BIND=()
+[ "${SPEC_MODE:-none}" = dflash ] && DRAFT_BIND=(-B "$DRAFT:$DRAFT:ro")
+
 LOG="$RIPPLE_LOG_DIR/ripple-sglang.log"
+umask 077
+: > "$LOG" 2>/dev/null || true
+chmod 600 "$LOG" 2>/dev/null || true
 {
   echo "=== $(date '+%H:%M:%S') on $(hostname -s), context $MAX_MODEL_LEN, mem-fraction $MEM_FRACTION, tp ${TP:-2}"
   echo "=== spec ${SPEC[*]}"
@@ -48,7 +59,7 @@ exec >> "$LOG" 2>&1
 # Flags here are appended to the checkpoint launcher's own defaults, so they override them. The
 # default host is 127.0.0.1, which would make the endpoint unreachable from other nodes.
 exec singularity exec --nv \
-  -B "$MODEL:$MODEL:ro" -B "$DRAFT:$DRAFT:ro" \
+  -B "$MODEL:$MODEL:ro" "${DRAFT_BIND[@]}" \
   -B "$RIPPLE_LOG_DIR:$RIPPLE_LOG_DIR" -B "$LAUNCHER:$LAUNCHER:ro" \
   --env SGLANG_ALLOW_OVERWRITE_LONGER_CONTEXT_LEN="$SGLANG_ALLOW_OVERWRITE_LONGER_CONTEXT_LEN" \
   --env RIPPLE_SERVER_DIR="$MODEL/inference/server" \

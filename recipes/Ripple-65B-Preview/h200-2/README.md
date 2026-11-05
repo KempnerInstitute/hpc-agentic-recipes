@@ -7,7 +7,7 @@ Status: Validated - SGLang 0.5.19 in a container, protocol: slope(128,1152) at c
 | Served name | `ripple` |
 | Checkpoint | `Ripple-65B-Preview`, Hugging Face `ricursiveAI/Ripple-65B-Preview` |
 | On disk | 121 GiB across 16 shards, BF16, `RicursiveForCausalLM` |
-| Served precision | BF16 weights, BF16 KV cache; the launcher refuses anything else |
+| Served precision | BF16 weights, BF16 KV cache; the launcher rejects any other `--dtype` or `--kv-cache-dtype` |
 | Context | 262144. The checkpoint declares 2097152 |
 | Hardware | 2 H200 GPUs of one node, 143771 MiB each, TP2 |
 | Engine | SGLang 0.5.19 in Singularity, `fa3` attention, no speculative decoding |
@@ -31,6 +31,9 @@ chmod 600 secrets/Ripple-65B-Preview-h200-2.key
 - Requests without the key receive HTTP 401.
 - The key reaches SGLang through `common/tools/ripple_launch.py`, which reads it from the environment
   and appends `--api-key` inside the process, keeping it out of `/proc/<pid>/cmdline`.
+- SGLang then logs the parsed `server_args`, the key among them, so `serve.sh` creates
+  `$RIPPLE_LOG_DIR` mode 700 and the log mode 600. Without that the key sits in a world readable file
+  on a shared node. Check the mode before trusting an older log, and rotate the key if it was exposed.
 
 ## 2. Build the environment
 
@@ -42,8 +45,8 @@ and the nodes here are Rocky 8 with glibc 2.28. The engine is therefore the publ
 bash recipes/Ripple-65B-Preview/h200-2/env/build.sh
 ```
 
-That verifies a staged image and reports its SGLang version, and pulls it only when the image is
-missing. `env/env.sh` resolves it in order: an exported `SIF`, then
+That verifies a staged image and reports its SGLang version, failing if `sglang` does not import
+inside it, and pulls the image only when it is missing. `env/env.sh` resolves it in order: an exported `SIF`, then
 `$MODELS_DIR/Ripple-65B-Preview/container/sglang-0.5.19.sif`, then the shared testbed copy.
 
 A copy of this checkpoint needs the `container/` subdirectory alongside the weights, 12.7 GiB on top
@@ -60,6 +63,9 @@ On a node you already hold, naming the two GPUs:
 ```
 bash recipes/Ripple-65B-Preview/h200-2/serve_ssh.sh <node> 0,1
 ```
+
+It refuses to start if any GPU in that list already has a compute process, since the rest of the node
+may belong to someone else.
 
 Startup is about 80 seconds with a warm page cache and a few minutes cold. The log is
 `$RIPPLE_LOG_DIR/ripple-sglang.log`, default under `/tmp/$USER/ripple`.
@@ -82,6 +88,10 @@ curl -s -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
   http://$NODE:8000/v1/chat/completions \
   -d '{"model":"ripple","messages":[{"role":"user","content":"Write a Python function that returns the n-th Fibonacci number iteratively."}],"max_tokens":600,"temperature":0.6}'
 ```
+
+Those `curl -H` lines put the key in curl's own argv, which other users on the node can see in
+`ps`. That is acceptable for a one-off check on a node you hold alone; use `curl -K <file>` with a
+mode 600 file otherwise.
 
 | Command | Expected |
 | --- | --- |
@@ -121,7 +131,7 @@ GPU: the other two GPUs on the node may belong to someone else.
 | Variable | Default | Effect |
 | --- | --- | --- |
 | `MODEL` | `$MODELS_DIR/Ripple-65B-Preview` | Serve a different copy of the checkpoint |
-| `DRAFT` | `$MODELS_DIR/Ripple-65B-Preview-DFlash2` | DFlash2 draft, used only when `SPEC_MODE=dflash` |
+| `DRAFT` | `$MODELS_DIR/Ripple-65B-Preview-DFlash2` | DFlash2 draft. Only read, and only bound into the container, when `SPEC_MODE=dflash` |
 | `SIF` | resolved as in step 2 | Container image |
 | `API_PORT` | 8000 | Listening port |
 | `MAX_MODEL_LEN` | 262144 | Context window, fixed at init |

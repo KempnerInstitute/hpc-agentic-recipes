@@ -50,9 +50,10 @@ if not os.path.isfile(os.path.join(_SERVER_DIR, "model.py")):
     print(f"ripple_launch.py: no model.py in {_SERVER_DIR}", file=sys.stderr)
     raise SystemExit(1)
 
-# The checkpoint's modules import each other by bare name, so its directory has to come first.
-if _SERVER_DIR not in sys.path:
-    sys.path.insert(0, _SERVER_DIR)
+# The checkpoint's modules import each other by bare name, so its directory has to come first. It is
+# removed before being prepended, so an entry already present further down cannot shadow model.py.
+sys.path = [p for p in sys.path if p not in (_SERVER_DIR,)]
+sys.path.insert(0, _SERVER_DIR)
 
 from sglang.srt.models.registry import ModelRegistry  # noqa: E402
 
@@ -71,6 +72,24 @@ def key_from_env(env):
     return None
 
 
+BF16 = ("bfloat16", "bf16")
+
+
+def check_bf16(argv):
+    """Refuse a non-BF16 dtype or KV cache dtype, which this checkpoint is not validated for."""
+    for flag in ("--dtype", "--kv-cache-dtype"):
+        value = None
+        for i, a in enumerate(argv):
+            if a == flag and i + 1 < len(argv):
+                value = argv[i + 1]
+            elif a.startswith(flag + "="):
+                value = a.split("=", 1)[1]
+        if value is not None and value.lower() not in BF16:
+            print(f"ripple_launch.py: {flag}={value} is not supported, this recipe serves BF16 only",
+                  file=sys.stderr)
+            raise SystemExit(2)
+
+
 def build_argv(argv, env):
     if "--api-key" in argv or any(a.startswith("--api-key=") for a in argv):
         return list(argv)
@@ -83,6 +102,7 @@ if __name__ == "__main__":
     from sglang.srt.server_args import prepare_server_args
     from sglang.srt.utils import kill_process_tree
 
+    check_bf16(sys.argv[1:])
     args = prepare_server_args(build_argv(sys.argv[1:], os.environ))
     try:
         launch_server(args)
