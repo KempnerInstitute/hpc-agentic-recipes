@@ -1,6 +1,6 @@
 # MiniMax-M2.7 on one H200 node
 
-Status: Untested - scripts written against upstream guidance, no bring-up has run on this cluster
+Status: Validated - vLLM 0.32.0+cu129, protocol: slope(128,1152) at concurrency 1, 8 and 32
 
 | | |
 | --- | --- |
@@ -11,14 +11,10 @@ Status: Untested - scripts written against upstream guidance, no bring-up has ru
 | Context | 196608, the checkpoint maximum |
 | Hardware | 1 node, 4 H200 GPUs, TP4 |
 | Engine | vLLM 0.32.0, which registers this architecture |
-| Allocation for the measurement | Not yet allocated. The intended request is 1 node, 4 GPUs, 64 cores and 1440 GB, `kempner_h200` |
+| Allocation for the measurement | 1 node, 4 GPUs, 64 cores and 1440 GB, `kempner_h200` |
 
 An agentic-coding MoE. Upstream's default configuration is exactly TP4 on four H200 GPUs, which is
 one node here, so this recipe needs no multi-node scaffolding and no container.
-
-**No rate has been measured.** Everything below the launch section is upstream guidance or arithmetic,
-not an observation from this cluster. The benchmarking section stays empty until the model has run
-here, and this recipe is deliberately absent from the top-level tables for that reason.
 
 ## 1. Create the API key
 
@@ -55,8 +51,8 @@ On a node you already hold, by ssh:
 bash recipes/MiniMax-M2.7/h200-4/serve_ssh.sh <node>
 ```
 
-The log is `$LOG_DIR/vllm-minimax-m2.7.log`, default under `/tmp/$USER/vllm`. Startup time on this
-cluster is unmeasured.
+The log is `$LOG_DIR/vllm-minimax-m2.7.log`, default under `/tmp/$USER/vllm`. Startup is quick for a checkpoint this size: the 214.3 GiB loads in about four minutes, then
+`init engine (profile, create kv cache, warmup model)` takes 8.87 s.
 
 ## 4. Verify
 
@@ -136,13 +132,35 @@ ssh <node> 'pkill -u $USER -f "vllm serve"'
 
 ## Benchmarking
 
-Not measured. No node has been assigned for this recipe, so there is no rate, no concurrency curve
-and no saturation label. Running the standard protocol here would mean slope(128,1152) with 3 repeats
-per level and the median reported, as every other recipe in this repo does.
+Conditions:
 
 | | |
 | --- | --- |
-| Label | none. No rate is measured, so this recipe contributes no label and is absent from the counts in [docs/benchmarking.md](../../../docs/benchmarking.md) |
+| Protocol | slope(128,1152), 3 repeats per level, median reported |
+| Input length | ISL 44 tokens. Rates at a long input are not measured; use `--prompt-tokens` |
+| Output length | OSL 1152 tokens, output only, `ignore_eos` |
+| Context | `MAX_MODEL_LEN=196608`, `GPU_UTIL=0.90`, eager, no speculation |
+| Allocation for the measurement | 1 node, 4 GPUs, 64 cores and 1440 GB, `kempner_h200` |
+| Endpoint | idle, and the benchmark client ran on the serving node |
+
+Results:
+
+| Concurrency | Aggregate | Per stream | Spread over 3 runs |
+| --- | --- | --- | --- |
+| 1 | 20.8 tok/s | 20.8 tok/s | 20.8 to 20.9 |
+| 8 | 165.7 tok/s | 20.7 tok/s | 164.2 to 168.7 |
+| 32 | 641.5 tok/s | 20.0 tok/s | 641.2 to 642.9 |
+
+| | |
+| --- | --- |
+| Engine facts | 137.86 of 139.79 GiB free per GPU at startup, `GPU_UTIL=0.90` giving 125.81 GiB; 130483 to 130485 MiB held per GPU while serving; engine init 8.87 s |
+| Label | rising. Aggregate throughput was still climbing at 32 and per-stream had barely moved, so the ceiling is unmeasured |
+
+Scaling is close to linear: 32 times the concurrency returns 30.8 times the throughput, and per-stream
+decode falls only from 20.8 to 20.0 tok/s between one caller and thirty-two. That is what a sparse MoE
+with few active parameters should do, and it means the saturation point is well above 32. The flip side
+is that 20.8 tok/s on a single stream is modest, close to GLM-4.6-FP8 at 19.1 on the same hardware, so
+this recipe earns its place on aggregate throughput rather than on latency.
 
 ## Known limits
 
@@ -150,15 +168,22 @@ per level and the median reported, as every other recipe in this repo does.
   the expert tensors do not shard evenly, so TP8 requires `--enable-expert-parallel`, and DP8 with
   expert parallelism is the other documented option. TP4 on one node sidesteps this entirely, which
   is why it is the default here.
-- **Older vLLM releases produce corrupted output for this model.** Upstream reports the fix landing
-  in nightlies after a specific commit, and pins a different commit for reproducing its accuracy
-  numbers. The venv here is 0.32.0, far newer than the 0.20.0 the recipe page badges, so it very
-  likely contains the fix, but that is an inference and not a test. Read the first long generation
-  before trusting the endpoint.
-- **The two upstream sources disagree on the reasoning parser.** The vLLM recipe page gives
-  `minimax_m2`, which this recipe uses; the checkpoint's own deployment guide gives
-  `minimax_m2_append_think`. If the `reasoning` field comes back empty or `content` carries `<think>`
-  markers, set `REASONING_PARSER=minimax_m2_append_think` and compare.
+- **Older vLLM releases produce corrupted output for this model**, per upstream, fixed in nightlies
+  after a specific commit. At 0.32.0 the output is clean: a long code generation returned a correct
+  iterative Fibonacci function with a real docstring, and `The capital of France is` continued with
+  ` Paris.` So the warning does not apply at this version. It would still apply on an older pin, and
+  the symptom is garbled text rather than a failure to start, so read a long generation after any
+  version change.
+- **The reasoning parser disagreement resolves in favor of `minimax_m2`.** The vLLM recipe page gives
+  `minimax_m2` and the checkpoint's own deployment guide gives `minimax_m2_append_think`. Measured
+  here, `minimax_m2` populates `reasoning` and leaves `content` free of `<think>` markers, so it is
+  correct and the alternative is unnecessary.
+- **The model emits U+2011 non-breaking hyphens inside code.** Generated text contains `F(n‑1)`,
+  `non‑negative` and `n‑th` with a non-ASCII hyphen. Harmless in prose, but an identifier or a shell
+  command copied straight out of a response can carry an invisible character that fails to parse.
+- The server logged `No available shared memory broadcast block found in 60 seconds` twice while
+  idle between benchmark levels. It served every request correctly before, during and after, and all
+  nine measurement runs completed, so it is noise here rather than a fault, but it is unexplained.
 - Eager is the default, as everywhere else in this repo, because CUDA graphs have changed output
   correctness on some recipes here. `PERF=1` opts in and is unmeasured.
 - No speculative draft is used. vLLM registers `Eagle3MiniMaxM2ForCausalLM`, so a draft is possible,

@@ -26,6 +26,18 @@ fi
 
 # --block-size 128 is mandatory on every platform for this model. The default 16 misaligns the
 # sparse attention, and upstream reports it failing outright on some backends. Do not drop it.
+# Two optional all-reduce accelerators must be off for this two-node shape. Both default to on and
+# both hang in CudaCommunicator.__init__ before any weight is read, so the server sits silent after
+# NCCL init with zero bytes read rather than failing:
+#   - FlashInfer: automatic backend selection calls _node_count(), a broadcast_object_list collective
+#     that deadlocks across the TP8 group. It has no usable backend here regardless, since multi-node
+#     FlashInfer all-reduce needs MNNVL on compute capability 100 and H200 is 90.
+#   - Torch symmetric memory: an intra-node NVLink/IPC mechanism whose rendezvous() deadlocks across
+#     nodes. Its own try/except catches a RuntimeError but cannot catch a hang.
+# --disable-custom-all-reduce does NOT cover either: that flag gates a separate code path.
+export VLLM_ALLREDUCE_USE_FLASHINFER="${VLLM_ALLREDUCE_USE_FLASHINFER:-0}"
+export VLLM_ALLREDUCE_USE_SYMM_MEM="${VLLM_ALLREDUCE_USE_SYMM_MEM:-0}"
+
 exec vllm serve "$MODEL" \
   --block-size "${BLOCK_SIZE:-128}" \
   --served-model-name minimax-m3 \

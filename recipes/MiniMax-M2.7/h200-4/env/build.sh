@@ -27,6 +27,11 @@ uv venv --python 3.12 "$VENV"
 uv pip install --python "$VENV/bin/python" --torch-backend=cu129 "$WHEEL" "ray[default]" \
   "transformers==${TRANSFORMERS_VERSION}"
 
+# torchcodec arrives as a vllm dependency and fails at import here: it needs FFmpeg 4 to 7 shared
+# libraries this cluster does not provide, and vllm serve dies on libtorchcodec_image.so. Nothing in
+# this recipe decodes video, so remove it.
+uv pip uninstall --python "$VENV/bin/python" torchcodec 2>/dev/null || true
+
 "$VENV/bin/python" -c "import importlib.metadata as m; print('vllm', m.version('vllm'), '| torch', m.version('torch'), '| ray', m.version('ray'))"
 echo "built: $VENV"
 echo "record the exact resolution with:  uv pip freeze --python $VENV/bin/python > $S/requirements.lock"
