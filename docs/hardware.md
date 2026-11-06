@@ -46,10 +46,16 @@ four GPUs are fully NVLink-connected, so tensor parallelism inside a node is che
 
 ## Topology rules that are not obvious
 
-In vLLM, keep tensor parallelism inside a node and use pipeline parallelism across nodes: pure tensor
-parallelism spanning two nodes hangs at NCCL initialization rather than failing with an error. SGLang
-brings up its own process group and is not subject to this, and the recipe here runs TP16 across four
-nodes.
+In vLLM, prefer tensor parallelism inside a node and pipeline parallelism across nodes: pure tensor
+parallelism spanning two nodes hangs rather than failing with an error. SGLang brings up its own
+process group and is not subject to this, and the recipe here runs TP16 across four nodes.
+
+That vLLM hang is avoidable, and the MiniMax-M3 recipe runs pure TP8 across two nodes to show it. The
+hang is not in NCCL, which initializes and reports the correct world size, but in the two optional
+all-reduce accelerators that follow it, both of which default to on and deadlock in
+`CudaCommunicator.__init__` before any weight is read. Setting `VLLM_ALLREDUCE_USE_FLASHINFER=0` and
+`VLLM_ALLREDUCE_USE_SYMM_MEM=0` clears it. `--disable-custom-all-reduce` does not: it gates a separate
+path. Pipeline parallelism remains the simpler default, but cross-node TP is a working option.
 
 Older vLLM releases disabled speculative decoding under pipeline parallelism, so multi-node recipes gave
 up MTP even when the checkpoint shipped an MTP head. That is no longer true from 0.32.0, where GLM-5.3

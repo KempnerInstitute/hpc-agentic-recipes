@@ -32,6 +32,14 @@ to read it and what the published quality scores are worth.
 - **Full context on one GPU for a 65B:** Ripple-65B-Preview in NVFP4, 36.2 tok/s, serving the whole
   262144 window on a single H200 where its BF16 build needs two GPUs for the same window and caps near
   33,000 tokens on one. It leads nothing on rate; it is the cheap way to a long context for this model.
+- **Fastest two-node decode:** MiniMax-M3, 111.5 tok/s on two H200 nodes at pure TP8. GLM-5.3 is still
+  faster on the same hardware at 142.3, but M3 is the only recipe here that runs cross-node tensor
+  parallelism in vLLM, which needs two optional all-reduce accelerators switched off. Its KV pool is
+  the catch: 482,176 tokens, so only 3.68 callers fit at its 131072 context.
+- **Agentic coding on one node:** MiniMax-M2.7, 214.3 GiB in FP8 on a single H200 node at TP4, the
+  cheapest recipe here to reach a published SWE-Pro score near a frontier model. It is slow per stream
+  at 20.8 tok/s, but scales almost linearly to 642 tok/s at concurrency 32, so it suits many parallel
+  agents rather than one interactive session.
 
 No published source ranks all of these against each other, so pick on the scores below and on your own task
 rather than on this ordering.
@@ -158,6 +166,33 @@ From the [Ripple-65B-Preview card](https://huggingface.co/ricursiveAI/Ripple-65B
 GPQA Diamond 89.0 and AIME 2024 97.1, against a column of comparison models on the card itself. It is
 the only model here small enough to serve on one GPU in NVFP4 at the full context, and its scores are
 reported against reasoning benchmarks rather than the agentic coding sets the larger cards use.
+
+From the [MiniMax-M3 card](https://huggingface.co/MiniMaxAI/MiniMax-M3), which scores both MiniMax
+models against the same comparison set:
+
+| Benchmark | MiniMax M3 | MiniMax M2.7 | Claude Opus 4.7 | GPT 5.5 | Kimi K2.6 Thinking |
+| --- | --- | --- | --- | --- | --- |
+| SWE-Bench Verified | 80.5 | 79.9 | 87.6 | 82.9 | 80.2 |
+| SWE-Bench Pro | 59.0 | 56.2 | 64.3 | 58.6 | 58.6 |
+| Terminal Bench 2.1 | 66.0 | 51.1 | 66.1 | 78.2 | 53.9 |
+| NL2Repo | 42.1 | 35.0 | 56.3 | 52.9 | 42.8 |
+| SWE-fficiency | 34.8 | 14.0 | 42.2 | 46.6 | - |
+| VIBE-V2 | 50.1 | 37.9 | 55.9 | 50.5 | 46.0 |
+| KernelBench Hard | 28.8 | 10.5 | 30.7 | 20.9 | - |
+| PaperBench | 52.6 | 30.6 | 58.5 | 57.5 | - |
+| BrowseComp | 83.5 | 76.3 | 79.3 | 84.4 | 83.2 |
+| MCP Atlas | 74.2 | 49.4 | 77.0 | 75.3 | 66.6 |
+
+M3 leads M2.7 on every row, by a wide margin on several: Terminal Bench 2.1 66.0 against 51.1,
+SWE-fficiency 34.8 against 14.0, KernelBench Hard 28.8 against 10.5. On Terminal Bench 2.1 the card
+puts M3 level with Claude Opus 4.7 at 66.1, though GPT 5.5 leads at 78.2.
+
+Two caveats on this table. The card states these were run on MiniMax's own infrastructure using Claude
+Code as the scaffolding with the default system prompt overridden, and that some comparison columns
+are taken from other leaderboards rather than rerun, so it is not a like-for-like harness across
+columns. And this is a different Terminal-Bench version from the Kimi K3 and Hy4 tables above only in
+part: those report 2.1 as well, so **those rows are comparable**, unlike the Kimi K3.1 Pro figure,
+which uses Terminal-Bench 4.0.
 
 ### No published scores
 
