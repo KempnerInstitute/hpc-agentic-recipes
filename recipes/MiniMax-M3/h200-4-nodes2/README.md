@@ -138,8 +138,8 @@ is confusing if the node set changed.
 | `SPEC_MODEL` | unset | EAGLE3 draft checkpoint. Required when `SPEC_TOKENS` is non-zero |
 | `MTP_TOKENS` | 0 | Deprecated alias for `SPEC_TOKENS`, kept so older invocations still work |
 | `CUDAGRAPH_MODE` | `FULL_AND_PIECEWISE` | Graph mode when `ENFORCE_EAGER` is unset |
-| `VLLM_ALLREDUCE_USE_FLASHINFER` | 0 | **Leave at 0**, see Known limits |
-| `VLLM_ALLREDUCE_USE_SYMM_MEM` | 0 | **Leave at 0**, see Known limits |
+| `VLLM_ALLREDUCE_USE_FLASHINFER` | 0 | **Leave at 0** or the server deadlocks, see Known limits |
+| `VLLM_ALLREDUCE_USE_SYMM_MEM` | 0 | **Leave at 0** or the server deadlocks, see Known limits |
 | `SPEC_METHOD` | `eagle3` | Speculative method if a draft is supplied |
 | `ENFORCE_EAGER` | unset | Set to any value to skip CUDA graphs |
 | `TOOL_PARSER` | `minimax_m3` | Tool-call parser. **Not** `minimax_m2` |
@@ -157,6 +157,7 @@ Conditions:
 | Input length | ISL 182 tokens. Rates at a long input are not measured; use `--prompt-tokens` |
 | Output length | OSL 1152 tokens, output only, `ignore_eos` |
 | Context | `MAX_MODEL_LEN=131072`, `GPU_UTIL=0.94`, `KV_DTYPE=fp8_e4m3`, `BLOCK_SIZE=128`, no speculation |
+| Graphs | CUDA graphs enabled, not eager. The engine auto-enabled breakable CUDA graphs; most recipes in this repo serve eager instead |
 | Allocation for the measurement | 2 nodes, 4 GPUs each, 64 cores and 1440 GB per node, `kempner_h200` |
 | Endpoint | idle, and the benchmark client ran on the head node |
 
@@ -173,8 +174,10 @@ Results:
 | Engine facts | 99.94 GiB of weights per GPU; KV cache 13.49 GiB per GPU, a 482,176 token pool, 3.68 full-length requests at 131072 context; model load 362 s on the slowest rank; engine init 203.69 s |
 | Label | rising. Aggregate throughput was still climbing at 32, so the ceiling is unmeasured |
 
-111.5 tok/s on a single stream is the fastest figure in this repo for a checkpoint of this size, and it
-is 5.4 times what the smaller MiniMax-M2.7 manages at 20.8 on one node. Per-stream decode does fall
+111.5 tok/s on a single stream is 5.4 times what the smaller MiniMax-M2.7 manages at 20.8 on one node,
+which is the useful comparison here since both run the same engine on the same hardware. It is not the
+fastest single-stream figure in this repo: GLM-5.3 reaches 142.3 on two nodes from a comparable
+checkpoint, and three smaller models are faster still. Per-stream decode does fall
 sharply under load, from 111.5 to 49.4 between one caller and thirty-two, so the aggregate gain comes
 partly from giving up single-stream latency. One of the three runs at concurrency 32 came in at 1499.1
 against two near 1582, which is why the median rather than the mean is reported.
@@ -189,16 +192,26 @@ against two near 1582, which is why the median rather than the mean is reported.
   reasoning. Passing `minimax_m2`, which the M2.7 recipe in this repo correctly uses, is a plausible
   copy-paste error and upstream flags the change explicitly.
 - **Upstream says M3 support had not shipped in a stable vLLM release** and recommends a dedicated
-  Docker image. The venv built here is 0.32.0 and its registry does list
-  `MiniMaxM3SparseForConditionalGeneration`, `MiniMaxM3SparseForCausalLM` and `MiniMaxM3MTP`, so the
-  code is present, but whether it is complete and correct at this version is untested. If load or
-  generation fails, the image is the documented fallback.
-- **Context is capped at 131072, not the declared 1048576, and the KV pool is the reason.** The engine
-  reports 13.49 GiB of KV per GPU, a 482,176 token pool, which is **3.68 full-length requests** at
-  131072. Eight concurrent callers at full context will not fit, and the declared 1048576 is far out of
-  reach on this hardware: a single 1M-token request needs roughly twice the whole pool. The benchmark
-  above used 182-token inputs, so its concurrency 32 result says nothing about long-context capacity.
-  Raising `MAX_MODEL_LEN` lowers the concurrency figure proportionally.
+  Docker image. That is not needed here: 0.32.0 loads the checkpoint and serves it. A long code
+  generation returned a correct iterative Fibonacci with type and range guards, and an unauthenticated
+  request returned HTTP 401. Those are spot checks rather than a systematic correctness evaluation, so
+  the image remains the fallback if a later version regresses.
+- **131072 is this recipe's configured context, and the KV pool is small relative to it.** The engine
+  reports 13.49 GiB of KV per GPU, a 482,176 token pool, which is **3.68 requests** at 131072. So eight
+  concurrent callers at full context do not fit in the measured configuration, and a single 1M-token
+  request would need roughly twice the whole pool. The largest workable context was not measured;
+  131072 is the setting used, not an established ceiling. For an unchanged KV pool, raising
+  `MAX_MODEL_LEN` lowers that concurrency figure proportionally. The benchmark above used 182-token
+  inputs, so its concurrency 32 result says nothing about long-context capacity.
+- **Two all-reduce accelerators must stay disabled**, which is why `VLLM_ALLREDUCE_USE_FLASHINFER` and
+  `VLLM_ALLREDUCE_USE_SYMM_MEM` default to 0. Both default to on upstream and both deadlock in
+  `CudaCommunicator.__init__` on this two-node group, before any weight is read: the server stays
+  alive, NCCL reports the right world size, and nothing is logged. FlashInfer's automatic backend
+  selection calls `_node_count()`, a `broadcast_object_list` collective that never returns, and it has
+  no usable backend here anyway since multi-node FlashInfer all-reduce wants MNNVL on compute
+  capability 100 while H200 is 90. Torch symmetric memory is an intra-node NVLink mechanism whose
+  `rendezvous()` deadlocks across nodes; its `try/except RuntimeError` catches a failure but not a
+  hang. `--disable-custom-all-reduce` gates a separate path and does not cover either.
 - No speculative draft is used. Upstream uses EAGLE3 with 3 tokens and published third-party drafts,
   none of which is downloaded here, so `SPEC_TOKENS` defaults to 0. This architecture also has an
   `MiniMaxM3MTP` entry in vLLM, unexercised.

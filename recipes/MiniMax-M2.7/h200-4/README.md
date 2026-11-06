@@ -184,8 +184,9 @@ this recipe earns its place on aggregate throughput rather than on latency.
 - The server logged `No available shared memory broadcast block found in 60 seconds` twice while
   idle between benchmark levels. It served every request correctly before, during and after, and all
   nine measurement runs completed, so it is noise here rather than a fault, but it is unexplained.
-- Eager is the default, as everywhere else in this repo, because CUDA graphs have changed output
-  correctness on some recipes here. `PERF=1` opts in and is unmeasured.
+- Eager is the default here because CUDA graphs have changed output correctness on some recipes in
+  this repo. `PERF=1` opts in and is unmeasured. Note that the MiniMax-M3 recipe does serve with
+  graphs, so this is not a repo-wide rule.
 - No speculative draft is used. vLLM registers `Eagle3MiniMaxM2ForCausalLM`, so a draft is possible,
   but none is downloaded and none is measured.
 - A third-party guide claims this model serves on 2 H200 GPUs. That contradicts upstream's TP4
