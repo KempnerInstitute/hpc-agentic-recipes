@@ -167,31 +167,32 @@ GPQA Diamond 89.0 and AIME 2024 97.1, against a column of comparison models on t
 the only model here small enough to serve on one GPU in NVFP4 at the full context, and its scores are
 reported against reasoning benchmarks rather than the agentic coding sets the larger cards use.
 
-From the [MiniMax-M2.7 card](https://huggingface.co/MiniMaxAI/MiniMax-M2.7), which publishes its
-numbers in prose rather than a table:
+From the [MiniMax-M3 card](https://huggingface.co/MiniMaxAI/MiniMax-M3), which scores both MiniMax
+models against the same comparison set:
 
-| Benchmark | MiniMax M2.7 |
-| --- | --- |
-| SWE-Pro | 56.22% |
-| SWE Multilingual | 76.5 |
-| Multi SWE Bench | 52.7 |
-| VIBE-Pro | 55.6% |
-| Terminal Bench 2 | 57.0% |
-| NL2Repo | 39.8% |
-| Toolathon | 46.3% |
-| MM Claw, end to end | 62.7% |
+| Benchmark | MiniMax M3 | MiniMax M2.7 | Claude Opus 4.7 | GPT 5.5 | Kimi K2.6 Thinking |
+| --- | --- | --- | --- | --- | --- |
+| SWE-Bench Verified | 80.5 | 79.9 | 87.6 | 82.9 | 80.2 |
+| SWE-Bench Pro | 59.0 | 56.2 | 64.3 | 58.6 | 58.6 |
+| Terminal Bench 2.1 | 66.0 | 51.1 | 66.1 | 78.2 | 53.9 |
+| NL2Repo | 42.1 | 35.0 | 56.3 | 52.9 | 42.8 |
+| SWE-fficiency | 34.8 | 14.0 | 42.2 | 46.6 | - |
+| VIBE-V2 | 50.1 | 37.9 | 55.9 | 50.5 | 46.0 |
+| KernelBench Hard | 28.8 | 10.5 | 30.7 | 20.9 | - |
+| PaperBench | 52.6 | 30.6 | 58.5 | 57.5 | - |
+| BrowseComp | 83.5 | 76.3 | 79.3 | 84.4 | 83.2 |
+| MCP Atlas | 74.2 | 49.4 | 77.0 | 75.3 | 66.6 |
 
-The card says SWE-Pro 56.22 matches GPT-5.3-Codex and VIBE-Pro 55.6 is near Opus 4.6, and separately
-claims an ELO of 1495 on GDPval-AA, the highest among open-weight models. **Terminal Bench 2 at 57.0 is
-not comparable with the Terminal-Bench 2.1 rows above**, which is the version Kimi K3 and Hy4 report.
-Third-party leaderboards circulate a much higher SWE-bench Verified figure for this model; that is a
-different benchmark from the SWE-Pro number the card publishes, and this repo cites the card.
+M3 leads M2.7 on every row, by a wide margin on several: Terminal Bench 2.1 66.0 against 51.1,
+SWE-fficiency 34.8 against 14.0, KernelBench Hard 28.8 against 10.5. On Terminal Bench 2.1 the card
+puts M3 level with Claude Opus 4.7 at 66.1, though GPT 5.5 leads at 78.2.
 
-The [MiniMax-M3 card](https://huggingface.co/MiniMaxAI/MiniMax-M3) publishes **no scores in text at
-all**: its benchmark figures are an image, so nothing is quoted here. It claims frontier-level
-long-horizon agentic coding without numbers that can be read from the card, and it is the newer and
-much larger of the two at 795.5 GiB in BF16 against 214.3 GiB in FP8. Choose between them on your own
-task, not on these cards: M2.7 is the one with published, quotable numbers.
+Two caveats on this table. The card states these were run on MiniMax's own infrastructure using Claude
+Code as the scaffolding with the default system prompt overridden, and that some comparison columns
+are taken from other leaderboards rather than rerun, so it is not a like-for-like harness across
+columns. And this is a different Terminal-Bench version from the Kimi K3 and Hy4 tables above only in
+part: those report 2.1 as well, so **those rows are comparable**, unlike the Kimi K3.1 Pro figure,
+which uses Terminal-Bench 4.0.
 
 ### No published scores
 
