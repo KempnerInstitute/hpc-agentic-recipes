@@ -15,12 +15,16 @@ scientific work.
 | --- | --- | --- | --- | --- | --- |
 | [`h200-4-nodes4`](h200-4-nodes4/README.md) | SGLang | 4 nodes, 16 H200 GPUs, TP16 | 48.8 tok/s | 836.3 at c=32, rising | Validated |
 
-836.3 tok/s at concurrency 32 is the highest aggregate of any four-node recipe here, and 48.8 tok/s on
-a single stream beats both Kimi recipes on the same hardware.
+48.8 tok/s on a single stream beats both Kimi recipes on the same four nodes, 40.4 and 40.3, which is
+what 49B active out of 770B buys. Its 836.3 tok/s aggregate is **not** comparable with the other
+four-node recipes: this sweep stopped at concurrency 32 and was still climbing, while Muse-Spark swept
+to 1024 for 9459, Mistral to 48 for 1518 and Kimi-K3 to 64 for 1067. Read the aggregate with its
+concurrency, never alone.
 
-Four nodes is the only workable shape. The model rejects pipeline parallelism, so parallelism is pure
-tensor parallel, and TP must be a power of two dividing the 64 attention heads. Eight GPUs cannot hold
-1452.8 GiB; twelve would need TP12 and twenty TP20, neither legal. So it is 16 GPUs or nothing.
+Four nodes is the smallest workable shape. The model rejects pipeline parallelism, so parallelism is
+pure tensor parallel, and TP must be a power of two dividing the 64 attention heads. Eight GPUs cannot
+hold 1452.8 GiB; twelve would need TP12 and twenty TP20, neither legal. TP32 would also be legal on
+eight nodes, which this cluster cannot spare.
 
 **This recipe bind-mounts a patched file into the container.** SGLang's post-load barrier is hardcoded
 at 480 s and sixteen ranks loading this checkpoint finish 600 to 700 s apart, which kills ranks that

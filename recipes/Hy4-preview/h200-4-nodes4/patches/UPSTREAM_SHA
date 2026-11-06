@@ -1,1 +1,3 @@
 sglang 0.5.18, from the image lmsysorg/sglang:hy4-preview
+The image publishes no commit hash: sglang/version.py reads from _version.py, and the tag is not a
+release. Compare by version string and by the file's own contents when the image is rebuilt.

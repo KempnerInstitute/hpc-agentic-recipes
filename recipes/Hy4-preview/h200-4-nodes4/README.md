@@ -27,6 +27,7 @@ Known limits and [patches/README.md](patches/README.md) before changing anything
 ```
 mkdir -p secrets
 ( umask 077; printf '%s' "sk-local-$(openssl rand -hex 24)" > secrets/Hy4-preview-h200-4-nodes4.key )
+chmod 600 secrets/Hy4-preview-h200-4-nodes4.key
 ```
 
 - `secrets/vllm_api_key` is read when this file is absent.
@@ -44,7 +45,8 @@ bash recipes/Hy4-preview/h200-4-nodes4/env/build.sh
 ```
 
 That verifies a staged image and reports its SGLang version, failing if `sglang` does not import
-inside it. `env/env.sh` resolves it in order: an exported `SIF`, then
+inside it. It cannot verify anything on a host without `singularity`, and says so rather than
+reporting success. `env/env.sh` resolves it in order: an exported `SIF`, then
 `$MODELS_DIR/Hy4-preview/container/sglang-hy4-preview.sif`, then the shared testbed copy.
 
 **The layers must be unpacked on node-local disk**, not on shared storage, for the same reason as the
@@ -73,7 +75,7 @@ serves the endpoint. `serve_ssh.sh` refuses a node whose GPUs are busy, launches
 confirms all four are alive by the pid each one records.
 
 **Startup is about an hour**, most of it weight loading. Measured per rank: 2459, 2497, 2959 and
-3151 s, then graph capture. The log is `$HY4_LOG_DIR/hy4-rank<N>.log` on each node, default under
+3151 s, which is 41 to 53 minutes, then graph capture. The log is `$HY4_LOG_DIR/hy4-rank<N>.log` on each node, default under
 `/tmp/$USER/hy4`.
 
 ## 4. Verify
@@ -93,7 +95,9 @@ curl -s -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
 
 Those `curl -H` lines put the key in curl's own argv, which other users on the node can see in `ps`.
 That is acceptable for a one-off check on nodes you hold alone; use `curl -K <file>` with a mode 600
-file otherwise.
+file otherwise. For the same reason, do not pass a key through `EXTRA_ARGS`: it would land in the
+server's own argv. Passing `EXTRA_ARGS='--api-key='` disables authentication outright, because the
+launcher only appends the key when no `--api-key` is already present.
 
 | Command | Expected |
 | --- | --- |
@@ -132,7 +136,9 @@ scancel <job id>
 ```
 
 For an ssh launch, kill `sglang_launch.py` on each of the four nodes. Kill by that name rather than by
-GPU, in case anything else on the node is not yours.
+GPU, in case anything else on the node is not yours. That name is shared with the other SGLang recipes
+here, so if more than one is running under your account, tell them apart by `$HY4_LOG_DIR` or the port
+before killing.
 
 ## Tunable inputs
 
@@ -146,7 +152,7 @@ GPU, in case anything else on the node is not yours.
 | `MEM_FRACTION` | 0.85 | Static VRAM fraction for weights plus KV |
 | `TP` | 16 | Tensor parallel size. Must be a power of two dividing the 64 heads |
 | `NNODES` | 4 | Node count |
-| `HY4_LOAD_BARRIER_PATCH` | 1 | Bind the patched load barrier. Setting 0 restores the 480 s upstream value and the launch will fail |
+| `HY4_LOAD_BARRIER_PATCH` | 1 | Bind the patched load barrier. Only the exact value `0` skips it, which restores the 480 s upstream value and the launch is expected to fail on this checkpoint |
 | `SPEC_MODE` | `none` | Set to `nextn` for the native MTP layer, see Known limits |
 | `SPEC_STEPS`, `SPEC_TOPK`, `SPEC_DRAFT` | 3, 1, 4 | NEXTN settings, only with `SPEC_MODE=nextn` |
 | `MOE_RUNNER` | `auto` | MoE runner backend. Unset passes no flag, so the engine chooses; the cookbook pins none for this model |
@@ -181,9 +187,11 @@ Results:
 | Engine facts | KV cache 278,400 tokens, 2.12 full-length requests at once; `max_running_requests` 2048 and 15.48 GB free after sizing |
 | Label | rising. Aggregate throughput was still climbing at 32 and the request cap is 2048, so the ceiling is unmeasured |
 
-836.3 tok/s at concurrency 32 is the highest aggregate of any four-node recipe here, and 48.8 tok/s on
-a single stream beats both Kimi recipes on the same hardware, which is what 49B active out of 770B
-buys. Speculative decoding is off, so the card's own latency figures are not reproduced here.
+48.8 tok/s on a single stream beats both Kimi recipes on these same four nodes, 40.4 and 40.3, which
+is what 49B active out of 770B buys. The 836.3 aggregate is not comparable with the other four-node
+recipes, because this sweep stopped at concurrency 32 while they ran to 48, 64 and 1024; a figure that
+is still climbing is a floor, not a ceiling. Speculative decoding is off, so the card's own latency
+figures are not reproduced here.
 
 ## Known limits
 

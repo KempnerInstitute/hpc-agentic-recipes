@@ -30,6 +30,7 @@ umask 077
 : > "$LOG" || { echo "cannot create $LOG" >&2; exit 1; }
 chmod 600 "$LOG" || { echo "cannot restrict $LOG; refusing to log the API key into a readable file" >&2; exit 1; }
 # This rank's own pid, so serve_ssh.sh checks this process rather than any same-user launcher.
+rm -f "$HY4_LOG_DIR/hy4-rank$RANK.pid"
 echo $$ > "$HY4_LOG_DIR/hy4-rank$RANK.pid"
 
 _hca=""
@@ -51,6 +52,10 @@ MOE=()
 # The native MTP layer is driven by NEXTN here, not by the mtp flags other recipes use. Off by default
 # for a first bring-up; the cookbook's low-latency preset turns it on.
 SPEC=()
+case "${SPEC_MODE:-none}" in
+  none|nextn) : ;;
+  *) echo "SPEC_MODE='${SPEC_MODE}' is not none or nextn" >&2; exit 2 ;;
+esac
 if [ "${SPEC_MODE:-none}" = nextn ]; then
   SPEC=(--speculative-algorithm NEXTN
         --speculative-num-steps "${SPEC_STEPS:-3}"
@@ -75,7 +80,13 @@ exec >> "$LOG" 2>&1
 # attempts, so correctly loading ranks were killed. There is no environment variable for it, so the
 # file is bind-mounted with a larger value. See patches/README.md.
 BINDS=(-B "$MODEL:$MODEL:ro" -B "$HY4_LOG_DIR:$HY4_LOG_DIR" -B "$LAUNCHER:$LAUNCHER:ro")
-if [ "${HY4_LOAD_BARRIER_PATCH:-1}" = 1 ]; then
+case "${HY4_LOAD_BARRIER_PATCH:-1}" in
+  0) echo "HY4_LOAD_BARRIER_PATCH=0: serving with the image's 480 s load barrier, which this" >&2
+     echo "checkpoint has not met in testing; expect the launch to fail. See patches/README.md." >&2 ;;
+  1) _apply_patch=1 ;;
+  *) echo "HY4_LOAD_BARRIER_PATCH='${HY4_LOAD_BARRIER_PATCH}' is not 0 or 1" >&2; exit 2 ;;
+esac
+if [ "${_apply_patch:-0}" = 1 ]; then
   _pp="$S/patches/load_model_utils.py"
   _pp_dst=/sgl-workspace/sglang/python/sglang/srt/model_executor/model_runner_components/load_model_utils.py
   [ -f "$_pp" ] || { echo "HY4_LOAD_BARRIER_PATCH=1 but $_pp is missing" >&2; exit 1; }

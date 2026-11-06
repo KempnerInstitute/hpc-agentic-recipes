@@ -8,7 +8,7 @@ source "$S/env.sh"
 
 IMAGE="${IMAGE:-docker://lmsysorg/sglang:hy4-preview}"
 # The tag moves, so record what the recipe's numbers were measured against and warn on a mismatch.
-MEASURED_SGLANG="unmeasured"
+MEASURED_SGLANG="0.5.18"
 FORCE=0
 [ "${1:-}" = "--force" ] && FORCE=1
 
@@ -26,7 +26,9 @@ if [ -f "$SIF" ] && [ "$FORCE" = 0 ]; then
       *) echo "  note: measured against sglang $MEASURED_SGLANG; this image reports ${_v% *}" ;;
     esac
   else
-    echo "  singularity not on PATH here, so the version was not read"
+    echo "  singularity is not on PATH here, so the image could not be verified" >&2
+    echo "  run this on a node that has it, or set SIF and verify by hand" >&2
+    exit 1
   fi
   exit 0
 fi

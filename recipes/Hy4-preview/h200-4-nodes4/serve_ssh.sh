@@ -17,8 +17,14 @@ MODEL="${MODEL:-$MODELS_DIR/Hy4-preview}"
 # contending with another user's work.
 for n in "${NODES[@]}"; do
   BUSY="$(timeout 30 ssh -n -o BatchMode=yes -o ConnectTimeout=10 "$n" \
-    "nvidia-smi --query-compute-apps=pid --format=csv,noheader | wc -l" 2>/dev/null)"
-  if [ "${BUSY:-0}" != 0 ]; then
+    "set -o pipefail; nvidia-smi --query-compute-apps=pid --format=csv,noheader | wc -l")" || {
+    echo "could not read GPU state on $n; refusing to launch blind" >&2
+    exit 1
+  }
+  case "$BUSY" in
+    ''|*[!0-9]*) echo "unreadable GPU count from $n: '$BUSY'" >&2; exit 1 ;;
+  esac
+  if [ "$BUSY" != 0 ]; then
     echo "$n already has ${BUSY} GPU compute process(es); refusing to launch" >&2
     exit 1
   fi
@@ -63,7 +69,7 @@ sleep 20
 for i in 0 1 2 3; do
   n="${NODES[$i]}"
   if timeout 45 ssh -n -o BatchMode=yes -o ConnectTimeout=10 "$n" \
-       "p=\$(cat '$(q "$HY4_LOG_DIR")/hy4-rank$i.pid' 2>/dev/null); [ -n \"\$p\" ] && kill -0 \"\$p\" 2>/dev/null" 2>/dev/null; then
+       "p=\$(cat '$(q "$HY4_LOG_DIR")/hy4-rank$i.pid' 2>/dev/null); [ -n \"\$p\" ] && kill -0 \"\$p\" 2>/dev/null && tr '\\0' ' ' < /proc/\$p/cmdline 2>/dev/null | grep -qE 'sglang_launch.py|Singularity runtime parent'" 2>/dev/null; then
     echo "  rank $i alive on $n"
   else
     echo "  rank $i is NOT running on $n, see $HY4_LOG_DIR/hy4-rank$i.log" >&2; FAILED=1
