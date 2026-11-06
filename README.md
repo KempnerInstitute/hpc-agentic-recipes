@@ -116,6 +116,7 @@ has, the engine refuses to start. Each recipe states its own ceiling in Known li
 | **Kimi-K3.1-Pro** | MXFP4 | [4 H200 nodes](recipes/Kimi-K3.1-Pro/h200-4-nodes4-sglang) | 40.4 | 708/32 📈 | 256K |
 | **Kimi-K3** | MXFP4 QAT | [4 H200 nodes](recipes/Kimi-K3/h200-4-nodes4-sglang) | 40.3 | 1067/64 🚧 | 374K |
 | **Qwen3-235B-A22B** | BF16 | [1 RTX node](recipes/Qwen3-235B-A22B/rtx-8) | 62.7 | 3948/512 ⛰️ | 40K |
+| **Qwen3.8-2.4T-A95B** | FP8 | [6 H200 nodes](recipes/Qwen3.8-2.4T-A95B-FP8/h200-4-nodes6) | 52.6 | 535/32 📈 | 256K |
 | **Qwen3.8-27B** | BF16 | [1 H200 GPU](recipes/Qwen3.8-27B/h200-1) | 122.1 | 3957/1024 📈 | 256K |
 | | FP8 | [1 H200 GPU](recipes/Qwen3.8-27B-FP8/h200-1) | 170.6 | 4855/1024 ➖ | 256K |
 | **Qwen3-Coder-480B** | FP8 | [1 RTX node](recipes/Qwen3-Coder-480B-A35B-Instruct-FP8/rtx-8) | 68.0 | 3197/640 ⛰️ | 256K |
