@@ -21,6 +21,17 @@ to read it and what the published quality scores are worth.
   Kimi-K2.7-Code, 1T in INT4, is the largest coding-specialized checkpoint that fits one RTX node. Both cost
   latency for it: 40.3 and 20.6 tok/s.
 - **Longest context:** GLM-5.2-FP8 on two H200 nodes, serving 626K by default.
+- **Largest checkpoint:** Qwen3.8-2.4T-A95B-FP8, 2.4T parameters with 95B active, on six H200 nodes at
+  52.6 tok/s. Size buys quality, not speed: a dense 27B reaches 170.6 tok/s on a single GPU here.
+- **Most aggregate throughput on four nodes:** Hy4-preview, 836.3 tok/s at concurrency 32 and still
+  climbing, with 48.8 tok/s on a single stream, which beats both Kimi recipes on the same hardware.
+  A 770B MoE with only 49B active is what buys that. It serves 131072 rather than its declared 1M, and
+  its recipe bind-mounts a patched file because SGLang's load barrier is too short for the checkpoint.
+- **Newest frontier MoE on four nodes:** Kimi-K3.1-Pro, 40.4 tok/s, within a percent of Kimi-K3 on the
+  same four H200 nodes, so the two cost the same to serve and the choice is on published scores.
+- **Full context on one GPU for a 65B:** Ripple-65B-Preview in NVFP4, 36.2 tok/s, serving the whole
+  262144 window on a single H200 where its BF16 build needs two GPUs for the same window and caps near
+  33,000 tokens on one. It leads nothing on rate; it is the cheap way to a long context for this model.
 
 No published source ranks all of these against each other, so pick on the scores below and on your own task
 rather than on this ordering.
@@ -121,9 +132,38 @@ left out because this recipe is validated for text. The FP8 build reprints the s
 its metrics are nearly identical, without publishing a comparison, so read these as an upper bound for that
 recipe.
 
+From the [Hy4-preview card](https://huggingface.co/tencent/Hy4-preview), a 770B MoE with 49B active:
+
+| Benchmark | Hy4 preview |
+| --- | --- |
+| GPQA Diamond | 92.3 |
+| Terminal-Bench 2.1 | 85.4 |
+| SWE-bench Pro | 65.7 |
+| Deep SWE | 64.3 |
+| Toolathlon, verified | 74.1 |
+| Apex Agents | 37.1 |
+
+The card also reports an internal blind evaluation over 203 engineering tasks where Hy4 scores 2.99
+against GLM 5.3 at 2.92 and Kimi K3 at 2.94, which is the vendor's own harness and its own task set.
+Two rows look comparable with the Kimi K3 table above and are not safely so: K3 reports Terminal-Bench
+2.1 at 88.3 and GPQA Diamond at 93.5, both above Hy4, but each card runs its own harness. The card
+lists over-reasoning and over-verification as known limitations.
+
+From the [Kimi K3.1 Pro card](https://huggingface.co/moonshotai/Kimi-K3.1-Pro), a 2.8T MoE with 104B
+active, scored on **Terminal-Bench 4.0** rather than the 2.1 used above, so its 65.7 is not comparable
+with any number in the earlier tables. The card states it was evaluated with the Claude Code harness
+while most comparison scores are the best reported elsewhere, which favors it.
+
+From the [Ripple-65B-Preview card](https://huggingface.co/ricursiveAI/Ripple-65B-Preview), a dense 65B:
+GPQA Diamond 89.0 and AIME 2024 97.1, against a column of comparison models on the card itself. It is
+the only model here small enough to serve on one GPU in NVFP4 at the full context, and its scores are
+reported against reasoning benchmarks rather than the agentic coding sets the larger cards use.
+
 ### No published scores
 
-`GLM-4.6`, `Qwen3-235B-A22B` and `Qwen3-Coder-480B` ship no benchmark table. The Qwen3-Coder card points to
+`GLM-4.6`, `Qwen3-235B-A22B` and `Qwen3-Coder-480B` ship no benchmark table. `Qwen3.8-2.4T-A95B` names
+GPQA Diamond and SWE-bench Pro on its card but publishes no scores in text, so nothing is quoted for it
+here either. The Qwen3-Coder card points to
 [the Qwen blog](https://qwenlm.github.io/blog/qwen3-coder/), where the figures are images rather than text.
 Nothing is quoted for them here rather than sourcing a number to an aggregator.
 
