@@ -1,6 +1,6 @@
 # MiniMax-M3 on two H200 nodes
 
-Status: Untested - scripts written against upstream guidance, no bring-up has run on this cluster
+Status: Validated - vLLM 0.32.0+cu129, protocol: slope(128,1152) at concurrency 1, 8 and 32
 
 | | |
 | --- | --- |
@@ -11,19 +11,16 @@ Status: Untested - scripts written against upstream guidance, no bring-up has ru
 | Context | 131072 by default; the checkpoint declares 1048576 |
 | Hardware | 2 nodes, 4 H200 GPUs each, 8 GPUs total, pure TP8 over Ray |
 | Engine | vLLM 0.32.0, which registers this architecture |
-| Allocation for the measurement | Not yet allocated. The intended request is 2 nodes, 4 GPUs each, 64 cores and 1440 GB per node, `kempner_h200` |
+| Allocation for the measurement | 2 nodes, 4 GPUs each, 64 cores and 1440 GB per node, `kempner_h200` |
 
 A sparse-attention MoE, newer than the M2 line and a different architecture rather than a revision of
 it. Upstream's default is TP8 on an 8-GPU node; the nodes here hold four GPUs each, so TP8 spans
 two of them over Ray.
 
-**No rate has been measured.** Everything below the launch section is upstream guidance or arithmetic,
-not an observation from this cluster. The benchmarking section stays empty until the model has run
-here, and the top-level table lists this recipe with no rates for the same reason.
-
-Two nodes are genuinely required: 795.5 GiB of weights against 561.6 GiB on a single node. Eight GPUs
-give 1123.2 GiB, which leaves roughly 260 GiB once the weights are placed at `GPU_UTIL=0.94`. That is
-headroom before engine overhead, not a measured KV pool.
+Two nodes are genuinely required: 795.5 GiB of weights against 561.6 GiB on a single node. Measured,
+each GPU holds 99.94 GiB of weights and the engine reports only **13.49 GiB left for KV per GPU**, a
+482,176 token pool. Subtracting weights from VRAM badly overestimates KV room on this model, so see
+Known limits before planning for long contexts.
 
 ## 1. Create the API key
 
@@ -62,8 +59,8 @@ bash recipes/MiniMax-M3/h200-4-nodes2/serve_ssh.sh <head> <worker>
 
 That reads `ib0` on each node, starts a Ray head and one worker, prints the cluster GPU count, which
 must be 8, and then launches the server on the head. The head serves the endpoint. The log is
-`$LOG_DIR/vllm-minimax-m3.log` on the head, default under `/tmp/$USER/vllm`. Startup time on this
-cluster is unmeasured.
+`$LOG_DIR/vllm-minimax-m3.log` on the head, default under `/tmp/$USER/vllm`. Startup is slow: the slowest rank takes 362 s to load its 99.94 GiB, then
+`init engine (profile, create kv cache, warmup model)` adds 203.69 s, so allow about ten minutes.
 
 ## 4. Verify
 
@@ -152,13 +149,35 @@ is confusing if the node set changed.
 
 ## Benchmarking
 
-Not measured. No nodes have been assigned for this recipe, so there is no rate, no concurrency curve
-and no saturation label. Running the standard protocol here would mean slope(128,1152) with 3 repeats
-per level and the median reported, as every other recipe in this repo does.
+Conditions:
 
 | | |
 | --- | --- |
-| Label | none. No rate is measured, so this recipe contributes no label and is absent from the counts in [docs/benchmarking.md](../../../docs/benchmarking.md) |
+| Protocol | slope(128,1152), 3 repeats per level, median reported |
+| Input length | ISL 182 tokens. Rates at a long input are not measured; use `--prompt-tokens` |
+| Output length | OSL 1152 tokens, output only, `ignore_eos` |
+| Context | `MAX_MODEL_LEN=131072`, `GPU_UTIL=0.94`, `KV_DTYPE=fp8_e4m3`, `BLOCK_SIZE=128`, no speculation |
+| Allocation for the measurement | 2 nodes, 4 GPUs each, 64 cores and 1440 GB per node, `kempner_h200` |
+| Endpoint | idle, and the benchmark client ran on the head node |
+
+Results:
+
+| Concurrency | Aggregate | Per stream | Spread over 3 runs |
+| --- | --- | --- | --- |
+| 1 | 111.5 tok/s | 111.5 tok/s | 111.4 to 111.6 |
+| 8 | 583.3 tok/s | 72.9 tok/s | 582.9 to 583.4 |
+| 32 | 1582.2 tok/s | 49.4 tok/s | 1499.1 to 1583.2 |
+
+| | |
+| --- | --- |
+| Engine facts | 99.94 GiB of weights per GPU; KV cache 13.49 GiB per GPU, a 482,176 token pool, 3.68 full-length requests at 131072 context; model load 362 s on the slowest rank; engine init 203.69 s |
+| Label | rising. Aggregate throughput was still climbing at 32, so the ceiling is unmeasured |
+
+111.5 tok/s on a single stream is the fastest figure in this repo for a checkpoint of this size, and it
+is 5.4 times what the smaller MiniMax-M2.7 manages at 20.8 on one node. Per-stream decode does fall
+sharply under load, from 111.5 to 49.4 between one caller and thirty-two, so the aggregate gain comes
+partly from giving up single-stream latency. One of the three runs at concurrency 32 came in at 1499.1
+against two near 1582, which is why the median rather than the mean is reported.
 
 ## Known limits
 
@@ -174,10 +193,12 @@ per level and the median reported, as every other recipe in this repo does.
   `MiniMaxM3SparseForConditionalGeneration`, `MiniMaxM3SparseForCausalLM` and `MiniMaxM3MTP`, so the
   code is present, but whether it is complete and correct at this version is untested. If load or
   generation fails, the image is the documented fallback.
-- **Context is capped at 131072, not the declared 1048576.** Upstream's own default is 65536 and it
-  suggests 131072 as a middle setting. No KV pool has been measured here, so the largest context this
-  shape can actually hold is unknown; 131072 is upstream's suggestion rather than a limit established
-  on this hardware.
+- **Context is capped at 131072, not the declared 1048576, and the KV pool is the reason.** The engine
+  reports 13.49 GiB of KV per GPU, a 482,176 token pool, which is **3.68 full-length requests** at
+  131072. Eight concurrent callers at full context will not fit, and the declared 1048576 is far out of
+  reach on this hardware: a single 1M-token request needs roughly twice the whole pool. The benchmark
+  above used 182-token inputs, so its concurrency 32 result says nothing about long-context capacity.
+  Raising `MAX_MODEL_LEN` lowers the concurrency figure proportionally.
 - No speculative draft is used. Upstream uses EAGLE3 with 3 tokens and published third-party drafts,
   none of which is downloaded here, so `SPEC_TOKENS` defaults to 0. This architecture also has an
   `MiniMaxM3MTP` entry in vLLM, unexercised.
