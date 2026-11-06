@@ -19,10 +19,11 @@ two of them over Ray.
 
 **No rate has been measured.** Everything below the launch section is upstream guidance or arithmetic,
 not an observation from this cluster. The benchmarking section stays empty until the model has run
-here, and this recipe is deliberately absent from the top-level tables for that reason.
+here, and the top-level table lists this recipe with no rates for the same reason.
 
 Two nodes are genuinely required: 795.5 GiB of weights against 561.6 GiB on a single node. Eight GPUs
-give 1123.2 GiB, leaving about 260 GiB for KV at `GPU_UTIL=0.94`.
+give 1123.2 GiB, which leaves roughly 260 GiB once the weights are placed at `GPU_UTIL=0.94`. That is
+headroom before engine overhead, not a measured KV pool.
 
 ## 1. Create the API key
 
@@ -136,7 +137,12 @@ is confusing if the node set changed.
 | `GPU_UTIL` | 0.94 | Fraction of VRAM for weights plus KV cache |
 | `TP` | 8 | Tensor parallel size, spanning both nodes |
 | `KV_DTYPE` | `fp8_e4m3` | KV cache dtype |
-| `SPEC_TOKENS` | 0 | Speculative tokens, off. Needs a draft checkpoint, see Known limits |
+| `SPEC_TOKENS` | 0 | Speculative tokens, off. Requires `SPEC_MODEL`, see Known limits |
+| `SPEC_MODEL` | unset | EAGLE3 draft checkpoint. Required when `SPEC_TOKENS` is non-zero |
+| `MTP_TOKENS` | 0 | Deprecated alias for `SPEC_TOKENS`, kept so older invocations still work |
+| `CUDAGRAPH_MODE` | `FULL_AND_PIECEWISE` | Graph mode when `ENFORCE_EAGER` is unset |
+| `VLLM_ALLREDUCE_USE_FLASHINFER` | 0 | **Leave at 0**, see Known limits |
+| `VLLM_ALLREDUCE_USE_SYMM_MEM` | 0 | **Leave at 0**, see Known limits |
 | `SPEC_METHOD` | `eagle3` | Speculative method if a draft is supplied |
 | `ENFORCE_EAGER` | unset | Set to any value to skip CUDA graphs |
 | `TOOL_PARSER` | `minimax_m3` | Tool-call parser. **Not** `minimax_m2` |
@@ -156,9 +162,10 @@ per level and the median reported, as every other recipe in this repo does.
 
 ## Known limits
 
-- **`--block-size 128` is mandatory and the recipe hard-codes it as the default.** Upstream calls it
-  required on every platform: the engine default of 16 misaligns this model's sparse attention, and on
-  some backends it fails outright rather than degrading. Do not lower it to save KV memory.
+- **`--block-size 128` is mandatory and the recipe hard-codes it as the default.** This is upstream's
+  statement, not an observation here: it calls 128 required on every platform, says the engine default
+  of 16 misaligns this model's sparse attention, and reports outright failure on some backends. Do not
+  lower it to save KV memory.
 - **The parsers differ from the M2 line.** This model uses `minimax_m3` for both tool calls and
   reasoning. Passing `minimax_m2`, which the M2.7 recipe in this repo correctly uses, is a plausible
   copy-paste error and upstream flags the change explicitly.
@@ -167,18 +174,21 @@ per level and the median reported, as every other recipe in this repo does.
   `MiniMaxM3SparseForConditionalGeneration`, `MiniMaxM3SparseForCausalLM` and `MiniMaxM3MTP`, so the
   code is present, but whether it is complete and correct at this version is untested. If load or
   generation fails, the image is the documented fallback.
-- **Context is capped at 131072, not the declared 1048576.** Upstream's own default is 65536 and
-  suggests 131072 as a middle setting; 1M context would need far more KV than 260 GiB. Raising
-  `MAX_MODEL_LEN` toward the declared maximum will fail to allocate long before it reaches 1M.
+- **Context is capped at 131072, not the declared 1048576.** Upstream's own default is 65536 and it
+  suggests 131072 as a middle setting. No KV pool has been measured here, so the largest context this
+  shape can actually hold is unknown; 131072 is upstream's suggestion rather than a limit established
+  on this hardware.
 - No speculative draft is used. Upstream uses EAGLE3 with 3 tokens and published third-party drafts,
   none of which is downloaded here, so `SPEC_TOKENS` defaults to 0. This architecture also has an
   `MiniMaxM3MTP` entry in vLLM, unexercised.
 - `--kv-cache-dtype fp8_e4m3` is set by default. Upstream describes FP8 KV as optional and lossless
   in its own testing, giving about 1.5 times the KV pool. That claim is upstream's and is unverified
   here.
-- The MXFP8 checkpoint of this model is **not** usable on this cluster, which is why BF16 is served
-  despite being twice the size. The MXFP8 kernel path needs SM100, while H200 is SM90 and the
-  RTX PRO 6000 nodes are SM120.
+- **The MXFP8 checkpoint of this model is untested here**, which is why BF16 is served despite being
+  twice the size. SGLang's cookbook states for a different model that its MXFP8 kernel path requires
+  SM100, and vLLM 0.32.0 contains an `es_sm100_mxfp8_blockscaled_grouped_quant` kernel, but the same
+  source also carries SM80-and-later Marlin and emulation paths. So MXFP8 on H200 (SM90) or RTX PRO
+  6000 (SM120) is unverified rather than ruled out.
 - Pure TP8 across two nodes puts tensor parallelism over the InfiniBand fabric rather than inside a
   node, unlike the TP4-per-node layouts elsewhere in this repo. The cost of that is unmeasured.
 - Multimodal is not exercised. The architecture name ends in `ForConditionalGeneration` and vLLM also

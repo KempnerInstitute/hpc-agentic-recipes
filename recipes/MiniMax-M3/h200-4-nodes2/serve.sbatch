@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=minimaxm3-fp8
+#SBATCH --job-name=minimax-m3
 #SBATCH --partition=kempner_h200
 #SBATCH --nodes=2
 #SBATCH --gres=gpu:4

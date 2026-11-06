@@ -8,7 +8,7 @@ Status: Validated - vLLM 0.32.0+cu129, protocol: slope(128,1152) at concurrency 
 | Checkpoint | `MiniMax-M2.7`, Hugging Face `MiniMaxAI/MiniMax-M2.7` |
 | On disk | 214.3 GiB across 125 shards, `MiniMaxM2ForCausalLM` |
 | Served precision | FP8 weights |
-| Context | 196608, the checkpoint maximum |
+| Context | 196608 as served. The checkpoint declares 204800 |
 | Hardware | 1 node, 4 H200 GPUs, TP4 |
 | Engine | vLLM 0.32.0, which registers this architecture |
 | Allocation for the measurement | 1 node, 4 GPUs, 64 cores and 1440 GB, `kempner_h200` |
@@ -118,11 +118,11 @@ ssh <node> 'pkill -u $USER -f "vllm serve"'
 | --- | --- | --- |
 | `MODEL` | `$MODELS_DIR/MiniMax-M2.7` | Serve a different copy of the checkpoint |
 | `API_PORT` | 8000 | Listening port |
-| `MAX_MODEL_LEN` | 196608 | Context window, the checkpoint maximum |
+| `MAX_MODEL_LEN` | 196608 | Context window as served. The checkpoint declares 204800 |
 | `GPU_UTIL` | 0.90 | Fraction of VRAM for weights plus KV cache |
 | `TP` | 4 | Tensor parallel size. **Do not set 8**, see Known limits |
 | `PERF` | unset | Set to any value to enable CUDA graphs instead of eager |
-| `CUDAGRAPH_MODE` | `NONE` | Graph mode when `PERF` is set |
+| `CUDAGRAPH_MODE` | `FULL_AND_PIECEWISE` | Graph mode when `PERF` is set |
 | `SPEC_CONFIG` | unset | Full speculative-config JSON, off by default |
 | `TOOL_PARSER` | `minimax_m2` | Tool-call parser |
 | `REASONING_PARSER` | `minimax_m2` | Reasoning parser |
@@ -158,7 +158,7 @@ Results:
 
 Scaling is close to linear: 32 times the concurrency returns 30.8 times the throughput, and per-stream
 decode falls only from 20.8 to 20.0 tok/s between one caller and thirty-two. That is what a sparse MoE
-with few active parameters should do, and it means the saturation point is well above 32. The flip side
+with few active parameters should do, and no turnover was observed through concurrency 32. The flip side
 is that 20.8 tok/s on a single stream is modest, close to GLM-4.6-FP8 at 19.1 on the same hardware, so
 this recipe earns its place on aggregate throughput rather than on latency.
 
@@ -169,15 +169,15 @@ this recipe earns its place on aggregate throughput rather than on latency.
   expert parallelism is the other documented option. TP4 on one node sidesteps this entirely, which
   is why it is the default here.
 - **Older vLLM releases produce corrupted output for this model**, per upstream, fixed in nightlies
-  after a specific commit. At 0.32.0 the output is clean: a long code generation returned a correct
-  iterative Fibonacci function with a real docstring, and `The capital of France is` continued with
-  ` Paris.` So the warning does not apply at this version. It would still apply on an older pin, and
-  the symptom is garbled text rather than a failure to start, so read a long generation after any
-  version change.
-- **The reasoning parser disagreement resolves in favor of `minimax_m2`.** The vLLM recipe page gives
-  `minimax_m2` and the checkpoint's own deployment guide gives `minimax_m2_append_think`. Measured
-  here, `minimax_m2` populates `reasoning` and leaves `content` free of `<think>` markers, so it is
-  correct and the alternative is unnecessary.
+  after a specific commit. **No corruption was observed in the checks run here** at 0.32.0: a long
+  code generation returned a correct iterative Fibonacci function with a real docstring, and
+  `The capital of France is` continued with ` Paris.` That is two generations, not a systematic
+  accuracy evaluation, so it is evidence the fix is present rather than proof. The symptom is garbled
+  text rather than a failure to start, so read a long generation after any version change.
+- **`minimax_m2` is the reasoning parser that worked here.** The vLLM recipe page gives `minimax_m2`
+  and the checkpoint's own deployment guide gives `minimax_m2_append_think`. For the requests tested,
+  `minimax_m2` populated `reasoning` and left `content` free of `<think>` markers. If a different
+  prompt shape leaks markers, `REASONING_PARSER=minimax_m2_append_think` is the alternative to try.
 - **The model emits U+2011 non-breaking hyphens inside code.** Generated text contains `F(n‑1)`,
   `non‑negative` and `n‑th` with a non-ASCII hyphen. Harmless in prose, but an identifier or a shell
   command copied straight out of a response can carry an invisible character that fails to parse.

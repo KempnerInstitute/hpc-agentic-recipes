@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Serve MiniMax-M3 across two H200 nodes: pure TP8 over Ray, BF16: TP4 inside each node, PP2 between them, over Ray.
+# Serve MiniMax-M3 across two H200 nodes: pure TP8 over Ray, BF16.
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 source "$S/env/env.sh"
@@ -20,8 +20,11 @@ else
 fi
 # Upstream uses EAGLE3 for this model, not MTP, and no draft checkpoint is downloaded here, so
 # speculation stays off. Set SPEC_TOKENS and SPEC_MODEL together if you add a draft.
-[ "${SPEC_TOKENS:-${MTP_TOKENS:-0}}" != 0 ] && EXTRA+=(--speculative-config \
-  "{\"method\": \"${SPEC_METHOD:-eagle3}\", \"num_speculative_tokens\": ${SPEC_TOKENS:-${MTP_TOKENS:-0}}}")
+if [ "${SPEC_TOKENS:-${MTP_TOKENS:-0}}" != 0 ]; then
+  [ -n "${SPEC_MODEL:-}" ] || { echo "SPEC_TOKENS is set but SPEC_MODEL is not; an EAGLE3 draft checkpoint is required" >&2; exit 2; }
+  EXTRA+=(--speculative-config \
+    "{\"method\": \"${SPEC_METHOD:-eagle3}\", \"model\": \"$SPEC_MODEL\", \"num_speculative_tokens\": ${SPEC_TOKENS:-${MTP_TOKENS:-0}}}")
+fi
 [ -n "${EXTRA_ARGS:-}" ] && EXTRA+=($EXTRA_ARGS)
 
 # --block-size 128 is mandatory on every platform for this model. The default 16 misaligns the

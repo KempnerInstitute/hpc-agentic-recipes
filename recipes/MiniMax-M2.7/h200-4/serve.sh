@@ -12,7 +12,7 @@ MODEL="${MODEL:-$MODELS_DIR/MiniMax-M2.7}"
 EXTRA=()
 [ -n "${EXTRA_ARGS:-}" ] && EXTRA+=($EXTRA_ARGS)
 if [ -n "${PERF:-}" ]; then
-  EXTRA+=(--compilation-config "{\"cudagraph_mode\": \"${CUDAGRAPH_MODE:-NONE}\"}")
+  EXTRA+=(--compilation-config "{\"cudagraph_mode\": \"${CUDAGRAPH_MODE:-FULL_AND_PIECEWISE}\"}")
 else
   EXTRA+=(--enforce-eager)
 fi
