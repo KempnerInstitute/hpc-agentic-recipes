@@ -174,8 +174,9 @@ Results:
 | Engine facts | KV cache 9,294,877 tokens, 35.4 full-length requests at once; 19.71 to 26.05 GiB of KV per worker, and 541 to 556 GB held per node |
 | Label | rising. Aggregate throughput was still climbing at 32, and the sequence cap is far above it, so the ceiling is unmeasured |
 
-52.6 tok/s on a single stream is the fastest H200 figure in the repo, which is the point of a 95B
-active MoE: only a fraction of the 2.4T parameters runs per token. Per-stream throughput falls faster
+52.6 tok/s on a single stream is remarkable for a 2.4T parameter checkpoint, and that is the point of
+a 95B active MoE: only a fraction of the weights runs per token. It is not the fastest model here,
+since a dense 27B reaches 170.6 tok/s on a single H200 GPU. Per-stream throughput also falls faster
 than on a dense model, from 52.6 to 16.7 between one caller and thirty-two, because pipeline
 parallelism serializes a request across six stages.
 

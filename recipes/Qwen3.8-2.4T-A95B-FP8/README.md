@@ -10,8 +10,10 @@ in this repo.
 | --- | --- | --- | --- | --- | --- |
 | [`h200-4-nodes6`](h200-4-nodes6/README.md) | vLLM | 6 nodes, 24 H200 GPUs, TP4 EP1 PP6 | 52.6 tok/s | 534.7 at c=32, rising | Validated |
 
-52.6 tok/s on a single stream is the fastest H200 figure in the repo, which is what a 95B active MoE
-buys: only a fraction of the 2.4T parameters runs per token.
+52.6 tok/s on a single stream is remarkable for a 2.4T parameter checkpoint, and that is what a 95B
+active MoE buys: only a fraction of the weights runs per token. It is not the fastest model here. A
+dense 27B reaches 170.6 tok/s on a single H200 GPU, and Gemma-4-26B-A4B reaches 250.5. Size buys
+quality, not speed.
 
 Six nodes is the minimum. Sixteen GPUs give 2246 GiB against 2324.7 GiB of weights, so four nodes
 cannot load the model at all, and five leave almost nothing for the KV cache. Upstream sizes this
