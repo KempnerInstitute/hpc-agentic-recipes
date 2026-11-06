@@ -109,6 +109,8 @@ has, the engine refuses to start. Each recipe states its own ceiling in Known li
 | | NVFP4 | [1 RTX node](recipes/Mistral-Large-4-1T-A52B-NVFP4/rtx-8) | 129.7 | 826/48 📈 | 96K |
 | **Muse-Glimmer-30B** | BF16 | [1 H200 GPU](recipes/Muse-Glimmer-30B/h200-1) | 61.0 | 8925/256 📈 | 128K |
 | **MiMo-V2.6-Pro-RL** | FP8 | [1 RTX node](recipes/MiMo-V2.6-Pro-RL/rtx-8) | 84.9 | 1136/128 📈 | 64K |
+| **MiniMax-M2.7** | FP8 | [1 H200 node](recipes/MiniMax-M2.7/h200-4) | not measured | not measured | 192K |
+| **MiniMax-M3** | BF16 | [2 H200 nodes](recipes/MiniMax-M3/h200-4-nodes2) | not measured | not measured | 128K |
 | **Ripple-65B-Preview** | BF16 | [2 H200 GPUs](recipes/Ripple-65B-Preview/h200-2) | 40.5 | 588/16 🚧 | 256K |
 | | BF16 | [1 H200 GPU](recipes/Ripple-65B-Preview/h200-1) | 25.1 | 189/8 🚧 | 32K |
 | | NVFP4 | [1 H200 GPU](recipes/Ripple-65B-Preview-NVFP4/h200-1) | 36.2 | 518/16 🚧 | 256K |
