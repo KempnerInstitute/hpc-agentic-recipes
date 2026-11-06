@@ -32,6 +32,14 @@ to read it and what the published quality scores are worth.
 - **Full context on one GPU for a 65B:** Ripple-65B-Preview in NVFP4, 36.2 tok/s, serving the whole
   262144 window on a single H200 where its BF16 build needs two GPUs for the same window and caps near
   33,000 tokens on one. It leads nothing on rate; it is the cheap way to a long context for this model.
+- **Fastest two-node decode:** MiniMax-M3, 111.5 tok/s on two H200 nodes at pure TP8. GLM-5.3 is still
+  faster on the same hardware at 142.3, but M3 is the only recipe here that runs cross-node tensor
+  parallelism in vLLM, which needs two optional all-reduce accelerators switched off. Its KV pool is
+  the catch: 482,176 tokens, so only 3.68 callers fit at its 131072 context.
+- **Agentic coding on one node:** MiniMax-M2.7, 214.3 GiB in FP8 on a single H200 node at TP4, the
+  cheapest recipe here to reach a published SWE-Pro score near a frontier model. It is slow per stream
+  at 20.8 tok/s, but scales almost linearly to 642 tok/s at concurrency 32, so it suits many parallel
+  agents rather than one interactive session.
 
 No published source ranks all of these against each other, so pick on the scores below and on your own task
 rather than on this ordering.
@@ -158,6 +166,32 @@ From the [Ripple-65B-Preview card](https://huggingface.co/ricursiveAI/Ripple-65B
 GPQA Diamond 89.0 and AIME 2024 97.1, against a column of comparison models on the card itself. It is
 the only model here small enough to serve on one GPU in NVFP4 at the full context, and its scores are
 reported against reasoning benchmarks rather than the agentic coding sets the larger cards use.
+
+From the [MiniMax-M2.7 card](https://huggingface.co/MiniMaxAI/MiniMax-M2.7), which publishes its
+numbers in prose rather than a table:
+
+| Benchmark | MiniMax M2.7 |
+| --- | --- |
+| SWE-Pro | 56.22% |
+| SWE Multilingual | 76.5 |
+| Multi SWE Bench | 52.7 |
+| VIBE-Pro | 55.6% |
+| Terminal Bench 2 | 57.0% |
+| NL2Repo | 39.8% |
+| Toolathon | 46.3% |
+| MM Claw, end to end | 62.7% |
+
+The card says SWE-Pro 56.22 matches GPT-5.3-Codex and VIBE-Pro 55.6 is near Opus 4.6, and separately
+claims an ELO of 1495 on GDPval-AA, the highest among open-weight models. **Terminal Bench 2 at 57.0 is
+not comparable with the Terminal-Bench 2.1 rows above**, which is the version Kimi K3 and Hy4 report.
+Third-party leaderboards circulate a much higher SWE-bench Verified figure for this model; that is a
+different benchmark from the SWE-Pro number the card publishes, and this repo cites the card.
+
+The [MiniMax-M3 card](https://huggingface.co/MiniMaxAI/MiniMax-M3) publishes **no scores in text at
+all**: its benchmark figures are an image, so nothing is quoted here. It claims frontier-level
+long-horizon agentic coding without numbers that can be read from the card, and it is the newer and
+much larger of the two at 795.5 GiB in BF16 against 214.3 GiB in FP8. Choose between them on your own
+task, not on these cards: M2.7 is the one with published, quotable numbers.
 
 ### No published scores
 
